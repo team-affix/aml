@@ -39,12 +39,22 @@ GTEST_CPPFLAGS = \
 CLI11_INC = CLI11/include
 
 # ==============================================================================
+# ANTLR4  (system install — required by atlas parser)
+# ==============================================================================
+
+ANTLR4_INC = /usr/include/antlr4-runtime
+ANTLR4_LIB = /usr/lib/x86_64-linux-gnu
+
+# ==============================================================================
 # Atlas library dependencies  (built from the atlas/ submodule)
 # ==============================================================================
 
 ATLAS_CORE_LIB            = atlas/build/libatlas_core.a
 ATLAS_CORE_DEBUG_LIB      = atlas/build/libatlas_core_debug.a
 ATLAS_CORE_DEBUG_FAST_LIB = atlas/build/libatlas_core_debug_fast.a
+
+ATLAS_PARSER_DEBUG_LIB      = atlas/build/libatlas_parser_debug.a
+ATLAS_PARSER_DEBUG_FAST_LIB = atlas/build/libatlas_parser_debug_fast.a
 
 GIT_TAG := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -94,8 +104,8 @@ AML_CORE_DEBUG_FAST_GTEST_OBJ = \
     build/obj/core_debug_fast_test/gtest-all.o \
     build/obj/core_debug_fast_test/gmock-all.o
 
-AML_CORE_DEBUG_TEST_CXXFLAGS      = $(DEBUG_CXXFLAGS) $(GTEST_CPPFLAGS) -Icore/test
-AML_CORE_DEBUG_FAST_TEST_CXXFLAGS = $(DEBUG_FAST_CXXFLAGS) $(GTEST_CPPFLAGS) -Icore/test
+AML_CORE_DEBUG_TEST_CXXFLAGS      = $(DEBUG_CXXFLAGS) $(GTEST_CPPFLAGS) -Icore/test -Iatlas/parser/hpp -I$(ANTLR4_INC)
+AML_CORE_DEBUG_FAST_TEST_CXXFLAGS = $(DEBUG_FAST_CXXFLAGS) $(GTEST_CPPFLAGS) -Icore/test -Iatlas/parser/hpp -I$(ANTLR4_INC)
 
 # --- cli ---
 
@@ -152,6 +162,14 @@ $(ATLAS_CORE_DEBUG_LIB):
 
 $(ATLAS_CORE_DEBUG_FAST_LIB):
 	$(MAKE) -C atlas build/libatlas_core_debug_fast.a
+
+$(ATLAS_PARSER_DEBUG_LIB): $(ATLAS_CORE_DEBUG_LIB)
+	$(MAKE) -C atlas parser/generated
+	$(MAKE) -C atlas build/libatlas_parser_debug.a
+
+$(ATLAS_PARSER_DEBUG_FAST_LIB): $(ATLAS_CORE_DEBUG_FAST_LIB)
+	$(MAKE) -C atlas parser/generated
+	$(MAKE) -C atlas build/libatlas_parser_debug_fast.a
 
 # ==============================================================================
 # User-facing targets
@@ -217,20 +235,22 @@ $(AML_CLI_DEBUG_FAST_LIB): $(AML_CLI_DEBUG_FAST_OBJ) | build
 # Test binary link rules
 # ==============================================================================
 
-$(AML_CORE_DEBUG_BIN): $(AML_CORE_DEBUG_LIB) $(ATLAS_CORE_DEBUG_LIB) \
+$(AML_CORE_DEBUG_BIN): $(AML_CORE_DEBUG_LIB) $(ATLAS_CORE_DEBUG_LIB) $(ATLAS_PARSER_DEBUG_LIB) \
                        $(AML_CORE_DEBUG_TEST_OBJ) $(AML_CORE_DEBUG_GTEST_OBJ) | build
 	$(CXX) $(CXXFLAGS) -o $@ \
 	    $(AML_CORE_DEBUG_TEST_OBJ) $(AML_CORE_DEBUG_GTEST_OBJ) \
 	    -Lbuild -laml_core_debug \
-	    -Latlas/build -latlas_core_debug \
+	    -Latlas/build -latlas_parser_debug -latlas_core_debug \
+	    -L$(ANTLR4_LIB) -lantlr4-runtime \
 	    -lpthread
 
-$(AML_CORE_DEBUG_FAST_BIN): $(AML_CORE_DEBUG_FAST_LIB) $(ATLAS_CORE_DEBUG_FAST_LIB) \
+$(AML_CORE_DEBUG_FAST_BIN): $(AML_CORE_DEBUG_FAST_LIB) $(ATLAS_CORE_DEBUG_FAST_LIB) $(ATLAS_PARSER_DEBUG_FAST_LIB) \
                              $(AML_CORE_DEBUG_FAST_TEST_OBJ) $(AML_CORE_DEBUG_FAST_GTEST_OBJ) | build
 	$(CXX) $(CXXFLAGS) -o $@ \
 	    $(AML_CORE_DEBUG_FAST_TEST_OBJ) $(AML_CORE_DEBUG_FAST_GTEST_OBJ) \
 	    -Lbuild -laml_core_debug_fast \
-	    -Latlas/build -latlas_core_debug_fast \
+	    -Latlas/build -latlas_parser_debug_fast -latlas_core_debug_fast \
+	    -L$(ANTLR4_LIB) -lantlr4-runtime \
 	    -lpthread
 
 $(AML_CLI_DEBUG_BIN): $(AML_CLI_DEBUG_LIB) $(AML_CORE_DEBUG_LIB) $(ATLAS_CORE_DEBUG_LIB) \
@@ -269,7 +289,7 @@ build/obj/core_debug_fast/%.o: core/cpp/%.cpp | build/obj/core_debug_fast
 
 # --- aml core tests (debug | debug_fast) ---
 
-build/obj/core_debug_test/%.o: core/test/%.cpp | build/obj/core_debug_test
+build/obj/core_debug_test/%.o: core/test/%.cpp $(ATLAS_PARSER_DEBUG_LIB) | build/obj/core_debug_test
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(AML_CORE_DEBUG_TEST_CXXFLAGS) -c $< -o $@
 
@@ -281,7 +301,7 @@ build/obj/core_debug_test/gmock-all.o: $(GMOCK_ALL_CC) | build/obj/core_debug_te
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(AML_CORE_DEBUG_TEST_CXXFLAGS) -c $< -o $@
 
-build/obj/core_debug_fast_test/%.o: core/test/%.cpp | build/obj/core_debug_fast_test
+build/obj/core_debug_fast_test/%.o: core/test/%.cpp $(ATLAS_PARSER_DEBUG_FAST_LIB) | build/obj/core_debug_fast_test
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(AML_CORE_DEBUG_FAST_TEST_CXXFLAGS) -c $< -o $@
 
