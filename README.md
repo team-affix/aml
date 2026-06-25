@@ -93,7 +93,7 @@ A further benefit is correctness. When inference is delegated to the CHC solver,
 
 ### Personal note
 
-I believe the entanglement of learnability and inference complexity is one of the major reasons why protein folding was so hard to learn from data for so long. Simulating the physical process of a protein folding — computing the actual trajectory from amino acid sequence to final structure — is extraordinarily computationally demanding. A predictive model that must perform that simulation internally in order to produce a correct output needs to be correspondingly large and complex, and learning such a model from data is extremely difficult.
+I believe the entanglement of learnability and inference complexity could be one of the major reasons why protein folding was so hard to learn from data for so long. Simulating the physical process of a protein folding — computing the actual trajectory from amino acid sequence to final structure — is extraordinarily computationally demanding. A predictive model that must perform that simulation internally in order to produce a correct output needs to be correspondingly large and complex, and learning such a model from data is extremely difficult.
 
 But *describing* the constraints of protein folding — the relation between sequence and structure — may be far simpler than simulating the process. A contrastive learner would not need to simulate anything. It would learn the relation, and then delegate the job of finding structures consistent with that relation to the solver. Whether this framing would have made the problem more tractable earlier is an open question, but the principle seems directly applicable.
 
