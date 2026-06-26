@@ -5,6 +5,8 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include "value_objects/list_format.hpp"
+#include "value_objects/nat_format.hpp"
 
 struct aml_expr {
     struct app {
@@ -17,13 +19,13 @@ struct aml_expr {
         const aml_expr* body;
         auto operator<=>(const abs&) const = default;
     };
-    struct var {
+    struct token {
         std::string name;
-        auto operator<=>(const var&) const = default;
+        auto operator<=>(const token&) const = default;
     };
     struct nat {
-        uint64_t value;
-        bool     church;
+        uint64_t  value;
+        nat_format format;
         auto operator<=>(const nat&) const = default;
     };
     struct integer {
@@ -31,7 +33,7 @@ struct aml_expr {
         auto operator<=>(const integer&) const = default;
     };
     struct character {
-        uint32_t codepoint;
+        char value;
         auto operator<=>(const character&) const = default;
     };
     struct string {
@@ -40,10 +42,10 @@ struct aml_expr {
     };
     struct list {
         std::vector<const aml_expr*> elems;
-        bool                         church;
+        list_format                  format;
         auto operator<=>(const list&) const = default;
     };
-    std::variant<app, abs, var, nat, integer, character, string, list> content;
+    std::variant<app, abs, token, nat, integer, character, string, list> content;
     auto operator<=>(const aml_expr&) const = default;
 };
 

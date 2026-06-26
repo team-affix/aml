@@ -5,16 +5,18 @@
 #include <string>
 #include <vector>
 #include "value_objects/aml_expr.hpp"
+#include "value_objects/list_format.hpp"
+#include "value_objects/nat_format.hpp"
 
 struct aml_expr_pool {
     const aml_expr* make_app(const aml_expr* func, const aml_expr* arg);
     const aml_expr* make_abs(std::string param, const aml_expr* body);
-    const aml_expr* make_var(std::string name);
-    const aml_expr* make_nat(uint64_t value, bool church);
+    const aml_expr* make_token(std::string name);
+    const aml_expr* make_nat(uint64_t value, nat_format format);
     const aml_expr* make_integer(int64_t value);
-    const aml_expr* make_character(uint32_t codepoint);
+    const aml_expr* make_character(char value);
     const aml_expr* make_string(std::string value);
-    const aml_expr* make_list(std::vector<const aml_expr*> elems, bool church);
+    const aml_expr* make_list(std::vector<const aml_expr*> elems, list_format format);
     size_t size() const;
 
     aml_expr_pool() = default;

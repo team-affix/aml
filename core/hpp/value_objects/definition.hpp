@@ -1,10 +1,10 @@
-#ifndef FUNCTION_DEF_HPP
-#define FUNCTION_DEF_HPP
+#ifndef DEFINITION_HPP
+#define DEFINITION_HPP
 
 #include <string>
 #include "aml_expr.hpp"
 
-struct function_def {
+struct definition {
     std::string     name;
     const aml_expr* body;
 };

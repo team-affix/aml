@@ -7,9 +7,7 @@
 
 struct AmlParserFixture : public ::testing::Test {
     aml_expr_pool pool;
-    aml_visitor<aml_expr_pool, aml_expr_pool, aml_expr_pool, aml_expr_pool,
-                aml_expr_pool, aml_expr_pool, aml_expr_pool, aml_expr_pool>
-        visitor{pool, pool, pool, pool, pool, pool, pool, pool};
+    aml_visitor<aml_expr_pool> visitor{pool};
 };
 
 #endif

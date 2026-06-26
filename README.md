@@ -71,13 +71,15 @@ The practical consequence is that there is no way for the search to "cheat" by f
 
 ## Contrastive learning
 
-AML learns from both positive and negative data. But it does not work by predicting an output label from an input. The distinction is fundamental to how the model is structured.
+AML learns from a single **statement file**: each line is an **input** and a **label**, written as `input : label.`. The label type is not fixed — boolean labels are common for contrastive learning (`multiply 3 4 12 : true.` / `multiply 3 4 5 : false.`), but labels can be any expression when the task needs something else.
+
+AML does not work by predicting an output label from an input in the conventional sense. The distinction is fundamental to how the model is structured.
 
 Consider learning multiplication. A conventional model would learn a function `f(x, y) → z` — it takes inputs and produces an output. AML instead learns a **relation**: `x * y = z`. The model does not have a designated output; it describes a constraint that holds over all of its arguments together.
 
 This means inference works differently. Rather than feeding inputs into a model and reading off an output, you populate *some* of the variables — whichever ones you know — and run the CHC solver to instantiate the rest. If you know `x` and `y`, the solver finds `z`. If you know `y` and `z`, the solver finds `x`. The same model supports all of these query directions without retraining.
 
-Positive examples are data points where the relation holds. Negative examples are data points where it does not. The search finds the smallest program — the simplest relation — that is consistent with all positive examples and inconsistent with all negative examples.
+The search finds the smallest program — the simplest relation — that is consistent with every input–label pair in the statement file.
 
 ### Decoupling learnability from inference complexity
 

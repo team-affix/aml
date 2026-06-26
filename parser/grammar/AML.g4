@@ -4,47 +4,59 @@ grammar AML;
 // File kinds — three separate top-level grammars
 // ============================================================
 
-// Constructor declarations only: NAME/arity groups separated by |.
+// Declaration groups: NAME/arity members separated by |, one group per line.
 // Example:
-//   true/0 | false/0
-//   suc/1 | zero/0
+//   true/0 | false/0.
+//   suc/1 | zero/0.
 declarationFile
-    : constructorGroup* EOF
+    : (declarationGroup eol)* EOF
     ;
 
-// Function definitions only: NAME = expr.
+// Definitions: NAME = expr, one per line.
 // Example:
-//   not = b => b false true
+//   not = b => b false true.
 definitionFile
-    : functionDef* EOF
+    : (definition eol)* EOF
     ;
 
-// Training data: one statement per line, terminated by '.'
+// Statement file: input : label pairs (one dataset).
 // Example:
-//   multiply 3 4 12.
-//   not false.
-trainingFile
-    : statement* EOF
+//   multiply 3 4 12 : true.
+//   multiply 3 4 5 : false.
+statementFile
+    : (statement eol)* EOF
     ;
 
-statement
-    : expr '.'
+eol
+    : '.'
     ;
 
 // ============================================================
 // Declarations
 // ============================================================
 
-constructorGroup
-    : constructor ('|' constructor)*
+declarationGroup
+    : declaration ('|' declaration)*
     ;
 
-constructor
+declaration
     : NAME '/' POSINT
     ;
 
-functionDef
+// ============================================================
+// Definitions
+// ============================================================
+
+definition
     : NAME '=' expr
+    ;
+
+// ============================================================
+// Statements
+// ============================================================
+
+statement
+    : expr ':' expr
     ;
 
 // ============================================================

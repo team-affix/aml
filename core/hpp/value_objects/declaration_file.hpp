@@ -2,10 +2,10 @@
 #define DECLARATION_FILE_HPP
 
 #include <vector>
-#include "constructor_group.hpp"
+#include "declaration_group.hpp"
 
 struct declaration_file {
-    std::vector<constructor_group> groups;
+    std::vector<declaration_group> groups;
 };
 
 #endif

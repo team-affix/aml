@@ -29,13 +29,13 @@ static bool parses_definition_file(const std::string& s) {
     return parser.getNumberOfSyntaxErrors() == 0;
 }
 
-static bool parses_training_file(const std::string& s) {
+static bool parses_statement_file(const std::string& s) {
     antlr4::ANTLRInputStream stream(s);
     AMLLexer lexer(&stream);
     antlr4::CommonTokenStream tokens(&lexer);
     AMLParser parser(&tokens);
     parser.removeErrorListeners();
-    parser.trainingFile();
+    parser.statementFile();
     return parser.getNumberOfSyntaxErrors() == 0;
 }
 
@@ -57,10 +57,10 @@ static size_t declaration_group_count(const std::string& s) {
     parser.removeErrorListeners();
     auto* ctx = parser.declarationFile();
     if (parser.getNumberOfSyntaxErrors() != 0) return SIZE_MAX;
-    return ctx->constructorGroup().size();
+    return ctx->declarationGroup().size();
 }
 
-static size_t function_def_count(const std::string& s) {
+static size_t definition_count(const std::string& s) {
     antlr4::ANTLRInputStream stream(s);
     AMLLexer lexer(&stream);
     antlr4::CommonTokenStream tokens(&lexer);
@@ -68,29 +68,29 @@ static size_t function_def_count(const std::string& s) {
     parser.removeErrorListeners();
     auto* ctx = parser.definitionFile();
     if (parser.getNumberOfSyntaxErrors() != 0) return SIZE_MAX;
-    return ctx->functionDef().size();
+    return ctx->definition().size();
 }
 
-static size_t training_statement_count(const std::string& s) {
+static size_t statement_count(const std::string& s) {
     antlr4::ANTLRInputStream stream(s);
     AMLLexer lexer(&stream);
     antlr4::CommonTokenStream tokens(&lexer);
     AMLParser parser(&tokens);
     parser.removeErrorListeners();
-    auto* ctx = parser.trainingFile();
+    auto* ctx = parser.statementFile();
     if (parser.getNumberOfSyntaxErrors() != 0) return SIZE_MAX;
     return ctx->statement().size();
 }
 
-static size_t group_constructor_count(const std::string& s) {
+static size_t group_declaration_count(const std::string& s) {
     antlr4::ANTLRInputStream stream(s);
     AMLLexer lexer(&stream);
     antlr4::CommonTokenStream tokens(&lexer);
     AMLParser parser(&tokens);
     parser.removeErrorListeners();
-    auto* ctx = parser.constructorGroup();
+    auto* ctx = parser.declarationGroup();
     if (parser.getNumberOfSyntaxErrors() != 0) return SIZE_MAX;
-    return ctx->constructor().size();
+    return ctx->declaration().size();
 }
 
 } // namespace
@@ -99,11 +99,11 @@ static size_t group_constructor_count(const std::string& s) {
 // Lexer
 // ---------------------------------------------------------------------------
 
-TEST(AmlParseTest, LexConstructorName) {
-    EXPECT_TRUE(parses_declaration_file("foo/0"));
-    EXPECT_TRUE(parses_declaration_file("bar_baz/1"));
-    EXPECT_TRUE(parses_declaration_file("MyType/2"));
-    EXPECT_TRUE(parses_declaration_file("_internal/0"));
+TEST(AmlParseTest, LexDeclarationName) {
+    EXPECT_TRUE(parses_declaration_file("foo/0."));
+    EXPECT_TRUE(parses_declaration_file("bar_baz/1."));
+    EXPECT_TRUE(parses_declaration_file("MyType/2."));
+    EXPECT_TRUE(parses_declaration_file("_internal/0."));
 }
 
 TEST(AmlParseTest, LexNatLit) {
@@ -143,35 +143,35 @@ TEST(AmlParseTest, ParseEmptyDeclarationFile) {
     EXPECT_TRUE(parses_declaration_file(""));
 }
 
-TEST(AmlParseTest, ParseConstructorSingle) {
-    EXPECT_EQ(group_constructor_count("nil/0"), 1u);
+TEST(AmlParseTest, ParseDeclarationSingle) {
+    EXPECT_EQ(group_declaration_count("nil/0"), 1u);
 }
 
-TEST(AmlParseTest, ParseConstructorGroup) {
-    EXPECT_EQ(group_constructor_count("true/0 | false/0"), 2u);
+TEST(AmlParseTest, ParseDeclarationGroup) {
+    EXPECT_EQ(group_declaration_count("true/0 | false/0"), 2u);
 }
 
-TEST(AmlParseTest, ParseConstructorGroupThree) {
-    EXPECT_EQ(group_constructor_count("a/0 | b/1 | c/2"), 3u);
+TEST(AmlParseTest, ParseDeclarationGroupThree) {
+    EXPECT_EQ(group_declaration_count("a/0 | b/1 | c/2"), 3u);
 }
 
-TEST(AmlParseTest, ParseConstructorGroupNewlines) {
-    EXPECT_EQ(group_constructor_count("true/0 |\nfalse/0"), 2u);
+TEST(AmlParseTest, ParseDeclarationGroupNewlines) {
+    EXPECT_EQ(group_declaration_count("true/0 |\nfalse/0"), 2u);
 }
 
 TEST(AmlParseTest, ParseMultipleDeclarationGroups) {
     std::string src =
-        "true/0 | false/0\n"
-        "suc/1  | zero/0\n";
+        "true/0 | false/0.\n"
+        "suc/1 | zero/0.\n";
     EXPECT_EQ(declaration_group_count(src), 2u);
 }
 
 TEST(AmlParseTest, RejectFunctionInDeclarationFile) {
-    EXPECT_FALSE(parses_declaration_file("id = x => x"));
+    EXPECT_FALSE(parses_declaration_file("id = x => x."));
 }
 
-TEST(AmlParseTest, RejectTrainingStatementInDeclarationFile) {
-    EXPECT_FALSE(parses_declaration_file("not false."));
+TEST(AmlParseTest, RejectStatementInDeclarationFile) {
+    EXPECT_FALSE(parses_declaration_file("not false : true."));
 }
 
 // ---------------------------------------------------------------------------
@@ -182,20 +182,21 @@ TEST(AmlParseTest, ParseEmptyDefinitionFile) {
     EXPECT_TRUE(parses_definition_file(""));
 }
 
-TEST(AmlParseTest, ParseFunctionDefSimple) {
-    EXPECT_EQ(function_def_count("not = b => b false true"), 1u);
+TEST(AmlParseTest, ParseDefinitionSimple) {
+    EXPECT_EQ(definition_count("not = b => b false true."), 1u);
 }
 
-TEST(AmlParseTest, ParseFunctionDefMultiple) {
-    EXPECT_EQ(function_def_count("f = x => x\ng = x => x"), 2u);
+TEST(AmlParseTest, ParseDefinitionMultiple) {
+    EXPECT_EQ(definition_count("f = x => x.\ng = x => x."), 2u);
 }
 
-TEST(AmlParseTest, ParseFunctionDefSelfRef) {
-    EXPECT_TRUE(parses_definition_file("factorial = n => n (factorial (pred n)) one"));
+TEST(AmlParseTest, ParseDefinitionSelfRef) {
+    EXPECT_TRUE(
+        parses_definition_file("factorial = n => n (factorial (pred n)) one."));
 }
 
-TEST(AmlParseTest, RejectDeclarationInDefinitionFile) {
-    EXPECT_FALSE(parses_definition_file("true/0 | false/0"));
+TEST(AmlParseTest, RejectConstructorInDefinitionFile) {
+    EXPECT_FALSE(parses_definition_file("true/0 | false/0."));
 }
 
 TEST(AmlParseTest, RejectBareExpressionInDefinitionFile) {
@@ -203,32 +204,32 @@ TEST(AmlParseTest, RejectBareExpressionInDefinitionFile) {
 }
 
 // ---------------------------------------------------------------------------
-// Training files
+// Statement files
 // ---------------------------------------------------------------------------
 
-TEST(AmlParseTest, ParseEmptyTrainingFile) {
-    EXPECT_TRUE(parses_training_file(""));
+TEST(AmlParseTest, ParseEmptyStatementFile) {
+    EXPECT_TRUE(parses_statement_file(""));
 }
 
-TEST(AmlParseTest, ParseTrainingStatements) {
-    EXPECT_EQ(training_statement_count("true."), 1u);
-    EXPECT_EQ(training_statement_count("not false.\nmultiply 3 4 12."), 2u);
+TEST(AmlParseTest, ParseStatementFileStatements) {
+    EXPECT_EQ(statement_count("true : false."), 1u);
+    EXPECT_EQ(statement_count("not false : true.\nmultiply 3 4 12 : true."), 2u);
 }
 
-TEST(AmlParseTest, ParseTrainingWithLiterals) {
-    EXPECT_TRUE(parses_training_file("multiply 3 4 12.\n[1, -2, 'a']."));
+TEST(AmlParseTest, ParseStatementFileWithLiterals) {
+    EXPECT_TRUE(parses_statement_file("multiply 3 4 12 : true.\n[1, -2, 'a'] : false."));
 }
 
-TEST(AmlParseTest, RejectDeclarationInTrainingFile) {
-    EXPECT_FALSE(parses_training_file("true/0 | false/0"));
+TEST(AmlParseTest, RejectDeclarationInStatementFile) {
+    EXPECT_FALSE(parses_statement_file("true/0 | false/0"));
 }
 
-TEST(AmlParseTest, RejectDefinitionInTrainingFile) {
-    EXPECT_FALSE(parses_training_file("id = x => x"));
+TEST(AmlParseTest, RejectDefinitionInStatementFile) {
+    EXPECT_FALSE(parses_statement_file("id = x => x."));
 }
 
 // ---------------------------------------------------------------------------
-// Expressions (shared across definition and training files)
+// Expressions (shared across function and statement files)
 // ---------------------------------------------------------------------------
 
 TEST(AmlParseTest, ParseAbstractionSimple) {
@@ -315,16 +316,16 @@ TEST(AmlParseTest, ParseStrLit) {
 // ---------------------------------------------------------------------------
 
 struct TestVisitor : public AMLBaseVisitor {
-    int constructor_group_count = 0;
-    int function_def_count      = 0;
+    int declaration_group_count = 0;
+    int definition_count      = 0;
     int statement_count         = 0;
 
-    std::any visitConstructorGroup(AMLParser::ConstructorGroupContext* ctx) override {
-        ++constructor_group_count;
+    std::any visitDeclarationGroup(AMLParser::DeclarationGroupContext* ctx) override {
+        ++declaration_group_count;
         return visitChildren(ctx);
     }
-    std::any visitFunctionDef(AMLParser::FunctionDefContext* ctx) override {
-        ++function_def_count;
+    std::any visitDefinition(AMLParser::DefinitionContext* ctx) override {
+        ++definition_count;
         return visitChildren(ctx);
     }
     std::any visitStatement(AMLParser::StatementContext* ctx) override {
@@ -334,7 +335,7 @@ struct TestVisitor : public AMLBaseVisitor {
 };
 
 TEST(AmlParseTest, VisitorTraversalDeclarationFile) {
-    antlr4::ANTLRInputStream stream("true/0 | false/0\n");
+    antlr4::ANTLRInputStream stream("true/0 | false/0.\n");
     AMLLexer lexer(&stream);
     antlr4::CommonTokenStream tokens(&lexer);
     AMLParser parser(&tokens);
@@ -343,13 +344,13 @@ TEST(AmlParseTest, VisitorTraversalDeclarationFile) {
 
     TestVisitor v;
     v.visit(tree);
-    EXPECT_EQ(v.constructor_group_count, 1);
-    EXPECT_EQ(v.function_def_count, 0);
+    EXPECT_EQ(v.declaration_group_count, 1);
+    EXPECT_EQ(v.definition_count, 0);
     EXPECT_EQ(v.statement_count, 0);
 }
 
 TEST(AmlParseTest, VisitorTraversalDefinitionFile) {
-    antlr4::ANTLRInputStream stream("f = x => x\n");
+    antlr4::ANTLRInputStream stream("f = x => x.\n");
     AMLLexer lexer(&stream);
     antlr4::CommonTokenStream tokens(&lexer);
     AMLParser parser(&tokens);
@@ -358,22 +359,22 @@ TEST(AmlParseTest, VisitorTraversalDefinitionFile) {
 
     TestVisitor v;
     v.visit(tree);
-    EXPECT_EQ(v.constructor_group_count, 0);
-    EXPECT_EQ(v.function_def_count, 1);
+    EXPECT_EQ(v.declaration_group_count, 0);
+    EXPECT_EQ(v.definition_count, 1);
     EXPECT_EQ(v.statement_count, 0);
 }
 
-TEST(AmlParseTest, VisitorTraversalTrainingFile) {
-    antlr4::ANTLRInputStream stream("not false.\n");
+TEST(AmlParseTest, VisitorTraversalStatementFile) {
+    antlr4::ANTLRInputStream stream("not false : true.\n");
     AMLLexer lexer(&stream);
     antlr4::CommonTokenStream tokens(&lexer);
     AMLParser parser(&tokens);
-    auto* tree = parser.trainingFile();
+    auto* tree = parser.statementFile();
     ASSERT_EQ(parser.getNumberOfSyntaxErrors(), 0);
 
     TestVisitor v;
     v.visit(tree);
-    EXPECT_EQ(v.constructor_group_count, 0);
-    EXPECT_EQ(v.function_def_count, 0);
+    EXPECT_EQ(v.declaration_group_count, 0);
+    EXPECT_EQ(v.definition_count, 0);
     EXPECT_EQ(v.statement_count, 1);
 }

@@ -2,10 +2,10 @@
 #define DEFINITION_FILE_HPP
 
 #include <vector>
-#include "function_def.hpp"
+#include "definition.hpp"
 
 struct definition_file {
-    std::vector<function_def> functions;
+    std::vector<definition> definitions;
 };
 
 #endif
