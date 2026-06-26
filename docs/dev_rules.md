@@ -2,6 +2,8 @@ no optional arguments
 no optional template arguments
 no overloading (prefer 1 function that receives all args from the generic case)
 no public member vars UNLESS its a value object
+use structs, never classes
+only use inheritance for antlr visitors. otherwise, we should just have templates for swapping-out behavior
 prefer running the _fast debug variants for timely development testing
 unit tests should only ever have the SUT concrete and all other dependencies mocked. (see how atlas does this)
 integration tests should test how multiple combinations of concrete systems work together, unlike unit tests. SOME of the infra can still be mocked.
