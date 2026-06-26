@@ -1,0 +1,14 @@
+# CLI headers and tests.
+CompileFlags:
+  Add:
+    - -std=c++20
+    - -I..
+    - -Ihpp
+    - -Itest
+    - -I../core/hpp
+    - -I../atlas
+    - -I../atlas/core/hpp
+    - -I../atlas/mcts/include
+    - -I../CLI11/include
+    - -I../googletest/googletest/include
+    - -I../googletest/googlemock/include

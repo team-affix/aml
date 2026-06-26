@@ -10,7 +10,7 @@ namespace {
 struct TranspilerTest : public ::testing::Test {
     aml_expr_pool aml_pool;
     lc_expr_pool  lc_pool;
-    transpiler    tx{lc_pool};
+    transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool> tx{lc_pool, lc_pool, lc_pool};
     std::map<std::string, const lc_expr*> globals;
 
     void SetUp() override { tx.register_builtins(globals); }
@@ -199,7 +199,7 @@ TEST_F(TranspilerTest, TranspileListChurch) {
 // ---------------------------------------------------------------------------
 
 TEST_F(TranspilerTest, TranspileCustomConstructorGroup) {
-    constructor_group group{{"decided", 1}, {"undecided", 0}};
+    constructor_group group{{{"decided", 1}, {"undecided", 0}}};
     tx.register_group(group, globals);
     const lc_expr* undec = globals.at("undecided");
     EXPECT_TRUE(lc_expr_eq(undec, lc_lam(lc_lam(lc_var(0)))));
@@ -220,11 +220,12 @@ TEST_F(TranspilerTest, TranspileProgramWithFunctions) {
             aml_pool.make_app(aml_pool.make_var("b"), aml_pool.make_var("false")),
             aml_pool.make_var("true")));
 
-    aml_program prog;
-    prog.functions.push_back({"id", id});
-    prog.functions.push_back({"not", not_});
+    declaration_file decls;
+    definition_file defs;
+    defs.functions.push_back({"id", id});
+    defs.functions.push_back({"not", not_});
 
-    transpiled_program out = transpiler::transpile_program(prog);
+    transpiled_program out = transpile_program(decls, defs);
     EXPECT_EQ(out.functions.size(), 2u);
     EXPECT_TRUE(lc_expr_eq(out.functions[0].body, lc_lam(lc_var(0))));
     EXPECT_NE(out.globals.at("true"), nullptr);
@@ -241,9 +242,9 @@ TEST_F(TranspilerTest, TranspileIfThenElseFunction) {
                     aml_pool.make_app(aml_pool.make_var("cond"), aml_pool.make_var("a")),
                     aml_pool.make_var("b")))));
 
-    aml_program prog;
-    prog.functions.push_back({"if_then_else", body});
-    transpiled_program out = transpiler::transpile_program(prog);
+    definition_file defs;
+    defs.functions.push_back({"if_then_else", body});
+    transpiled_program out = transpile_program({}, defs);
 
     const lc_expr* got = out.functions[0].body;
     const lc_expr* expected = lc_lam(lc_lam(lc_lam(

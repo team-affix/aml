@@ -1,0 +1,3 @@
+Y = f => (x => f (x x)) (x => f (x x))
+not = b => b false true
+if_then_else = cond => a => b => cond a b

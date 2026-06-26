@@ -1,0 +1,4 @@
+true/0 | false/0
+suc/1 | zero/0
+cons/2 | nil/0
+pos/1 | negsuc/1

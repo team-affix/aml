@@ -1,0 +1,16 @@
+# Parser headers and tests: #include "value_objects/..." via core, generated ANTLR output.
+CompileFlags:
+  Add:
+    - -std=c++20
+    - -I..
+    - -Ihpp
+    - -Igenerated
+    - -Itest
+    - -I../core/hpp
+    - -I../cli/hpp
+    - -I../atlas
+    - -I../atlas/core/hpp
+    - -I../atlas/mcts/include
+    - -I/usr/include/antlr4-runtime
+    - -I../googletest/googletest/include
+    - -I../googletest/googlemock/include

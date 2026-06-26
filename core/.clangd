@@ -1,0 +1,13 @@
+# Core headers and tests: #include "value_objects/..." / "infrastructure/..."
+CompileFlags:
+  Add:
+    - -std=c++20
+    - -I..
+    - -Ihpp
+    - -Itest
+    - -I../atlas
+    - -I../atlas/core/hpp
+    - -I../atlas/mcts/include
+    - -I../atlas/parser/hpp
+    - -I../googletest/googletest/include
+    - -I../googletest/googlemock/include

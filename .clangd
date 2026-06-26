@@ -1,3 +1,4 @@
+# Matches makefile CXXFLAGS (repo root).
 CompileFlags:
   Add:
     - -std=c++20
@@ -7,5 +8,12 @@ CompileFlags:
     - -Iatlas
     - -Iatlas/core/hpp
     - -Iatlas/mcts/include
+    - -Iatlas/parser/hpp
+    - -Iparser/hpp
+    - -Iparser/generated
+    - -I/usr/include/antlr4-runtime
     - -Igoogletest/googletest/include
     - -Igoogletest/googlemock/include
+    - -Igoogletest/googletest
+    - -Igoogletest/googlemock
+    - -ICLI11/include

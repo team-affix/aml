@@ -1,5 +1,4 @@
-// schema_visitor: parses AML source into aml_program / aml_expr via schema_visitor.
-// Covers constructor groups, function definitions, expression shapes, and literals.
+// aml_visitor: parses the three AML file kinds into value objects.
 
 #include <gtest/gtest.h>
 #include <optional>
@@ -11,56 +10,123 @@
 
 namespace {
 
-// ---------------------------------------------------------------------------
-// Parse helpers
-// ---------------------------------------------------------------------------
-
-static std::optional<aml_program> try_parse_program(const std::string& src) {
+static std::optional<declaration_file> try_parse_declarations(const std::string& src,
+                                                                aml_expr_pool& pool) {
     antlr4::ANTLRInputStream stream(src);
     AMLLexer lexer(&stream);
     antlr4::CommonTokenStream tokens(&lexer);
     AMLParser parser(&tokens);
     parser.removeErrorListeners();
     lexer.removeErrorListeners();
-    auto* tree = parser.program();
+    auto* tree = parser.declarationFile();
     if (parser.getNumberOfSyntaxErrors() != 0 || lexer.getNumberOfSyntaxErrors() != 0)
         return std::nullopt;
-    schema_visitor visitor;
-    return visitor.parse(tree);
+    aml_visitor<aml_expr_pool, aml_expr_pool, aml_expr_pool, aml_expr_pool,
+                aml_expr_pool, aml_expr_pool, aml_expr_pool, aml_expr_pool>
+        visitor{pool, pool, pool, pool, pool, pool, pool, pool};
+    return visitor.parse_declarations(tree);
 }
 
-static aml_program parse_program(const std::string& src) {
-    auto prog = try_parse_program(src);
-    if (!prog.has_value()) {
-        ADD_FAILURE() << "failed to parse program:\n" << src;
+static std::optional<definition_file> try_parse_definitions(const std::string& src,
+                                                            aml_expr_pool& pool) {
+    antlr4::ANTLRInputStream stream(src);
+    AMLLexer lexer(&stream);
+    antlr4::CommonTokenStream tokens(&lexer);
+    AMLParser parser(&tokens);
+    parser.removeErrorListeners();
+    lexer.removeErrorListeners();
+    auto* tree = parser.definitionFile();
+    if (parser.getNumberOfSyntaxErrors() != 0 || lexer.getNumberOfSyntaxErrors() != 0)
+        return std::nullopt;
+    aml_visitor<aml_expr_pool, aml_expr_pool, aml_expr_pool, aml_expr_pool,
+                aml_expr_pool, aml_expr_pool, aml_expr_pool, aml_expr_pool>
+        visitor{pool, pool, pool, pool, pool, pool, pool, pool};
+    return visitor.parse_definitions(tree);
+}
+
+static std::optional<training_file> try_parse_training(const std::string& src,
+                                                       aml_expr_pool& pool) {
+    antlr4::ANTLRInputStream stream(src);
+    AMLLexer lexer(&stream);
+    antlr4::CommonTokenStream tokens(&lexer);
+    AMLParser parser(&tokens);
+    parser.removeErrorListeners();
+    lexer.removeErrorListeners();
+    auto* tree = parser.trainingFile();
+    if (parser.getNumberOfSyntaxErrors() != 0 || lexer.getNumberOfSyntaxErrors() != 0)
+        return std::nullopt;
+    aml_visitor<aml_expr_pool, aml_expr_pool, aml_expr_pool, aml_expr_pool,
+                aml_expr_pool, aml_expr_pool, aml_expr_pool, aml_expr_pool>
+        visitor{pool, pool, pool, pool, pool, pool, pool, pool};
+    return visitor.parse_training(tree);
+}
+
+struct parsed_declarations {
+    aml_expr_pool    pool;
+    declaration_file file;
+};
+
+struct parsed_definitions {
+    aml_expr_pool   pool;
+    definition_file file;
+};
+
+struct parsed_training {
+    aml_expr_pool pool;
+    training_file file;
+};
+
+static parsed_declarations parse_declarations(const std::string& src) {
+    aml_expr_pool pool;
+    auto file = try_parse_declarations(src, pool);
+    if (!file.has_value()) {
+        ADD_FAILURE() << "failed to parse declaration file:\n" << src;
         return {};
     }
-    return std::move(*prog);
+    return {std::move(pool), std::move(*file)};
 }
 
-static aml_program parse_expr_prog(const std::string& expr_src) {
-    return parse_program("_aml_probe = " + expr_src);
+static parsed_definitions parse_definitions(const std::string& src) {
+    aml_expr_pool pool;
+    auto file = try_parse_definitions(src, pool);
+    if (!file.has_value()) {
+        ADD_FAILURE() << "failed to parse definition file:\n" << src;
+        return {};
+    }
+    return {std::move(pool), std::move(*file)};
 }
 
-static const aml_expr* expr_body(const aml_program& prog) {
-    if (prog.functions.size() != 1u) {
-        ADD_FAILURE() << "expected one function definition, got " << prog.functions.size();
+static parsed_training parse_training(const std::string& src) {
+    aml_expr_pool pool;
+    auto file = try_parse_training(src, pool);
+    if (!file.has_value()) {
+        ADD_FAILURE() << "failed to parse training file:\n" << src;
+        return {};
+    }
+    return {std::move(pool), std::move(*file)};
+}
+
+static const aml_expr* probe_body(const definition_file& defs) {
+    if (defs.functions.size() != 1u) {
+        ADD_FAILURE() << "expected one function definition, got " << defs.functions.size();
         return nullptr;
     }
-    if (prog.functions[0].name != "_aml_probe") {
-        ADD_FAILURE() << "unexpected probe name: " << prog.functions[0].name;
+    if (defs.functions[0].name != "_aml_probe") {
+        ADD_FAILURE() << "unexpected probe name: " << defs.functions[0].name;
         return nullptr;
     }
-    return prog.functions[0].body;
+    return defs.functions[0].body;
 }
 
 struct parsed_expr {
-    aml_program     prog;
-    const aml_expr* body() const { return expr_body(prog); }
+    aml_expr_pool   pool;
+    definition_file file;
+    const aml_expr* body() const { return probe_body(file); }
 };
 
 static parsed_expr parse_expr(const std::string& expr_src) {
-    return {parse_expr_prog(expr_src)};
+    parsed_definitions pd = parse_definitions("_aml_probe = " + expr_src);
+    return {std::move(pd.pool), std::move(pd.file)};
 }
 
 // ---------------------------------------------------------------------------
@@ -107,90 +173,93 @@ static bool is_var(const aml_expr* e, const std::string& name) {
 
 } // namespace
 
-struct SchemaVisitorTest : AmlParserFixture {};
+struct AmlVisitorTest : AmlParserFixture {};
 
 // ---------------------------------------------------------------------------
 // Program-level
 // ---------------------------------------------------------------------------
 
-TEST_F(SchemaVisitorTest, ParseEmptyProgram) {
-    aml_program prog = parse_program("");
-    EXPECT_TRUE(prog.groups.empty());
-    EXPECT_TRUE(prog.functions.empty());
+TEST_F(AmlVisitorTest, ParseEmptyDeclarationFile) {
+    parsed_declarations pd = parse_declarations("");
+    EXPECT_TRUE(pd.file.groups.empty());
 }
 
-TEST_F(SchemaVisitorTest, ParseMixedProgram) {
-    std::string src =
-        "true/0 | false/0\n"
-        "suc/1 | zero/0\n"
-        "id = x => x\n"
-        "not = b => b false true\n";
-    aml_program prog = parse_program(src);
-    ASSERT_EQ(prog.groups.size(), 2u);
-    ASSERT_EQ(prog.functions.size(), 2u);
-    EXPECT_EQ(prog.functions[0].name, "id");
-    EXPECT_EQ(prog.functions[1].name, "not");
+TEST_F(AmlVisitorTest, ParseEmptyDefinitionFile) {
+    parsed_definitions pd = parse_definitions("");
+    EXPECT_TRUE(pd.file.functions.empty());
+}
+
+TEST_F(AmlVisitorTest, ParseEmptyTrainingFile) {
+    parsed_training pt = parse_training("");
+    EXPECT_TRUE(pt.file.statements.empty());
+}
+
+TEST_F(AmlVisitorTest, ParseTrainingStatements) {
+    parsed_training pt = parse_training("not false.\nmultiply 3 4 12.");
+    ASSERT_EQ(pt.file.statements.size(), 2u);
+    EXPECT_NE(as_app(pt.file.statements[0]), nullptr);
+    EXPECT_NE(as_app(pt.file.statements[1]), nullptr);
 }
 
 // ---------------------------------------------------------------------------
 // Constructor groups
 // ---------------------------------------------------------------------------
 
-TEST_F(SchemaVisitorTest, VisitConstructorSingle) {
-    aml_program prog = parse_program("nil/0");
-    ASSERT_EQ(prog.groups.size(), 1u);
-    ASSERT_EQ(prog.groups[0].size(), 1u);
-    EXPECT_EQ(prog.groups[0][0].name, "nil");
-    EXPECT_EQ(prog.groups[0][0].arity, 0u);
+TEST_F(AmlVisitorTest, VisitConstructorSingle) {
+    parsed_declarations pd = parse_declarations("nil/0");
+    ASSERT_EQ(pd.file.groups.size(), 1u);
+    ASSERT_EQ(pd.file.groups[0].constructors.size(), 1u);
+    EXPECT_EQ(pd.file.groups[0].constructors[0].name, "nil");
+    EXPECT_EQ(pd.file.groups[0].constructors[0].arity, 0u);
 }
 
-TEST_F(SchemaVisitorTest, VisitConstructorGroupPair) {
-    aml_program prog = parse_program("true/0 | false/0");
-    ASSERT_EQ(prog.groups.size(), 1u);
-    ASSERT_EQ(prog.groups[0].size(), 2u);
-    EXPECT_EQ(prog.groups[0][0].name, "true");
-    EXPECT_EQ(prog.groups[0][0].arity, 0u);
-    EXPECT_EQ(prog.groups[0][1].name, "false");
-    EXPECT_EQ(prog.groups[0][1].arity, 0u);
+TEST_F(AmlVisitorTest, VisitConstructorGroupPair) {
+    parsed_declarations pd = parse_declarations("true/0 | false/0");
+    ASSERT_EQ(pd.file.groups.size(), 1u);
+    ASSERT_EQ(pd.file.groups[0].constructors.size(), 2u);
+    EXPECT_EQ(pd.file.groups[0].constructors[0].name, "true");
+    EXPECT_EQ(pd.file.groups[0].constructors[0].arity, 0u);
+    EXPECT_EQ(pd.file.groups[0].constructors[1].name, "false");
+    EXPECT_EQ(pd.file.groups[0].constructors[1].arity, 0u);
 }
 
-TEST_F(SchemaVisitorTest, VisitConstructorGroupThree) {
-    aml_program prog = parse_program("a/0 | b/1 | c/2");
-    ASSERT_EQ(prog.groups[0].size(), 3u);
-    EXPECT_EQ(prog.groups[0][0].name, "a");
-    EXPECT_EQ(prog.groups[0][1].arity, 1u);
-    EXPECT_EQ(prog.groups[0][2].name, "c");
-    EXPECT_EQ(prog.groups[0][2].arity, 2u);
+TEST_F(AmlVisitorTest, VisitConstructorGroupThree) {
+    parsed_declarations pd = parse_declarations("a/0 | b/1 | c/2");
+    ASSERT_EQ(pd.file.groups[0].constructors.size(), 3u);
+    EXPECT_EQ(pd.file.groups[0].constructors[0].name, "a");
+    EXPECT_EQ(pd.file.groups[0].constructors[1].arity, 1u);
+    EXPECT_EQ(pd.file.groups[0].constructors[2].name, "c");
+    EXPECT_EQ(pd.file.groups[0].constructors[2].arity, 2u);
 }
 
-TEST_F(SchemaVisitorTest, VisitConstructorGroupPreservesOrder) {
-    aml_program prog = parse_program("decided/1 | undecided/0");
-    EXPECT_EQ(prog.groups[0][0].name, "decided");
-    EXPECT_EQ(prog.groups[0][1].name, "undecided");
+TEST_F(AmlVisitorTest, VisitConstructorGroupPreservesOrder) {
+    parsed_declarations pd = parse_declarations("decided/1 | undecided/0");
+    EXPECT_EQ(pd.file.groups[0].constructors[0].name, "decided");
+    EXPECT_EQ(pd.file.groups[0].constructors[1].name, "undecided");
 }
 
-TEST_F(SchemaVisitorTest, VisitConstructorHighArity) {
-    aml_program prog = parse_program("cons/2 | nil/0");
-    EXPECT_EQ(prog.groups[0][0].arity, 2u);
-    EXPECT_EQ(prog.groups[0][1].arity, 0u);
+TEST_F(AmlVisitorTest, VisitConstructorHighArity) {
+    parsed_declarations pd = parse_declarations("cons/2 | nil/0");
+    EXPECT_EQ(pd.file.groups[0].constructors[0].arity, 2u);
+    EXPECT_EQ(pd.file.groups[0].constructors[1].arity, 0u);
 }
 
-TEST_F(SchemaVisitorTest, VisitConstructorUnderscoreName) {
-    aml_program prog = parse_program("_internal/0");
-    EXPECT_EQ(prog.groups[0][0].name, "_internal");
+TEST_F(AmlVisitorTest, VisitConstructorUnderscoreName) {
+    parsed_declarations pd = parse_declarations("_internal/0");
+    EXPECT_EQ(pd.file.groups[0].constructors[0].name, "_internal");
 }
 
 // ---------------------------------------------------------------------------
 // Function definitions
 // ---------------------------------------------------------------------------
 
-TEST_F(SchemaVisitorTest, VisitFunctionDefName) {
-    aml_program prog = parse_program("foo = x => x");
-    ASSERT_EQ(prog.functions.size(), 1u);
-    EXPECT_EQ(prog.functions[0].name, "foo");
+TEST_F(AmlVisitorTest, VisitFunctionDefName) {
+    parsed_definitions pd = parse_definitions("foo = x => x");
+    ASSERT_EQ(pd.file.functions.size(), 1u);
+    EXPECT_EQ(pd.file.functions[0].name, "foo");
 }
 
-TEST_F(SchemaVisitorTest, VisitFunctionDefIdentityBody) {
+TEST_F(AmlVisitorTest, VisitFunctionDefIdentityBody) {
     auto pe = parse_expr("x => x"); const aml_expr* body = pe.body();
     const auto* abs = as_abs(body);
     ASSERT_NE(abs, nullptr);
@@ -198,7 +267,7 @@ TEST_F(SchemaVisitorTest, VisitFunctionDefIdentityBody) {
     EXPECT_TRUE(is_var(abs->body, "x"));
 }
 
-TEST_F(SchemaVisitorTest, VisitFunctionDefCurried) {
+TEST_F(AmlVisitorTest, VisitFunctionDefCurried) {
     auto pe = parse_expr("x => y => x"); const aml_expr* body = pe.body();
     const auto* outer = as_abs(body);
     ASSERT_NE(outer, nullptr);
@@ -209,7 +278,7 @@ TEST_F(SchemaVisitorTest, VisitFunctionDefCurried) {
     EXPECT_TRUE(is_var(inner->body, "x"));
 }
 
-TEST_F(SchemaVisitorTest, VisitFunctionDefSelfReferenceAllowed) {
+TEST_F(AmlVisitorTest, VisitFunctionDefSelfReferenceAllowed) {
     auto pe = parse_expr("n => pred n"); const aml_expr* body = pe.body();
     const auto* abs = as_abs(body);
     ASSERT_NE(abs, nullptr);
@@ -223,11 +292,11 @@ TEST_F(SchemaVisitorTest, VisitFunctionDefSelfReferenceAllowed) {
 // Variables
 // ---------------------------------------------------------------------------
 
-TEST_F(SchemaVisitorTest, VisitVarSimple) {
+TEST_F(AmlVisitorTest, VisitVarSimple) {
     auto pe = parse_expr("foo"); EXPECT_TRUE(is_var(pe.body(), "foo"));
 }
 
-TEST_F(SchemaVisitorTest, VisitVarWithUnderscore) {
+TEST_F(AmlVisitorTest, VisitVarWithUnderscore) {
     auto pe = parse_expr("_x"); EXPECT_TRUE(is_var(pe.body(), "_x"));
 }
 
@@ -235,14 +304,14 @@ TEST_F(SchemaVisitorTest, VisitVarWithUnderscore) {
 // Abstractions
 // ---------------------------------------------------------------------------
 
-TEST_F(SchemaVisitorTest, VisitAbsSingle) {
+TEST_F(AmlVisitorTest, VisitAbsSingle) {
     auto pe = parse_expr("f => f"); const auto* abs = as_abs(pe.body());
     ASSERT_NE(abs, nullptr);
     EXPECT_EQ(abs->param, "f");
     EXPECT_TRUE(is_var(abs->body, "f"));
 }
 
-TEST_F(SchemaVisitorTest, VisitAbsTripleCurried) {
+TEST_F(AmlVisitorTest, VisitAbsTripleCurried) {
     auto pe = parse_expr("a => b => c => a"); const aml_expr* body = pe.body();
     const auto* a = as_abs(body);
     const auto* b = as_abs(a->body);
@@ -254,7 +323,7 @@ TEST_F(SchemaVisitorTest, VisitAbsTripleCurried) {
     EXPECT_TRUE(is_var(c->body, "a"));
 }
 
-TEST_F(SchemaVisitorTest, VisitIfThenElseShape) {
+TEST_F(AmlVisitorTest, VisitIfThenElseShape) {
     auto pe = parse_expr("cond => a => b => cond a b"); const aml_expr* body = pe.body();
     const auto* cond = as_abs(body);
     const auto* a = as_abs(cond->body);
@@ -272,14 +341,14 @@ TEST_F(SchemaVisitorTest, VisitIfThenElseShape) {
 // Applications (left-associativity)
 // ---------------------------------------------------------------------------
 
-TEST_F(SchemaVisitorTest, VisitAppUnary) {
+TEST_F(AmlVisitorTest, VisitAppUnary) {
     auto pe = parse_expr("f x"); const auto* app = as_app(pe.body());
     ASSERT_NE(app, nullptr);
     EXPECT_TRUE(is_var(app->func, "f"));
     EXPECT_TRUE(is_var(app->arg, "x"));
 }
 
-TEST_F(SchemaVisitorTest, VisitAppBinaryLeftAssoc) {
+TEST_F(AmlVisitorTest, VisitAppBinaryLeftAssoc) {
     auto pe = parse_expr("f x y"); const aml_expr* e = pe.body();
     const auto* outer = as_app(e);
     ASSERT_NE(outer, nullptr);
@@ -290,7 +359,7 @@ TEST_F(SchemaVisitorTest, VisitAppBinaryLeftAssoc) {
     EXPECT_TRUE(is_var(inner->arg, "x"));
 }
 
-TEST_F(SchemaVisitorTest, VisitAppTernaryLeftAssoc) {
+TEST_F(AmlVisitorTest, VisitAppTernaryLeftAssoc) {
     auto pe = parse_expr("f x y z"); const aml_expr* e = pe.body();
     const auto* outer = as_app(e);
     const auto* middle = as_app(outer->func);
@@ -302,7 +371,7 @@ TEST_F(SchemaVisitorTest, VisitAppTernaryLeftAssoc) {
     EXPECT_TRUE(is_var(outer->arg, "z"));
 }
 
-TEST_F(SchemaVisitorTest, VisitAppGroupedFunction) {
+TEST_F(AmlVisitorTest, VisitAppGroupedFunction) {
     auto pe = parse_expr("(f x) y");
     const aml_expr* e = pe.body();
     const auto* outer = as_app(e);
@@ -314,7 +383,7 @@ TEST_F(SchemaVisitorTest, VisitAppGroupedFunction) {
     EXPECT_TRUE(is_var(inner->arg, "x"));
 }
 
-TEST_F(SchemaVisitorTest, VisitAppGroupedAbstractionFunction) {
+TEST_F(AmlVisitorTest, VisitAppGroupedAbstractionFunction) {
     auto pe = parse_expr("(x => x) y");
     const aml_expr* e = pe.body();
     const auto* app = as_app(e);
@@ -325,7 +394,7 @@ TEST_F(SchemaVisitorTest, VisitAppGroupedAbstractionFunction) {
     EXPECT_TRUE(is_var(app->arg, "y"));
 }
 
-TEST_F(SchemaVisitorTest, VisitAppAbstractionArg) {
+TEST_F(AmlVisitorTest, VisitAppAbstractionArg) {
     auto pe = parse_expr("f x => y");
     const aml_expr* e = pe.body();
     const auto* app = as_app(e);
@@ -337,7 +406,7 @@ TEST_F(SchemaVisitorTest, VisitAppAbstractionArg) {
     EXPECT_TRUE(is_var(arg_abs->body, "y"));
 }
 
-TEST_F(SchemaVisitorTest, VisitAppGroupedArg) {
+TEST_F(AmlVisitorTest, VisitAppGroupedArg) {
     auto pe = parse_expr("f (g x)");
     const aml_expr* e = pe.body();
     const auto* app = as_app(e);
@@ -349,7 +418,7 @@ TEST_F(SchemaVisitorTest, VisitAppGroupedArg) {
     EXPECT_TRUE(is_var(inner->arg, "x"));
 }
 
-TEST_F(SchemaVisitorTest, VisitAppDeeplyNestedArg) {
+TEST_F(AmlVisitorTest, VisitAppDeeplyNestedArg) {
     auto pe = parse_expr("f (g (h x))");
     const aml_expr* e = pe.body();
     const auto* app = as_app(e);
@@ -360,7 +429,7 @@ TEST_F(SchemaVisitorTest, VisitAppDeeplyNestedArg) {
     EXPECT_TRUE(is_var(h_app->arg, "x"));
 }
 
-TEST_F(SchemaVisitorTest, VisitAppTwoGroupedFunctions) {
+TEST_F(AmlVisitorTest, VisitAppTwoGroupedFunctions) {
     auto pe = parse_expr("(f x) (g y)");
     const aml_expr* e = pe.body();
     const auto* outer = as_app(e);
@@ -372,7 +441,7 @@ TEST_F(SchemaVisitorTest, VisitAppTwoGroupedFunctions) {
     EXPECT_TRUE(is_var(g_app->func, "g"));
 }
 
-TEST_F(SchemaVisitorTest, VisitGroupedExprPassthrough) {
+TEST_F(AmlVisitorTest, VisitGroupedExprPassthrough) {
     auto pe = parse_expr("(x)");
     EXPECT_TRUE(is_var(pe.body(), "x"));
 }
@@ -381,7 +450,7 @@ TEST_F(SchemaVisitorTest, VisitGroupedExprPassthrough) {
 // Y combinator shape
 // ---------------------------------------------------------------------------
 
-TEST_F(SchemaVisitorTest, VisitYCombinatorShape) {
+TEST_F(AmlVisitorTest, VisitYCombinatorShape) {
     auto pe = parse_expr("f => (x => f (x x)) (x => f (x x))");
     const aml_expr* body = pe.body();
     const auto* outer_abs = as_abs(body);
@@ -401,35 +470,35 @@ TEST_F(SchemaVisitorTest, VisitYCombinatorShape) {
 // Nat literals
 // ---------------------------------------------------------------------------
 
-TEST_F(SchemaVisitorTest, VisitNatZeroDefaultScott) {
+TEST_F(AmlVisitorTest, VisitNatZeroDefaultScott) {
     auto pe = parse_expr("0N"); const auto* nat = as_nat(pe.body());
     ASSERT_NE(nat, nullptr);
     EXPECT_EQ(nat->value, 0u);
     EXPECT_FALSE(nat->church);
 }
 
-TEST_F(SchemaVisitorTest, VisitNatValue) {
+TEST_F(AmlVisitorTest, VisitNatValue) {
     auto pe = parse_expr("42N"); const auto* nat = as_nat(pe.body());
     ASSERT_NE(nat, nullptr);
     EXPECT_EQ(nat->value, 42u);
     EXPECT_FALSE(nat->church);
 }
 
-TEST_F(SchemaVisitorTest, VisitNatChurch) {
+TEST_F(AmlVisitorTest, VisitNatChurch) {
     auto pe = parse_expr("<church> 42N"); const auto* nat = as_nat(pe.body());
     ASSERT_NE(nat, nullptr);
     EXPECT_EQ(nat->value, 42u);
     EXPECT_TRUE(nat->church);
 }
 
-TEST_F(SchemaVisitorTest, VisitNatScottExplicit) {
+TEST_F(AmlVisitorTest, VisitNatScottExplicit) {
     auto pe = parse_expr("<scott> 7N"); const auto* nat = as_nat(pe.body());
     ASSERT_NE(nat, nullptr);
     EXPECT_EQ(nat->value, 7u);
     EXPECT_FALSE(nat->church);
 }
 
-TEST_F(SchemaVisitorTest, VisitNatLarge) {
+TEST_F(AmlVisitorTest, VisitNatLarge) {
     auto pe = parse_expr("1000N"); const auto* nat = as_nat(pe.body());
     ASSERT_NE(nat, nullptr);
     EXPECT_EQ(nat->value, 1000u);
@@ -439,25 +508,25 @@ TEST_F(SchemaVisitorTest, VisitNatLarge) {
 // Integer literals
 // ---------------------------------------------------------------------------
 
-TEST_F(SchemaVisitorTest, VisitIntZero) {
+TEST_F(AmlVisitorTest, VisitIntZero) {
     auto pe = parse_expr("0"); const auto* integer = as_integer(pe.body());
     ASSERT_NE(integer, nullptr);
     EXPECT_EQ(integer->value, 0);
 }
 
-TEST_F(SchemaVisitorTest, VisitIntPositive) {
+TEST_F(AmlVisitorTest, VisitIntPositive) {
     auto pe = parse_expr("42"); const auto* integer = as_integer(pe.body());
     ASSERT_NE(integer, nullptr);
     EXPECT_EQ(integer->value, 42);
 }
 
-TEST_F(SchemaVisitorTest, VisitIntNegative) {
+TEST_F(AmlVisitorTest, VisitIntNegative) {
     auto pe = parse_expr("-12"); const auto* integer = as_integer(pe.body());
     ASSERT_NE(integer, nullptr);
     EXPECT_EQ(integer->value, -12);
 }
 
-TEST_F(SchemaVisitorTest, VisitIntNegativeLarge) {
+TEST_F(AmlVisitorTest, VisitIntNegativeLarge) {
     auto pe = parse_expr("-100"); const auto* integer = as_integer(pe.body());
     ASSERT_NE(integer, nullptr);
     EXPECT_EQ(integer->value, -100);
@@ -467,31 +536,31 @@ TEST_F(SchemaVisitorTest, VisitIntNegativeLarge) {
 // Character literals
 // ---------------------------------------------------------------------------
 
-TEST_F(SchemaVisitorTest, VisitCharSimple) {
+TEST_F(AmlVisitorTest, VisitCharSimple) {
     auto pe = parse_expr("'a'"); const auto* ch = as_character(pe.body());
     ASSERT_NE(ch, nullptr);
     EXPECT_EQ(ch->codepoint, static_cast<uint32_t>('a'));
 }
 
-TEST_F(SchemaVisitorTest, VisitCharNewline) {
+TEST_F(AmlVisitorTest, VisitCharNewline) {
     auto pe = parse_expr("'\\n'"); const auto* ch = as_character(pe.body());
     ASSERT_NE(ch, nullptr);
     EXPECT_EQ(ch->codepoint, static_cast<uint32_t>('\n'));
 }
 
-TEST_F(SchemaVisitorTest, VisitCharTab) {
+TEST_F(AmlVisitorTest, VisitCharTab) {
     auto pe = parse_expr("'\\t'"); const auto* ch = as_character(pe.body());
     ASSERT_NE(ch, nullptr);
     EXPECT_EQ(ch->codepoint, static_cast<uint32_t>('\t'));
 }
 
-TEST_F(SchemaVisitorTest, VisitCharEscapedQuote) {
+TEST_F(AmlVisitorTest, VisitCharEscapedQuote) {
     auto pe = parse_expr("'\\''"); const auto* ch = as_character(pe.body());
     ASSERT_NE(ch, nullptr);
     EXPECT_EQ(ch->codepoint, static_cast<uint32_t>('\''));
 }
 
-TEST_F(SchemaVisitorTest, VisitCharBackslash) {
+TEST_F(AmlVisitorTest, VisitCharBackslash) {
     auto pe = parse_expr("'\\\\'"); const auto* ch = as_character(pe.body());
     ASSERT_NE(ch, nullptr);
     EXPECT_EQ(ch->codepoint, static_cast<uint32_t>('\\'));
@@ -501,25 +570,25 @@ TEST_F(SchemaVisitorTest, VisitCharBackslash) {
 // String literals
 // ---------------------------------------------------------------------------
 
-TEST_F(SchemaVisitorTest, VisitStrEmpty) {
+TEST_F(AmlVisitorTest, VisitStrEmpty) {
     auto pe = parse_expr("\"\""); const auto* str = as_string(pe.body());
     ASSERT_NE(str, nullptr);
     EXPECT_TRUE(str->value.empty());
 }
 
-TEST_F(SchemaVisitorTest, VisitStrSimple) {
+TEST_F(AmlVisitorTest, VisitStrSimple) {
     auto pe = parse_expr("\"hello\""); const auto* str = as_string(pe.body());
     ASSERT_NE(str, nullptr);
     EXPECT_EQ(str->value, "hello");
 }
 
-TEST_F(SchemaVisitorTest, VisitStrWithSpace) {
+TEST_F(AmlVisitorTest, VisitStrWithSpace) {
     auto pe = parse_expr("\"hello world\""); const auto* str = as_string(pe.body());
     ASSERT_NE(str, nullptr);
     EXPECT_EQ(str->value, "hello world");
 }
 
-TEST_F(SchemaVisitorTest, VisitStrEscapedQuote) {
+TEST_F(AmlVisitorTest, VisitStrEscapedQuote) {
     auto pe = parse_expr("\"it\\\"s fine\""); const auto* str = as_string(pe.body());
     ASSERT_NE(str, nullptr);
     EXPECT_EQ(str->value, "it\"s fine");
@@ -529,21 +598,21 @@ TEST_F(SchemaVisitorTest, VisitStrEscapedQuote) {
 // List literals
 // ---------------------------------------------------------------------------
 
-TEST_F(SchemaVisitorTest, VisitListEmptyDefaultScott) {
+TEST_F(AmlVisitorTest, VisitListEmptyDefaultScott) {
     auto pe = parse_expr("[]"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     EXPECT_TRUE(lst->elems.empty());
     EXPECT_FALSE(lst->church);
 }
 
-TEST_F(SchemaVisitorTest, VisitListOneElement) {
+TEST_F(AmlVisitorTest, VisitListOneElement) {
     auto pe = parse_expr("[a]"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     ASSERT_EQ(lst->elems.size(), 1u);
     EXPECT_TRUE(is_var(lst->elems[0], "a"));
 }
 
-TEST_F(SchemaVisitorTest, VisitListThreeElements) {
+TEST_F(AmlVisitorTest, VisitListThreeElements) {
     auto pe = parse_expr("[a, b, c]"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     ASSERT_EQ(lst->elems.size(), 3u);
@@ -552,7 +621,7 @@ TEST_F(SchemaVisitorTest, VisitListThreeElements) {
     EXPECT_TRUE(is_var(lst->elems[2], "c"));
 }
 
-TEST_F(SchemaVisitorTest, VisitListNested) {
+TEST_F(AmlVisitorTest, VisitListNested) {
     auto pe = parse_expr("[[a, b], c]"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     ASSERT_EQ(lst->elems.size(), 2u);
@@ -562,7 +631,7 @@ TEST_F(SchemaVisitorTest, VisitListNested) {
     EXPECT_TRUE(is_var(lst->elems[1], "c"));
 }
 
-TEST_F(SchemaVisitorTest, VisitListWithApplications) {
+TEST_F(AmlVisitorTest, VisitListWithApplications) {
     auto pe = parse_expr("[f x, g y]"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     ASSERT_EQ(lst->elems.size(), 2u);
@@ -570,20 +639,20 @@ TEST_F(SchemaVisitorTest, VisitListWithApplications) {
     EXPECT_NE(as_app(lst->elems[1]), nullptr);
 }
 
-TEST_F(SchemaVisitorTest, VisitListChurch) {
+TEST_F(AmlVisitorTest, VisitListChurch) {
     auto pe = parse_expr("<church> [a, b, c]"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     EXPECT_TRUE(lst->church);
     EXPECT_EQ(lst->elems.size(), 3u);
 }
 
-TEST_F(SchemaVisitorTest, VisitListScottExplicit) {
+TEST_F(AmlVisitorTest, VisitListScottExplicit) {
     auto pe = parse_expr("<scott> []"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     EXPECT_FALSE(lst->church);
 }
 
-TEST_F(SchemaVisitorTest, VisitListMixedElements) {
+TEST_F(AmlVisitorTest, VisitListMixedElements) {
     auto pe = parse_expr("[x, 42N, \"hi\", 'a']"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     ASSERT_EQ(lst->elems.size(), 4u);
@@ -597,23 +666,26 @@ TEST_F(SchemaVisitorTest, VisitListMixedElements) {
 // Realistic programs
 // ---------------------------------------------------------------------------
 
-TEST_F(SchemaVisitorTest, VisitStandardLibrarySnippet) {
-    std::string src =
+TEST_F(AmlVisitorTest, VisitStandardLibraryDeclarations) {
+    parsed_declarations pd = parse_declarations(
         "true/0 | false/0\n"
-        "suc/1 | zero/0\n"
-        "Y = f => (x => f (x x)) (x => f (x x))\n"
-        "not = b => b false true\n"
-        "id = x => x\n";
-    aml_program prog = parse_program(src);
-    EXPECT_EQ(prog.groups.size(), 2u);
-    EXPECT_EQ(prog.functions.size(), 3u);
-    EXPECT_EQ(prog.functions[0].name, "Y");
-    EXPECT_EQ(prog.functions[1].name, "not");
-    EXPECT_EQ(prog.functions[2].name, "id");
-    EXPECT_NE(as_abs(prog.functions[2].body), nullptr);
+        "suc/1 | zero/0\n");
+    EXPECT_EQ(pd.file.groups.size(), 2u);
 }
 
-TEST_F(SchemaVisitorTest, VisitApplicationInFunctionBody) {
+TEST_F(AmlVisitorTest, VisitStandardLibraryDefinitions) {
+    parsed_definitions pd = parse_definitions(
+        "Y = f => (x => f (x x)) (x => f (x x))\n"
+        "not = b => b false true\n"
+        "id = x => x\n");
+    ASSERT_EQ(pd.file.functions.size(), 3u);
+    EXPECT_EQ(pd.file.functions[0].name, "Y");
+    EXPECT_EQ(pd.file.functions[1].name, "not");
+    EXPECT_EQ(pd.file.functions[2].name, "id");
+    EXPECT_NE(as_abs(pd.file.functions[2].body), nullptr);
+}
+
+TEST_F(AmlVisitorTest, VisitApplicationInFunctionBody) {
     auto pe = parse_expr("h => g h"); const aml_expr* body = pe.body();
     const auto* abs = as_abs(body);
     const auto* app = as_app(abs->body);
@@ -622,34 +694,39 @@ TEST_F(SchemaVisitorTest, VisitApplicationInFunctionBody) {
     EXPECT_TRUE(is_var(app->arg, "h"));
 }
 
-TEST_F(SchemaVisitorTest, VisitMultipleFunctionDefsInOrder) {
-    aml_program prog = parse_program("f = x => x\ng = y => y\nh = z => z");
-    ASSERT_EQ(prog.functions.size(), 3u);
-    EXPECT_EQ(prog.functions[0].name, "f");
-    EXPECT_EQ(prog.functions[1].name, "g");
-    EXPECT_EQ(prog.functions[2].name, "h");
+TEST_F(AmlVisitorTest, VisitMultipleFunctionDefsInOrder) {
+    parsed_definitions pd = parse_definitions("f = x => x\ng = y => y\nh = z => z");
+    ASSERT_EQ(pd.file.functions.size(), 3u);
+    EXPECT_EQ(pd.file.functions[0].name, "f");
+    EXPECT_EQ(pd.file.functions[1].name, "g");
+    EXPECT_EQ(pd.file.functions[2].name, "h");
 }
 
 // ---------------------------------------------------------------------------
 // Parse failures (grammar/lexer rejects — visitor never reached)
 // ---------------------------------------------------------------------------
 
-TEST_F(SchemaVisitorTest, RejectNegZero) {
-    EXPECT_FALSE(try_parse_program("_aml_probe = -0").has_value());
+TEST_F(AmlVisitorTest, RejectNegZero) {
+    aml_expr_pool pool;
+    EXPECT_FALSE(try_parse_definitions("_aml_probe = -0", pool).has_value());
 }
 
-TEST_F(SchemaVisitorTest, RejectEncodingOnInteger) {
-    EXPECT_FALSE(try_parse_program("_aml_probe = <church> 42").has_value());
+TEST_F(AmlVisitorTest, RejectEncodingOnInteger) {
+    aml_expr_pool pool;
+    EXPECT_FALSE(try_parse_definitions("_aml_probe = <church> 42", pool).has_value());
 }
 
-TEST_F(SchemaVisitorTest, RejectEncodingOnChar) {
-    EXPECT_FALSE(try_parse_program("_aml_probe = <church> 'a'").has_value());
+TEST_F(AmlVisitorTest, RejectEncodingOnChar) {
+    aml_expr_pool pool;
+    EXPECT_FALSE(try_parse_definitions("_aml_probe = <church> 'a'", pool).has_value());
 }
 
-TEST_F(SchemaVisitorTest, RejectEncodingOnString) {
-    EXPECT_FALSE(try_parse_program("_aml_probe = <church> \"hi\"").has_value());
+TEST_F(AmlVisitorTest, RejectEncodingOnString) {
+    aml_expr_pool pool;
+    EXPECT_FALSE(try_parse_definitions("_aml_probe = <church> \"hi\"", pool).has_value());
 }
 
-TEST_F(SchemaVisitorTest, RejectEncodingOnName) {
-    EXPECT_FALSE(try_parse_program("_aml_probe = <church> foo").has_value());
+TEST_F(AmlVisitorTest, RejectEncodingOnName) {
+    aml_expr_pool pool;
+    EXPECT_FALSE(try_parse_definitions("_aml_probe = <church> foo", pool).has_value());
 }

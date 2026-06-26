@@ -24,17 +24,17 @@ const aml_expr* build_deep_app(aml_expr_pool& pool, uint32_t depth) {
     return pool.make_abs("f", pool.make_abs("x", body));
 }
 
-aml_program single_fn(const std::string& name, const aml_expr* body) {
-    aml_program prog;
-    prog.functions.push_back({name, body});
-    return prog;
+definition_file single_fn(const std::string& name, const aml_expr* body) {
+    definition_file file;
+    file.functions.push_back({name, body});
+    return file;
 }
 
 } // namespace
 
 TEST_F(TranspilerStressTest, ManyNatLiterals) {
     lc_expr_pool lc;
-    transpiler tx{lc};
+    transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool> tx{lc, lc, lc};
     std::map<std::string, const lc_expr*> globals;
     tx.register_builtins(globals);
 
@@ -46,7 +46,7 @@ TEST_F(TranspilerStressTest, ManyNatLiterals) {
 
 TEST_F(TranspilerStressTest, ManyChurchNats) {
     lc_expr_pool lc;
-    transpiler tx{lc};
+    transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool> tx{lc, lc, lc};
     std::map<std::string, const lc_expr*> globals;
     tx.register_builtins(globals);
 
@@ -58,13 +58,13 @@ TEST_F(TranspilerStressTest, ManyChurchNats) {
 
 TEST_F(TranspilerStressTest, DeepAbstractionChain) {
     const aml_expr* e = build_deep_abs(aml_pool, 200);
-    transpiled_program out = transpiler::transpile_program(single_fn("deep", e));
+    transpiled_program out = transpile_program({}, single_fn("deep", e));
     EXPECT_NE(out.functions[0].body, nullptr);
 }
 
 TEST_F(TranspilerStressTest, DeepApplicationChain) {
     const aml_expr* e = build_deep_app(aml_pool, 100);
-    transpiled_program out = transpiler::transpile_program(single_fn("deep_app", e));
+    transpiled_program out = transpile_program({}, single_fn("deep_app", e));
     EXPECT_NE(out.functions[0].body, nullptr);
 }
 
@@ -74,17 +74,17 @@ TEST_F(TranspilerStressTest, LargeScottList) {
     for (int i = 0; i < 256; ++i)
         elems.push_back(aml_pool.make_character(static_cast<char>('a' + (i % 26))));
     const aml_expr* e = aml_pool.make_list(elems, false);
-    transpiled_program out = transpiler::transpile_program(single_fn("big_list", e));
+    transpiled_program out = transpile_program({}, single_fn("big_list", e));
     EXPECT_NE(out.functions[0].body, nullptr);
 }
 
 TEST_F(TranspilerStressTest, ManyFunctionDefinitions) {
-    aml_program prog;
+    definition_file defs;
     for (int i = 0; i < 100; ++i)
-        prog.functions.push_back({"f" + std::to_string(i),
+        defs.functions.push_back({"f" + std::to_string(i),
                                   aml_pool.make_abs("x", aml_pool.make_var("x"))});
 
-    transpiled_program out = transpiler::transpile_program(prog);
+    transpiled_program out = transpile_program({}, defs);
     EXPECT_EQ(out.functions.size(), 100u);
     const lc_expr* id = out.pool.make_lam(out.pool.make_var(0));
     for (const auto& fn : out.functions)
@@ -92,14 +92,14 @@ TEST_F(TranspilerStressTest, ManyFunctionDefinitions) {
 }
 
 TEST_F(TranspilerStressTest, LargeProgramPoolGrowth) {
-    aml_program prog;
+    definition_file defs;
     for (int i = 0; i < 50; ++i) {
-        prog.functions.push_back(
+        defs.functions.push_back(
             {"g" + std::to_string(i),
              aml_pool.make_app(aml_pool.make_var("true"), aml_pool.make_var("false"))});
     }
 
-    transpiled_program out = transpiler::transpile_program(prog);
+    transpiled_program out = transpile_program({}, defs);
     EXPECT_GT(out.pool.size(), 10u);
     EXPECT_EQ(out.globals.count("true"), 1u);
 }
