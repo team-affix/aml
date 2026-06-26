@@ -39,11 +39,12 @@ GTEST_CPPFLAGS = \
 CLI11_INC = CLI11/include
 
 # ==============================================================================
-# ANTLR4  (system install — required by atlas parser)
+# ANTLR4  (system install — required by atlas parser and aml parser)
 # ==============================================================================
 
 ANTLR4_INC = /usr/include/antlr4-runtime
 ANTLR4_LIB = /usr/lib/x86_64-linux-gnu
+ANTLR4_JAR = atlas/tools/antlr4-4.10.1-complete.jar
 
 # ==============================================================================
 # Atlas library dependencies  (built from the atlas/ submodule)
@@ -72,6 +73,13 @@ AML_CLI_DEBUG_FAST_LIB = build/libaml_cli_debug_fast.a
 
 AML_CORE_DEBUG_BIN      = build/core_debug
 AML_CORE_DEBUG_FAST_BIN = build/core_debug_fast
+
+AML_PARSER_LIB            = build/libaml_parser.a
+AML_PARSER_DEBUG_LIB      = build/libaml_parser_debug.a
+AML_PARSER_DEBUG_FAST_LIB = build/libaml_parser_debug_fast.a
+
+AML_PARSER_DEBUG_BIN      = build/parser_debug
+AML_PARSER_DEBUG_FAST_BIN = build/parser_debug_fast
 
 AML_CLI_DEBUG_BIN      = build/cli_debug
 AML_CLI_DEBUG_FAST_BIN = build/cli_debug_fast
@@ -106,6 +114,40 @@ AML_CORE_DEBUG_FAST_GTEST_OBJ = \
 
 AML_CORE_DEBUG_TEST_CXXFLAGS      = $(DEBUG_CXXFLAGS) $(GTEST_CPPFLAGS) -Icore/test -Iatlas/parser/hpp -I$(ANTLR4_INC)
 AML_CORE_DEBUG_FAST_TEST_CXXFLAGS = $(DEBUG_FAST_CXXFLAGS) $(GTEST_CPPFLAGS) -Icore/test -Iatlas/parser/hpp -I$(ANTLR4_INC)
+
+# --- parser ---
+
+# Hardcoded because parser/generated/ may not exist at make parse time.
+AML_PARSER_GENERATED_STEMS = AMLLexer AMLParser AMLBaseVisitor AMLVisitor
+
+AML_PARSER_SRC = $(wildcard parser/cpp/*.cpp)
+
+AML_PARSER_OBJ = \
+    $(patsubst %,                build/obj/parser/%.o,            $(AML_PARSER_GENERATED_STEMS)) \
+    $(patsubst parser/cpp/%.cpp, build/obj/parser/%.o,            $(AML_PARSER_SRC))
+AML_PARSER_DEBUG_OBJ = \
+    $(patsubst %,                build/obj/parser_debug/%.o,      $(AML_PARSER_GENERATED_STEMS)) \
+    $(patsubst parser/cpp/%.cpp, build/obj/parser_debug/%.o,      $(AML_PARSER_SRC))
+AML_PARSER_DEBUG_FAST_OBJ = \
+    $(patsubst %,                build/obj/parser_debug_fast/%.o, $(AML_PARSER_GENERATED_STEMS)) \
+    $(patsubst parser/cpp/%.cpp, build/obj/parser_debug_fast/%.o, $(AML_PARSER_SRC))
+
+PARSER_TEST_SRC = $(shell find parser/test -name '*.cpp' 2>/dev/null | sort)
+
+AML_PARSER_DEBUG_TEST_OBJ = \
+    $(patsubst parser/test/%.cpp, build/obj/parser_debug_test/%.o, $(PARSER_TEST_SRC))
+AML_PARSER_DEBUG_FAST_TEST_OBJ = \
+    $(patsubst parser/test/%.cpp, build/obj/parser_debug_fast_test/%.o, $(PARSER_TEST_SRC))
+
+AML_PARSER_DEBUG_GTEST_OBJ = \
+    build/obj/parser_debug_test/gtest-all.o \
+    build/obj/parser_debug_test/gmock-all.o
+AML_PARSER_DEBUG_FAST_GTEST_OBJ = \
+    build/obj/parser_debug_fast_test/gtest-all.o \
+    build/obj/parser_debug_fast_test/gmock-all.o
+
+AML_PARSER_DEBUG_TEST_CXXFLAGS      = $(DEBUG_CXXFLAGS) $(GTEST_CPPFLAGS) -Iparser/test -I$(ANTLR4_INC)
+AML_PARSER_DEBUG_FAST_TEST_CXXFLAGS = $(DEBUG_FAST_CXXFLAGS) $(GTEST_CPPFLAGS) -Iparser/test -I$(ANTLR4_INC)
 
 # --- cli ---
 
@@ -142,6 +184,14 @@ AML_CORE_DEBUG_FAST_TEST_DEP = $(AML_CORE_DEBUG_FAST_TEST_OBJ:.o=.d)
 AML_CORE_DEBUG_GTEST_DEP      = $(AML_CORE_DEBUG_GTEST_OBJ:.o=.d)
 AML_CORE_DEBUG_FAST_GTEST_DEP = $(AML_CORE_DEBUG_FAST_GTEST_OBJ:.o=.d)
 
+AML_PARSER_DEP            = $(AML_PARSER_OBJ:.o=.d)
+AML_PARSER_DEBUG_DEP      = $(AML_PARSER_DEBUG_OBJ:.o=.d)
+AML_PARSER_DEBUG_FAST_DEP = $(AML_PARSER_DEBUG_FAST_OBJ:.o=.d)
+AML_PARSER_DEBUG_TEST_DEP      = $(AML_PARSER_DEBUG_TEST_OBJ:.o=.d)
+AML_PARSER_DEBUG_FAST_TEST_DEP = $(AML_PARSER_DEBUG_FAST_TEST_OBJ:.o=.d)
+AML_PARSER_DEBUG_GTEST_DEP      = $(AML_PARSER_DEBUG_GTEST_OBJ:.o=.d)
+AML_PARSER_DEBUG_FAST_GTEST_DEP = $(AML_PARSER_DEBUG_FAST_GTEST_OBJ:.o=.d)
+
 AML_CLI_DEP            = $(AML_CLI_OBJ:.o=.d)
 AML_CLI_DEBUG_DEP      = $(AML_CLI_DEBUG_OBJ:.o=.d)
 AML_CLI_DEBUG_FAST_DEP = $(AML_CLI_DEBUG_FAST_OBJ:.o=.d)
@@ -176,16 +226,33 @@ $(ATLAS_PARSER_DEBUG_FAST_LIB): $(ATLAS_CORE_DEBUG_FAST_LIB)
 # ==============================================================================
 
 .PHONY: all core core_debug core_debug_fast \
+        parser parser_debug parser_debug_fast \
         cli cli_debug cli_debug_fast \
         aml clean
 
-all: core core_debug cli cli_debug aml
+all: core core_debug parser_debug cli cli_debug aml
 
 core: $(ATLAS_CORE_LIB) $(AML_CORE_LIB)
 
 core_debug: $(ATLAS_CORE_DEBUG_LIB) $(AML_CORE_DEBUG_LIB) $(AML_CORE_DEBUG_BIN)
 
 core_debug_fast: $(ATLAS_CORE_DEBUG_FAST_LIB) $(AML_CORE_DEBUG_FAST_LIB) $(AML_CORE_DEBUG_FAST_BIN)
+
+# Parser targets use recursive make: ANTLR codegen must run before the
+# generated .cpp files can be compiled.
+parser:
+	$(MAKE) parser/generated
+	$(MAKE) $(AML_PARSER_LIB)
+
+parser_debug:
+	$(MAKE) parser/generated
+	$(MAKE) $(AML_PARSER_DEBUG_LIB)
+	$(MAKE) $(AML_PARSER_DEBUG_BIN)
+
+parser_debug_fast:
+	$(MAKE) parser/generated
+	$(MAKE) $(AML_PARSER_DEBUG_FAST_LIB)
+	$(MAKE) $(AML_PARSER_DEBUG_FAST_BIN)
 
 cli: $(ATLAS_CORE_LIB) $(AML_CORE_LIB) $(AML_CLI_LIB)
 
@@ -204,6 +271,7 @@ aml: $(ATLAS_CORE_LIB) $(AML_CORE_LIB) $(AML_CLI_LIB)
 
 clean:
 	rm -rf build
+	rm -rf parser/generated
 
 # ==============================================================================
 # aml core library archive rules
@@ -216,6 +284,19 @@ $(AML_CORE_DEBUG_LIB): $(AML_CORE_DEBUG_OBJ) | build
 	$(AR) $(ARFLAGS) $@ $^
 
 $(AML_CORE_DEBUG_FAST_LIB): $(AML_CORE_DEBUG_FAST_OBJ) | build
+	$(AR) $(ARFLAGS) $@ $^
+
+# ==============================================================================
+# aml parser library archive rules
+# ==============================================================================
+
+$(AML_PARSER_LIB): $(AML_PARSER_OBJ) | build
+	$(AR) $(ARFLAGS) $@ $^
+
+$(AML_PARSER_DEBUG_LIB): $(AML_PARSER_DEBUG_OBJ) | build
+	$(AR) $(ARFLAGS) $@ $^
+
+$(AML_PARSER_DEBUG_FAST_LIB): $(AML_PARSER_DEBUG_FAST_OBJ) | build
 	$(AR) $(ARFLAGS) $@ $^
 
 # ==============================================================================
@@ -250,6 +331,20 @@ $(AML_CORE_DEBUG_FAST_BIN): $(AML_CORE_DEBUG_FAST_LIB) $(ATLAS_CORE_DEBUG_FAST_L
 	    $(AML_CORE_DEBUG_FAST_TEST_OBJ) $(AML_CORE_DEBUG_FAST_GTEST_OBJ) \
 	    -Lbuild -laml_core_debug_fast \
 	    -Latlas/build -latlas_parser_debug_fast -latlas_core_debug_fast \
+	    -L$(ANTLR4_LIB) -lantlr4-runtime \
+	    -lpthread
+
+$(AML_PARSER_DEBUG_BIN): $(AML_PARSER_DEBUG_LIB) $(AML_CORE_DEBUG_LIB) $(AML_PARSER_DEBUG_TEST_OBJ) $(AML_PARSER_DEBUG_GTEST_OBJ) | build
+	$(CXX) $(CXXFLAGS) -o $@ \
+	    $(AML_PARSER_DEBUG_TEST_OBJ) $(AML_PARSER_DEBUG_GTEST_OBJ) \
+	    -Lbuild -laml_parser_debug -laml_core_debug \
+	    -L$(ANTLR4_LIB) -lantlr4-runtime \
+	    -lpthread
+
+$(AML_PARSER_DEBUG_FAST_BIN): $(AML_PARSER_DEBUG_FAST_LIB) $(AML_CORE_DEBUG_FAST_LIB) $(AML_PARSER_DEBUG_FAST_TEST_OBJ) $(AML_PARSER_DEBUG_FAST_GTEST_OBJ) | build
+	$(CXX) $(CXXFLAGS) -o $@ \
+	    $(AML_PARSER_DEBUG_FAST_TEST_OBJ) $(AML_PARSER_DEBUG_FAST_GTEST_OBJ) \
+	    -Lbuild -laml_parser_debug_fast -laml_core_debug_fast \
 	    -L$(ANTLR4_LIB) -lantlr4-runtime \
 	    -lpthread
 
@@ -313,6 +408,60 @@ build/obj/core_debug_fast_test/gmock-all.o: $(GMOCK_ALL_CC) | build/obj/core_deb
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(AML_CORE_DEBUG_FAST_TEST_CXXFLAGS) -c $< -o $@
 
+# --- aml parser generated (release | debug | debug_fast) ---
+
+build/obj/parser/%.o: parser/generated/%.cpp | parser/generated build/obj/parser
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -I$(ANTLR4_INC) $(RELEASE_CXXFLAGS) -c $< -o $@
+
+build/obj/parser_debug/%.o: parser/generated/%.cpp | parser/generated build/obj/parser_debug
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -I$(ANTLR4_INC) $(DEBUG_CXXFLAGS) -c $< -o $@
+
+build/obj/parser_debug_fast/%.o: parser/generated/%.cpp | parser/generated build/obj/parser_debug_fast
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -I$(ANTLR4_INC) $(DEBUG_FAST_CXXFLAGS) -c $< -o $@
+
+# --- aml parser hand-written (release | debug | debug_fast) ---
+
+build/obj/parser/%.o: parser/cpp/%.cpp | build/obj/parser
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -I$(ANTLR4_INC) $(RELEASE_CXXFLAGS) -c $< -o $@
+
+build/obj/parser_debug/%.o: parser/cpp/%.cpp | build/obj/parser_debug
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -I$(ANTLR4_INC) $(DEBUG_CXXFLAGS) -c $< -o $@
+
+build/obj/parser_debug_fast/%.o: parser/cpp/%.cpp | build/obj/parser_debug_fast
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -I$(ANTLR4_INC) $(DEBUG_FAST_CXXFLAGS) -c $< -o $@
+
+# --- aml parser tests (debug | debug_fast) ---
+
+build/obj/parser_debug_test/%.o: parser/test/%.cpp | build/obj/parser_debug_test
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(AML_PARSER_DEBUG_TEST_CXXFLAGS) -c $< -o $@
+
+build/obj/parser_debug_test/gtest-all.o: $(GTEST_ALL_CC) | build/obj/parser_debug_test
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(AML_PARSER_DEBUG_TEST_CXXFLAGS) -c $< -o $@
+
+build/obj/parser_debug_test/gmock-all.o: $(GMOCK_ALL_CC) | build/obj/parser_debug_test
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(AML_PARSER_DEBUG_TEST_CXXFLAGS) -c $< -o $@
+
+build/obj/parser_debug_fast_test/%.o: parser/test/%.cpp | build/obj/parser_debug_fast_test
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(AML_PARSER_DEBUG_FAST_TEST_CXXFLAGS) -c $< -o $@
+
+build/obj/parser_debug_fast_test/gtest-all.o: $(GTEST_ALL_CC) | build/obj/parser_debug_fast_test
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(AML_PARSER_DEBUG_FAST_TEST_CXXFLAGS) -c $< -o $@
+
+build/obj/parser_debug_fast_test/gmock-all.o: $(GMOCK_ALL_CC) | build/obj/parser_debug_fast_test
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(AML_PARSER_DEBUG_FAST_TEST_CXXFLAGS) -c $< -o $@
+
 # --- aml cli (release | debug | debug_fast) ---
 
 build/obj/cli/%.o: cli/cpp/%.cpp | build/obj/cli
@@ -360,13 +509,34 @@ build/obj/cli_debug_fast_test/gmock-all.o: $(GMOCK_ALL_CC) | build/obj/cli_debug
 build \
 build/obj/core build/obj/core_debug build/obj/core_debug_fast \
 build/obj/core_debug_test build/obj/core_debug_fast_test \
+build/obj/parser build/obj/parser_debug build/obj/parser_debug_fast \
+build/obj/parser_debug_test build/obj/parser_debug_fast_test \
 build/obj/cli build/obj/cli_debug build/obj/cli_debug_fast \
 build/obj/cli_debug_test build/obj/cli_debug_fast_test:
 	mkdir -p $@
 
 # ==============================================================================
+# ANTLR4 codegen
+# ==============================================================================
+
+parser/generated: $(ANTLR4_JAR)
+	mkdir -p parser/generated
+	cd parser/grammar && java -jar ../../$(ANTLR4_JAR) -Dlanguage=Cpp -visitor -no-listener \
+	    -o ../../parser/generated/ AML.g4
+	sed -i 's|#include "antlr4-runtime.h"|#include <antlr4-runtime/antlr4-runtime.h>|g' \
+	    parser/generated/*.h parser/generated/*.cpp
+
+# ==============================================================================
 # Header dependencies
 # ==============================================================================
+
+-include $(AML_PARSER_DEP)
+-include $(AML_PARSER_DEBUG_DEP)
+-include $(AML_PARSER_DEBUG_FAST_DEP)
+-include $(AML_PARSER_DEBUG_TEST_DEP)
+-include $(AML_PARSER_DEBUG_FAST_TEST_DEP)
+-include $(AML_PARSER_DEBUG_GTEST_DEP)
+-include $(AML_PARSER_DEBUG_FAST_GTEST_DEP)
 
 -include $(AML_CORE_DEP)
 -include $(AML_CORE_DEBUG_DEP)

@@ -1,0 +1,11 @@
+CompileFlags:
+  Add:
+    - -std=c++20
+    - -I.
+    - -Icore/hpp
+    - -Icli/hpp
+    - -Iatlas
+    - -Iatlas/core/hpp
+    - -Iatlas/mcts/include
+    - -Igoogletest/googletest/include
+    - -Igoogletest/googlemock/include
