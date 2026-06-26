@@ -13,9 +13,9 @@ TEST_F(LcExprPoolTest, DifferentVarsReturnDifferentPointers) {
     EXPECT_NE(pool.make_var(0), pool.make_var(1));
 }
 
-TEST_F(LcExprPoolTest, LamInternedTwiceReturnsSamePointer) {
+TEST_F(LcExprPoolTest, AbsInternedTwiceReturnsSamePointer) {
     const lc_expr* body = pool.make_var(0);
-    EXPECT_EQ(pool.make_lam(body), pool.make_lam(body));
+    EXPECT_EQ(pool.make_abs(body), pool.make_abs(body));
 }
 
 TEST_F(LcExprPoolTest, AppInternedTwiceReturnsSamePointer) {

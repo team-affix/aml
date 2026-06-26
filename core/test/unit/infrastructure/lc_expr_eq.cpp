@@ -23,7 +23,7 @@ TEST(LcExprEqTest, DifferentStructure) {
 
 TEST(LcExprEqTest, NestedStructure) {
     lc_expr_pool pool;
-    const lc_expr* id = pool.make_lam(pool.make_var(0));
+    const lc_expr* id = pool.make_abs(pool.make_var(0));
     const lc_expr* app = pool.make_app(id, pool.make_var(0));
     EXPECT_TRUE(lc_expr_eq(app, pool.make_app(id, pool.make_var(0))));
 }

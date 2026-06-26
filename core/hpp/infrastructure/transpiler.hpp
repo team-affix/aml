@@ -20,40 +20,40 @@
 #include "value_objects/lc_expr.hpp"
 #include "value_objects/nat_format.hpp"
 
-template<typename IMakeLcVar, typename IMakeLcLam, typename IMakeLcApp>
+template<typename IMakeLcVar, typename IMakeLcAbs, typename IMakeLcApp>
 struct transpiler {
-    explicit transpiler(IMakeLcVar& make_var, IMakeLcLam& make_lam, IMakeLcApp& make_app);
+    explicit transpiler(IMakeLcVar& make_var, IMakeLcAbs& make_abs, IMakeLcApp& make_app);
 
     const lc_expr* transpile(const aml_expr* e, const local_binding_env& local,
                              const global_env& global);
 
 private:
-    using self = transpiler<IMakeLcVar, IMakeLcLam, IMakeLcApp>;
+    using self = transpiler<IMakeLcVar, IMakeLcAbs, IMakeLcApp>;
 
     token_transpiler<IMakeLcVar> token_;
     scott_nat_transpiler<IMakeLcVar, IMakeLcApp> scott_nat_;
-    church_nat_transpiler<IMakeLcVar, IMakeLcLam, IMakeLcApp> church_nat_;
+    church_nat_transpiler<IMakeLcVar, IMakeLcAbs, IMakeLcApp> church_nat_;
     integer_transpiler<IMakeLcVar, IMakeLcApp, scott_nat_transpiler<IMakeLcVar, IMakeLcApp>>
         integer_;
     character_transpiler<decltype(scott_nat_)> character_;
     scott_list_transpiler<self, IMakeLcVar, IMakeLcApp> scott_list_;
-    church_list_transpiler<self, IMakeLcVar, IMakeLcLam, IMakeLcApp> church_list_;
+    church_list_transpiler<self, IMakeLcVar, IMakeLcAbs, IMakeLcApp> church_list_;
     string_transpiler<decltype(scott_nat_), IMakeLcVar, IMakeLcApp> string_;
-    abs_transpiler<self, IMakeLcLam> abs_;
+    abs_transpiler<self, IMakeLcAbs> abs_;
     app_transpiler<self, IMakeLcApp> app_;
 };
 
 template<typename IV, typename IL, typename IA>
-transpiler<IV, IL, IA>::transpiler(IV& make_var, IL& make_lam, IA& make_app)
+transpiler<IV, IL, IA>::transpiler(IV& make_var, IL& make_abs, IA& make_app)
     : token_(make_var),
       scott_nat_(make_var, make_app),
-      church_nat_(make_var, make_lam, make_app),
+      church_nat_(make_var, make_abs, make_app),
       integer_(make_var, make_app, scott_nat_),
       character_(scott_nat_),
       scott_list_(*this, make_var, make_app),
-      church_list_(*this, make_var, make_lam, make_app),
+      church_list_(*this, make_var, make_abs, make_app),
       string_(scott_nat_, make_var, make_app),
-      abs_(*this, make_lam),
+      abs_(*this, make_abs),
       app_(*this, make_app) {}
 
 template<typename IV, typename IL, typename IA>

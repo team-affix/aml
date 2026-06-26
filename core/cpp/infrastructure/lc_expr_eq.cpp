@@ -15,7 +15,7 @@ bool lc_expr_eq(const lc_expr* a, const lc_expr* b) {
             return false;
         if constexpr (std::is_same_v<T, lc_expr::var>)
             return av.index == bv->index;
-        else if constexpr (std::is_same_v<T, lc_expr::lam>)
+        else if constexpr (std::is_same_v<T, lc_expr::abs>)
             return lc_expr_eq(av.body, bv->body);
         else if constexpr (std::is_same_v<T, lc_expr::app>)
             return lc_expr_eq(av.func, bv->func) && lc_expr_eq(av.arg, bv->arg);

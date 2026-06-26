@@ -89,7 +89,7 @@ TEST_F(TranspilerStressTest, ManyFunctionFragments) {
         names.push_back("f" + std::to_string(i));
     global_env env(std::move(names));
     local_binding_env local;
-    const lc_expr* id = bundle.lc.make_lam(bundle.lc.make_var(0));
+    const lc_expr* id = bundle.lc.make_abs(bundle.lc.make_var(0));
     for (int i = 0; i < 100; ++i) {
         const aml_expr* body = aml_pool.make_abs("x", aml_pool.make_token("x"));
         EXPECT_EQ(bundle.tx.transpile(body, local, env), id);

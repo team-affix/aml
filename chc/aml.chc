@@ -4,7 +4,7 @@
 % Term constructors:
 %   var(N)     -- variable with de Bruijn index N (Peano natural)
 %                 lower index = more recently bound (innermost abstraction)
-%   lam(B)     -- abstraction (λ. B)
+%   abs(B)     -- abstraction (λ. B)
 %   app(F, A)  -- application (F applied to A)
 %
 % Only beta reductions are performed — no delta reductions.
@@ -18,16 +18,16 @@
 % Example queries:
 %
 %   % Identity applied to itself: (λ. 0) (λ. 0)  →  λ. 0
-%   normalize(app(lam(var(zero)), lam(var(zero))), R)
+%   normalize(app(abs(var(zero)), abs(var(zero))), R)
 %
 %   % Church numeral 2 applied to successor and zero:
 %   % two = λf.λx. f (f x)  →  suc(suc(zero))  (using Peano encoding)
-%   normalize(app(app(lam(lam(app(var(1), app(var(1), var(zero))))),
-%                   lam(suc(var(zero)))),
+%   normalize(app(app(abs(abs(app(var(1), app(var(1), var(zero))))),
+%                   abs(suc(var(zero)))),
 %             R)
 %
 %   % K combinator: (λ. λ. 1) A B  →  A
-%   normalize(app(app(lam(lam(var(suc(zero)))), lam(var(zero))), lam(lam(var(zero)))), R)
+%   normalize(app(app(abs(abs(var(suc(zero)))), abs(var(zero))), abs(abs(var(zero)))), R)
 % ============================================================
 
 % ============================================================
@@ -53,7 +53,7 @@ pred(suc(N), N) :- nat(N).
 % ============================================================
 
 term(var(N))      :- nat(N).
-term(lam(B))      :- term(B).
+term(abs(B))      :- term(B).
 term(app(F, A))   :- term(F), term(A).
 
 % ============================================================
@@ -66,7 +66,7 @@ term(app(F, A))   :- term(F), term(A).
 
 shift(var(N), D, var(suc(N))) :- ge(N, D).
 shift(var(N), D, var(N))      :- lt(N, D).
-shift(lam(B),    D, lam(B2))        :- shift(B, suc(D), B2).
+shift(abs(B),    D, abs(B2))        :- shift(B, suc(D), B2).
 shift(app(F, A), D, app(F2, A2))    :- shift(F, D, F2), shift(A, D, A2).
 
 % shift_n(T, N, R)
@@ -96,7 +96,7 @@ subst(var(N), D, _, var(N)) :- lt(N, D).
 subst(var(N), D, _, var(P)) :- gt(N, D), pred(N, P).
 
 % Under a lambda: the new binder adds one level, so depth increases.
-subst(lam(B),    D, S, lam(B2))      :- subst(B, suc(D), S, B2).
+subst(abs(B),    D, S, abs(B2))      :- subst(B, suc(D), S, B2).
 
 % Application: substitute independently in function and argument.
 subst(app(F, A), D, S, app(F2, A2)) :- subst(F, D, S, F2), subst(A, D, S, A2).
@@ -109,7 +109,7 @@ subst(app(F, A), D, S, app(F2, A2)) :- subst(F, D, S, F2), subst(A, D, S, A2).
 % ============================================================
 
 % Beta step: (λ B) A  →  B [ A / var(0) ]
-reduce(app(lam(B), A), R) :- subst(B, zero, A, R).
+reduce(app(abs(B), A), R) :- subst(B, zero, A, R).
 
 % Reduce inside the left subterm of an application.
 reduce(app(F, A), app(F2, A)) :- reduce(F, F2).
@@ -118,14 +118,14 @@ reduce(app(F, A), app(F2, A)) :- reduce(F, F2).
 reduce(app(F, A), app(F, A2)) :- reduce(A, A2).
 
 % Reduce inside the body of a lambda.
-reduce(lam(B), lam(B2)) :- reduce(B, B2).
+reduce(abs(B), abs(B2)) :- reduce(B, B2).
 
 % ============================================================
 % Normal form
 %
 % not_abs(T): T is not a lambda abstraction.
 %   Defined positively by enumeration — an application app(F, A) is a
-%   beta-redex only when F = lam(_), so normal(app(F,A)) requires F to
+%   beta-redex only when F = abs(_), so normal(app(F,A)) requires F to
 %   not be an abstraction.
 % ============================================================
 
@@ -135,7 +135,7 @@ not_abs(app(F, A)) :- term(F), term(A).
 % normal(T): T is in beta-normal form (no redex exists anywhere).
 
 normal(var(N))    :- nat(N).
-normal(lam(B))    :- normal(B).
+normal(abs(B))    :- normal(B).
 normal(app(F, A)) :- normal(F), normal(A), not_abs(F).
 
 % ============================================================

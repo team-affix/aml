@@ -4,8 +4,8 @@ const lc_expr* lc_expr_pool::make_var(uint32_t index) {
     return intern(lc_expr{lc_expr::var{index}});
 }
 
-const lc_expr* lc_expr_pool::make_lam(const lc_expr* body) {
-    return intern(lc_expr{lc_expr::lam{body}});
+const lc_expr* lc_expr_pool::make_abs(const lc_expr* body) {
+    return intern(lc_expr{lc_expr::abs{body}});
 }
 
 const lc_expr* lc_expr_pool::make_app(const lc_expr* func, const lc_expr* arg) {

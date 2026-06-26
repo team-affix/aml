@@ -10,13 +10,13 @@
 //
 // Term constructors in the database (all Peano-indexed):
 //   var(N)     -- de Bruijn variable; var(zero) is the innermost binder
-//   lam(B)     -- abstraction
+//   abs(B)     -- abstraction
 //   app(F, A)  -- application
 //
 // Notable combinators used in tests:
-//   id  = lam(var(zero))                          -- λx.x
-//   K   = lam(lam(var(suc(zero))))                -- λxy.x
-//   S   = lam(lam(lam(app(app(var(2),var(0)),app(var(1),var(0))))))
+//   id  = abs(var(zero))                          -- λx.x
+//   K   = abs(abs(var(suc(zero))))                -- λxy.x
+//   S   = abs(abs(abs(app(app(var(2),var(0)),app(var(1),var(0))))))
 
 #include <cstddef>
 #include <cstdint>
@@ -128,9 +128,9 @@ struct LambdaCalculusTest : public ::testing::Test {
         return s_pool.make_functor(fid("var"), {peano(n)});
     }
 
-    // Build lam(body)
+    // Build abs(body)
     static const expr* lm(const expr* body) {
-        return s_pool.make_functor(fid("lam"), {body});
+        return s_pool.make_functor(fid("abs"), {body});
     }
 
     // Build app(f, a)
@@ -282,16 +282,16 @@ TEST_F(LambdaCalculusTest, TermVar) {
     EXPECT_TRUE(solves("term(var(zero))"));
 }
 
-TEST_F(LambdaCalculusTest, TermLam) {
-    EXPECT_TRUE(solves("term(lam(var(zero)))"));
+TEST_F(LambdaCalculusTest, TermAbs) {
+    EXPECT_TRUE(solves("term(abs(var(zero)))"));
 }
 
 TEST_F(LambdaCalculusTest, TermApp) {
-    EXPECT_TRUE(solves("term(app(lam(var(zero)), var(zero)))"));
+    EXPECT_TRUE(solves("term(app(abs(var(zero)), var(zero)))"));
 }
 
 TEST_F(LambdaCalculusTest, TermNestedApp) {
-    EXPECT_TRUE(solves("term(app(app(lam(lam(var(suc(zero)))), var(zero)), lam(var(zero))))"));
+    EXPECT_TRUE(solves("term(app(app(abs(abs(var(suc(zero)))), var(zero)), abs(var(zero))))"));
 }
 
 // ============================================================
@@ -306,9 +306,9 @@ TEST_F(LambdaCalculusTest, NotAbsApp) {
     EXPECT_TRUE(solves("not_abs(app(var(zero), var(zero)))"));
 }
 
-TEST_F(LambdaCalculusTest, NotAbsRefutedForLam) {
-    // lam is an abstraction — not_abs must not hold for it
-    EXPECT_FALSE(solves("not_abs(lam(var(zero)))", 500));
+TEST_F(LambdaCalculusTest, NotAbsRefutedForAbs) {
+    // abs is an abstraction — not_abs must not hold for it
+    EXPECT_FALSE(solves("not_abs(abs(var(zero)))", 500));
 }
 
 // ============================================================
@@ -319,12 +319,12 @@ TEST_F(LambdaCalculusTest, NormalVar) {
     EXPECT_TRUE(solves("normal(var(zero))"));
 }
 
-TEST_F(LambdaCalculusTest, NormalLamVar) {
-    EXPECT_TRUE(solves("normal(lam(var(zero)))"));
+TEST_F(LambdaCalculusTest, NormalAbsVar) {
+    EXPECT_TRUE(solves("normal(abs(var(zero)))"));
 }
 
-TEST_F(LambdaCalculusTest, NormalLamLamVar) {
-    EXPECT_TRUE(solves("normal(lam(lam(var(suc(zero)))))"));
+TEST_F(LambdaCalculusTest, NormalAbsAbsVar) {
+    EXPECT_TRUE(solves("normal(abs(abs(var(suc(zero)))))"));
 }
 
 TEST_F(LambdaCalculusTest, NormalAppVarVar) {
@@ -333,8 +333,8 @@ TEST_F(LambdaCalculusTest, NormalAppVarVar) {
 }
 
 TEST_F(LambdaCalculusTest, NormalRefutedForBetaRedex) {
-    // app(lam(var(zero)), var(zero)) contains a beta-redex — not normal
-    EXPECT_FALSE(solves("normal(app(lam(var(zero)), var(zero)))", 500));
+    // app(abs(var(zero)), var(zero)) contains a beta-redex — not normal
+    EXPECT_FALSE(solves("normal(app(abs(var(zero)), var(zero)))", 500));
 }
 
 // ============================================================
@@ -359,16 +359,16 @@ TEST_F(LambdaCalculusTest, ShiftVarOneAtCutoffZeroIncrements) {
     EXPECT_EQ(result, dv(2));
 }
 
-TEST_F(LambdaCalculusTest, ShiftUnderLamLeavesLamBoundVar) {
-    // shift(lam(var(0)), 0, R): under lam the cutoff becomes 1;
-    // var(0) < 1 so it is bound — R = lam(var(0))
-    const expr* result = solve_for("shift(lam(var(zero)), zero, R)", "R");
+TEST_F(LambdaCalculusTest, ShiftUnderAbsLeavesAbsBoundVar) {
+    // shift(abs(var(0)), 0, R): under abs the cutoff becomes 1;
+    // var(0) < 1 so it is bound — R = abs(var(0))
+    const expr* result = solve_for("shift(abs(var(zero)), zero, R)", "R");
     EXPECT_EQ(result, lm(dv(0)));
 }
 
-TEST_F(LambdaCalculusTest, ShiftUnderLamShiftsFreeVar) {
-    // shift(lam(var(1)), 0, R): under lam cutoff = 1; var(1) >= 1 so free — R = lam(var(2))
-    const expr* result = solve_for("shift(lam(var(suc(zero))), zero, R)", "R");
+TEST_F(LambdaCalculusTest, ShiftUnderAbsShiftsFreeVar) {
+    // shift(abs(var(1)), 0, R): under abs cutoff = 1; var(1) >= 1 so free — R = abs(var(2))
+    const expr* result = solve_for("shift(abs(var(suc(zero))), zero, R)", "R");
     EXPECT_EQ(result, lm(dv(2)));
 }
 
@@ -383,8 +383,8 @@ TEST_F(LambdaCalculusTest, ShiftAppShiftsBothSides) {
 // ============================================================
 
 TEST_F(LambdaCalculusTest, SubstVarAtDepthReplacedByArg) {
-    // subst(var(0), 0, lam(var(0)), R): depth matches — R = shift_n(lam(var(0)), 0) = lam(var(0))
-    const expr* result = solve_for("subst(var(zero), zero, lam(var(zero)), R)", "R");
+    // subst(var(0), 0, abs(var(0)), R): depth matches — R = shift_n(abs(var(0)), 0) = abs(var(0))
+    const expr* result = solve_for("subst(var(zero), zero, abs(var(zero)), R)", "R");
     EXPECT_EQ(result, lm(dv(0)));
 }
 
@@ -400,11 +400,11 @@ TEST_F(LambdaCalculusTest, SubstBoundVarBelowDepthUnchanged) {
     EXPECT_EQ(result, dv(0));
 }
 
-TEST_F(LambdaCalculusTest, SubstUnderLamIncrementsDepth) {
-    // subst(lam(var(0)), 0, var(zero), R):
+TEST_F(LambdaCalculusTest, SubstUnderAbsIncrementsDepth) {
+    // subst(abs(var(0)), 0, var(zero), R):
     //   descend: subst(var(0), 1, var(zero), R2) — var(0) < 1 — R2 = var(0)
-    //   result: R = lam(var(0))
-    const expr* result = solve_for("subst(lam(var(zero)), zero, var(zero), R)", "R");
+    //   result: R = abs(var(0))
+    const expr* result = solve_for("subst(abs(var(zero)), zero, var(zero), R)", "R");
     EXPECT_EQ(result, lm(dv(0)));
 }
 
@@ -431,38 +431,38 @@ TEST_F(LambdaCalculusTest, SubstArgShiftedByDepth) {
 TEST_F(LambdaCalculusTest, ReduceIdentityAppliedToVar) {
     // (λ.0) var(0) → var(0)
     const expr* result = solve_for(
-        "reduce(app(lam(var(zero)), var(zero)), R)", "R");
+        "reduce(app(abs(var(zero)), var(zero)), R)", "R");
     EXPECT_EQ(result, dv(0));
 }
 
 TEST_F(LambdaCalculusTest, ReduceIdentityAppliedToIdentity) {
     // (λ.0)(λ.0) → λ.0
     const expr* result = solve_for(
-        "reduce(app(lam(var(zero)), lam(var(zero))), R)", "R");
+        "reduce(app(abs(var(zero)), abs(var(zero))), R)", "R");
     EXPECT_EQ(result, id_term());
 }
 
 TEST_F(LambdaCalculusTest, ReduceInsideRhs) {
-    // app(var(0), app(lam(var(0)), var(0))) — rhs is the redex
+    // app(var(0), app(abs(var(0)), var(0))) — rhs is the redex
     // → app(var(0), var(0))
     const expr* result = solve_for(
-        "reduce(app(var(zero), app(lam(var(zero)), var(zero))), R)", "R");
+        "reduce(app(var(zero), app(abs(var(zero)), var(zero))), R)", "R");
     EXPECT_EQ(result, ap(dv(0), dv(0)));
 }
 
 TEST_F(LambdaCalculusTest, ReduceKAppliedToTwoArgs_FirstStep) {
-    // K = lam(lam(var(1))); first reduction: (K A) consumes outer lam
-    // app(lam(lam(var(suc(zero)))), lam(var(zero))) → lam(lam(var(zero)))
+    // K = abs(abs(var(1))); first reduction: (K A) consumes outer abs
+    // app(abs(abs(var(suc(zero)))), abs(var(zero))) → abs(abs(var(zero)))
     const expr* result = solve_for(
-        "reduce(app(lam(lam(var(suc(zero)))), lam(var(zero))), R)", "R");
+        "reduce(app(abs(abs(var(suc(zero)))), abs(var(zero))), R)", "R");
     EXPECT_EQ(result, lm(lm(dv(0))));
 }
 
-TEST_F(LambdaCalculusTest, ReduceUnderLam) {
-    // lam(app(lam(var(zero)), var(zero))) — redex is inside the body
-    // → lam(var(zero))
+TEST_F(LambdaCalculusTest, ReduceUnderAbs) {
+    // abs(app(abs(var(zero)), var(zero))) — redex is inside the body
+    // → abs(var(zero))
     const expr* result = solve_for(
-        "reduce(lam(app(lam(var(zero)), var(zero))), R)", "R");
+        "reduce(abs(app(abs(var(zero)), var(zero))), R)", "R");
     EXPECT_EQ(result, lm(dv(0)));
 }
 
@@ -475,9 +475,9 @@ TEST_F(LambdaCalculusTest, NormalizeVar) {
     EXPECT_EQ(result, dv(0));
 }
 
-TEST_F(LambdaCalculusTest, NormalizeLamVar) {
+TEST_F(LambdaCalculusTest, NormalizeAbsVar) {
     // λ.0 is already normal
-    const expr* result = solve_for("normalize(lam(var(zero)), R)", "R");
+    const expr* result = solve_for("normalize(abs(var(zero)), R)", "R");
     EXPECT_EQ(result, id_term());
 }
 
@@ -494,14 +494,14 @@ TEST_F(LambdaCalculusTest, NormalizeAppVarVar) {
 TEST_F(LambdaCalculusTest, NormalizeIdentityOnVar) {
     // (λ.0) var(0) → var(0)
     const expr* result = solve_for(
-        "normalize(app(lam(var(zero)), var(zero)), R)", "R");
+        "normalize(app(abs(var(zero)), var(zero)), R)", "R");
     EXPECT_EQ(result, dv(0));
 }
 
 TEST_F(LambdaCalculusTest, NormalizeIdentityOnIdentity) {
     // (λ.0)(λ.0) → λ.0
     const expr* result = solve_for(
-        "normalize(app(lam(var(zero)), lam(var(zero))), R)", "R");
+        "normalize(app(abs(var(zero)), abs(var(zero))), R)", "R");
     EXPECT_EQ(result, id_term());
 }
 
@@ -511,20 +511,20 @@ TEST_F(LambdaCalculusTest, NormalizeIdentityOnIdentity) {
 
 TEST_F(LambdaCalculusTest, NormalizeSelfApplicationOfIdentity) {
     // (λx.xx)(id) = id id = id
-    // lam(app(var(0), var(0))) applied to id:
+    // abs(app(var(0), var(0))) applied to id:
     // step 1: subst(app(var(0),var(0)), 0, id) = app(id, id)
     // step 2: app(id, id) → id
     const expr* result = solve_for(
-        "normalize(app(lam(app(var(zero), var(zero))), lam(var(zero))), R)", "R");
+        "normalize(app(abs(app(var(zero), var(zero))), abs(var(zero))), R)", "R");
     EXPECT_EQ(result, id_term());
 }
 
 TEST_F(LambdaCalculusTest, NormalizeKAppliedToTwoIdentities) {
     // K id id = id   (K returns its first arg)
-    // K = lam(lam(var(1))), id = lam(var(0))
+    // K = abs(abs(var(1))), id = abs(var(0))
     const expr* result = solve_for(
         "normalize("
-        "  app(app(lam(lam(var(suc(zero)))), lam(var(zero))), lam(var(zero))"
+        "  app(app(abs(abs(var(suc(zero)))), abs(var(zero))), abs(var(zero))"
         "), R)", "R");
     EXPECT_EQ(result, id_term());
 }
@@ -533,36 +533,36 @@ TEST_F(LambdaCalculusTest, NormalizeKAppliedToIdAndK) {
     // K id K = id
     const expr* result = solve_for(
         "normalize("
-        "  app(app(lam(lam(var(suc(zero)))), lam(var(zero))),"
-        "      lam(lam(var(suc(zero)))))"
+        "  app(app(abs(abs(var(suc(zero)))), abs(var(zero))),"
+        "      abs(abs(var(suc(zero)))))"
         ", R)", "R");
     EXPECT_EQ(result, id_term());
 }
 
-TEST_F(LambdaCalculusTest, NormalizeKFirstArgReturnedAsLam) {
+TEST_F(LambdaCalculusTest, NormalizeKFirstArgReturnedAsAbs) {
     // K (K) id = K  (the first arg, K itself, is returned)
     // K K id → K
     const expr* result = solve_for(
         "normalize("
-        "  app(app(lam(lam(var(suc(zero)))), lam(lam(var(suc(zero))))),"
-        "      lam(var(zero)))"
+        "  app(app(abs(abs(var(suc(zero)))), abs(abs(var(suc(zero))))),"
+        "      abs(var(zero)))"
         ", R)", "R");
     EXPECT_EQ(result, k_term());
 }
 
 TEST_F(LambdaCalculusTest, NormalizeSKKIsIdentity) {
     // S K K = I  (classical combinatory logic identity)
-    // S = lam(lam(lam(app(app(var(2),var(0)),app(var(1),var(0))))))
+    // S = abs(abs(abs(app(app(var(2),var(0)),app(var(1),var(0))))))
     // S K K x → K x (K x) → x
     // Test: S K K applied to id yields id
     const expr* result = solve_for(
         "normalize("
         "  app(app(app("
-        "    lam(lam(lam(app(app(var(suc(suc(zero))), var(zero)),"
+        "    abs(abs(abs(app(app(var(suc(suc(zero))), var(zero)),"
         "                    app(var(suc(zero)), var(zero)))))),"
-        "    lam(lam(var(suc(zero))))),"
-        "    lam(lam(var(suc(zero))))),"
-        "  lam(var(zero)))"
+        "    abs(abs(var(suc(zero))))),"
+        "    abs(abs(var(suc(zero))))),"
+        "  abs(var(zero)))"
         ", R)", "R", 500'000);
     EXPECT_EQ(result, id_term());
 }

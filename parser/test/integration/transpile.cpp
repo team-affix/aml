@@ -21,8 +21,8 @@ aml_visitor<aml_expr_pool> make_visitor() {
     return aml_visitor<aml_expr_pool>{shared_pool()};
 }
 
-const lc_expr* lc_lam(lc_expr_pool& pool, const lc_expr* b) {
-    return pool.make_lam(b);
+const lc_expr* lc_abs(lc_expr_pool& pool, const lc_expr* b) {
+    return pool.make_abs(b);
 }
 const lc_expr* lc_var(lc_expr_pool& pool, uint32_t i) {
     return pool.make_var(i);
@@ -47,7 +47,7 @@ TEST(ParseTranspileTest, IdentityFunction) {
     local_binding_env local;
     const lc_expr* body =
         bundle.tx.transpile(defs.definitions[0].body, local, env);
-    EXPECT_EQ(body, lc_lam(bundle.lc, lc_var(bundle.lc, 0)));
+    EXPECT_EQ(body, lc_abs(bundle.lc, lc_var(bundle.lc, 0)));
 }
 
 TEST(ParseTranspileTest, NotFunctionUsesGlobalIndices) {
@@ -76,7 +76,7 @@ TEST(ParseTranspileTest, NotFunctionUsesGlobalIndices) {
     local_binding_env local;
     const lc_expr* body =
         bundle.tx.transpile(defs.definitions[0].body, local, env);
-    const lc_expr* expected = lc_lam(bundle.lc, bundle.lc.make_app(
+    const lc_expr* expected = lc_abs(bundle.lc, bundle.lc.make_app(
         bundle.lc.make_app(lc_var(bundle.lc, 0), lc_var(bundle.lc, 5)), lc_var(bundle.lc, 6)));
     EXPECT_EQ(body, expected);
 }
@@ -118,7 +118,7 @@ TEST(ParseTranspileTest, IfThenElseFunctionFragment) {
     local_binding_env local;
     const lc_expr* body =
         bundle.tx.transpile(defs.definitions[0].body, local, env);
-    const lc_expr* expected = lc_lam(bundle.lc, lc_lam(bundle.lc, lc_lam(bundle.lc,
+    const lc_expr* expected = lc_abs(bundle.lc, lc_abs(bundle.lc, lc_abs(bundle.lc,
         bundle.lc.make_app(
             bundle.lc.make_app(lc_var(bundle.lc, 2), lc_var(bundle.lc, 1)),
             lc_var(bundle.lc, 0)))));

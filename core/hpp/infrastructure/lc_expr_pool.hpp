@@ -7,7 +7,7 @@
 
 struct lc_expr_pool {
     const lc_expr* make_var(uint32_t index);
-    const lc_expr* make_lam(const lc_expr* body);
+    const lc_expr* make_abs(const lc_expr* body);
     const lc_expr* make_app(const lc_expr* func, const lc_expr* arg);
     size_t size() const;
 
