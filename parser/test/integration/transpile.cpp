@@ -1,37 +1,39 @@
-// End-to-end: parse AML declaration + definition files then transpile to lc_expr.
+// End-to-end: parse AML fragments then transpile to lc_expr.
 
 #include <gtest/gtest.h>
-#include "infrastructure/transpiler.hpp"
+#include <string>
+#include <vector>
 #include "infrastructure/aml_expr_pool.hpp"
+#include "infrastructure/builtin_constructors.hpp"
+#include "infrastructure/expr_transpiler.hpp"
+#include "infrastructure/scott_encoder.hpp"
 #include "parser/generated/AMLLexer.h"
 #include "parser/generated/AMLParser.h"
 #include "parser/hpp/aml_visitor.hpp"
 
 namespace {
 
-static transpiled_program parse_and_transpile(const std::string& decl_src,
-                                              const std::string& def_src) {
-    antlr4::ANTLRInputStream decl_stream(decl_src);
-    AMLLexer decl_lexer(&decl_stream);
-    antlr4::CommonTokenStream decl_tokens(&decl_lexer);
-    AMLParser decl_parser(&decl_tokens);
-    decl_parser.removeErrorListeners();
-    decl_lexer.removeErrorListeners();
+using visitor_t = aml_visitor<aml_expr_pool, aml_expr_pool, aml_expr_pool, aml_expr_pool,
+                              aml_expr_pool, aml_expr_pool, aml_expr_pool, aml_expr_pool>;
 
-    antlr4::ANTLRInputStream def_stream(def_src);
-    AMLLexer def_lexer(&def_stream);
-    antlr4::CommonTokenStream def_tokens(&def_lexer);
-    AMLParser def_parser(&def_tokens);
-    def_parser.removeErrorListeners();
-    def_lexer.removeErrorListeners();
+aml_expr_pool& shared_pool() {
+    static aml_expr_pool pool;
+    return pool;
+}
 
-    aml_expr_pool pool;
-    aml_visitor<aml_expr_pool, aml_expr_pool, aml_expr_pool, aml_expr_pool,
-                aml_expr_pool, aml_expr_pool, aml_expr_pool, aml_expr_pool>
-        visitor{pool, pool, pool, pool, pool, pool, pool, pool};
-    declaration_file decls = visitor.parse_declarations(decl_parser.declarationFile());
-    definition_file defs = visitor.parse_definitions(def_parser.definitionFile());
-    return transpile_program(decls, defs);
+visitor_t make_visitor() {
+    aml_expr_pool& pool = shared_pool();
+    return visitor_t{pool, pool, pool, pool, pool, pool, pool, pool};
+}
+
+global_env global_env_with_builtins_and(std::vector<std::string> extra) {
+    std::vector<std::string> names;
+    names.reserve(builtin_constructor_names.size() + extra.size());
+    for (std::string_view name : builtin_constructor_names)
+        names.emplace_back(name);
+    for (std::string& name : extra)
+        names.push_back(std::move(name));
+    return global_env(std::move(names));
 }
 
 const lc_expr* lc_lam(lc_expr_pool& pool, const lc_expr* b) {
@@ -44,64 +46,198 @@ const lc_expr* lc_var(lc_expr_pool& pool, uint32_t i) {
 } // namespace
 
 TEST(ParseTranspileTest, IdentityFunction) {
-    transpiled_program out = parse_and_transpile("", "id = x => x");
-    ASSERT_EQ(out.functions.size(), 1u);
-    EXPECT_EQ(out.functions[0].name, "id");
-    EXPECT_TRUE(lc_expr_eq(out.functions[0].body, lc_lam(out.pool, lc_var(out.pool, 0))));
+    antlr4::ANTLRInputStream stream("id = x => x");
+    AMLLexer lexer(&stream);
+    antlr4::CommonTokenStream tokens(&lexer);
+    AMLParser parser(&tokens);
+    parser.removeErrorListeners();
+    lexer.removeErrorListeners();
+
+    definition_file defs = make_visitor().parse_definitions(parser.definitionFile());
+    ASSERT_EQ(defs.functions.size(), 1u);
+    EXPECT_EQ(defs.functions[0].name, "id");
+
+    lc_expr_pool lc;
+    expr_transpiler tx{lc, lc, lc};
+    global_env env({{"id"}});
+    local_binding_env local;
+    const lc_expr* body = tx.transpile_expr(defs.functions[0].body, local, env);
+    EXPECT_EQ(body, lc_lam(lc, lc_var(lc, 0)));
 }
 
-TEST(ParseTranspileTest, NotFunctionUsesScottBools) {
-    transpiled_program out = parse_and_transpile(
-        "true/0 | false/0",
-        "not = b => b false true");
-    ASSERT_EQ(out.functions.size(), 1u);
-    const lc_expr* body = out.functions[0].body;
-    const lc_expr* expected = lc_lam(out.pool,
-        out.pool.make_app(
-            out.pool.make_app(out.pool.make_var(0), out.globals.at("false")),
-            out.globals.at("true")));
-    EXPECT_TRUE(lc_expr_eq(body, expected));
+TEST(ParseTranspileTest, NotFunctionUsesGlobalIndices) {
+    antlr4::ANTLRInputStream decl_stream("true/0 | false/0");
+    AMLLexer decl_lexer(&decl_stream);
+    antlr4::CommonTokenStream decl_tokens(&decl_lexer);
+    AMLParser decl_parser(&decl_tokens);
+    decl_parser.removeErrorListeners();
+    decl_lexer.removeErrorListeners();
+
+    antlr4::ANTLRInputStream def_stream("not = b => b false true");
+    AMLLexer def_lexer(&def_stream);
+    antlr4::CommonTokenStream def_tokens(&def_lexer);
+    AMLParser def_parser(&def_tokens);
+    def_parser.removeErrorListeners();
+    def_lexer.removeErrorListeners();
+
+    visitor_t visitor = make_visitor();
+    declaration_file decls = visitor.parse_declarations(decl_parser.declarationFile());
+    definition_file defs = visitor.parse_definitions(def_parser.definitionFile());
+    ASSERT_EQ(defs.functions.size(), 1u);
+    ASSERT_EQ(decls.groups.size(), 1u);
+
+    lc_expr_pool lc;
+    scott_encoder enc{lc, lc, lc};
+    auto bools = enc.encode_constructor_group(decls.groups[0]);
+    EXPECT_EQ(bools.size(), 2u);
+
+    expr_transpiler tx{lc, lc, lc};
+    global_env env = global_env_from_builtin_names();
+    local_binding_env local;
+    const lc_expr* body = tx.transpile_expr(defs.functions[0].body, local, env);
+    const lc_expr* expected = lc_lam(lc, lc.make_app(
+        lc.make_app(lc_var(lc, 0), lc_var(lc, 5)), lc_var(lc, 6)));
+    EXPECT_EQ(body, expected);
 }
 
 TEST(ParseTranspileTest, ConstructorGroupAndNatLiteral) {
-    transpiled_program out = parse_and_transpile(
-        "true/0 | false/0",
-        "main = 2N");
-    ASSERT_EQ(out.functions.size(), 1u);
-    EXPECT_NE(out.globals.at("true"), nullptr);
-    EXPECT_NE(out.globals.at("false"), nullptr);
-    EXPECT_NE(out.functions[0].body, nullptr);
+    antlr4::ANTLRInputStream def_stream("main = 2N");
+    AMLLexer def_lexer(&def_stream);
+    antlr4::CommonTokenStream def_tokens(&def_lexer);
+    AMLParser def_parser(&def_tokens);
+    def_parser.removeErrorListeners();
+    def_lexer.removeErrorListeners();
+
+    definition_file defs = make_visitor().parse_definitions(def_parser.definitionFile());
+    ASSERT_EQ(defs.functions.size(), 1u);
+
+    lc_expr_pool lc;
+    expr_transpiler tx{lc, lc, lc};
+    global_env env = global_env_from_builtin_names();
+    local_binding_env local;
+    const lc_expr* body = tx.transpile_expr(defs.functions[0].body, local, env);
+    EXPECT_NE(body, nullptr);
+    EXPECT_GT(lc.size(), 1u);
 }
 
-TEST(ParseTranspileTest, IfThenElseProgram) {
-    transpiled_program out = parse_and_transpile(
-        "true/0 | false/0",
+TEST(ParseTranspileTest, IfThenElseFunctionFragment) {
+    antlr4::ANTLRInputStream def_stream(
+        "if_then_else = cond => a => b => cond a b");
+    AMLLexer def_lexer(&def_stream);
+    antlr4::CommonTokenStream def_tokens(&def_lexer);
+    AMLParser def_parser(&def_tokens);
+    def_parser.removeErrorListeners();
+    def_lexer.removeErrorListeners();
+
+    definition_file defs = make_visitor().parse_definitions(def_parser.definitionFile());
+    ASSERT_EQ(defs.functions.size(), 1u);
+
+    lc_expr_pool lc;
+    expr_transpiler tx{lc, lc, lc};
+    global_env env = global_env_with_builtins_and({"if_then_else"});
+    local_binding_env local;
+    const lc_expr* body = tx.transpile_expr(defs.functions[0].body, local, env);
+    const lc_expr* expected = lc_lam(lc, lc_lam(lc, lc_lam(lc,
+        lc.make_app(
+            lc.make_app(lc_var(lc, 2), lc_var(lc, 1)), lc_var(lc, 0)))));
+    EXPECT_EQ(body, expected);
+}
+
+TEST(ParseTranspileTest, MainUsesGlobalIndicesNotDeltaInlining) {
+    antlr4::ANTLRInputStream def_stream(
         "if_then_else = cond => a => b => cond a b\n"
         "main = if_then_else true false true");
-    ASSERT_EQ(out.functions.size(), 2u);
-    EXPECT_TRUE(lc_expr_eq(
-        out.globals.at("if_then_else"),
-        out.pool.make_lam(out.pool.make_lam(out.pool.make_lam(
-            out.pool.make_app(
-                out.pool.make_app(out.pool.make_var(2), out.pool.make_var(1)),
-                out.pool.make_var(0)))))));
+    AMLLexer def_lexer(&def_stream);
+    antlr4::CommonTokenStream def_tokens(&def_lexer);
+    AMLParser def_parser(&def_tokens);
+    def_parser.removeErrorListeners();
+    def_lexer.removeErrorListeners();
+
+    definition_file defs = make_visitor().parse_definitions(def_parser.definitionFile());
+    ASSERT_EQ(defs.functions.size(), 2u);
+
+    lc_expr_pool lc;
+    expr_transpiler tx{lc, lc, lc};
+    global_env env = global_env_with_builtins_and({"if_then_else", "main"});
+    local_binding_env local;
+    const lc_expr* main_body = tx.transpile_expr(defs.functions[1].body, local, env);
+    auto k_ite = env.lookup_global("if_then_else");
+    auto k_true = env.lookup_global("true");
+    auto k_false = env.lookup_global("false");
+    ASSERT_TRUE(k_ite.has_value());
+    ASSERT_TRUE(k_true.has_value());
+    ASSERT_TRUE(k_false.has_value());
+    const lc_expr* expected = lc.make_app(
+        lc.make_app(
+            lc.make_app(lc_var(lc, *k_ite), lc_var(lc, *k_true)),
+            lc_var(lc, *k_false)),
+        lc_var(lc, *k_true));
+    EXPECT_EQ(main_body, expected);
 }
 
 TEST(ParseTranspileTest, ListAndIntegerLiterals) {
-    transpiled_program out = parse_and_transpile("", "main = [1, -2, 'a']");
-    ASSERT_EQ(out.functions.size(), 1u);
-    EXPECT_GT(out.pool.size(), 5u);
+    antlr4::ANTLRInputStream def_stream("main = [1, -2, 'a']");
+    AMLLexer def_lexer(&def_stream);
+    antlr4::CommonTokenStream def_tokens(&def_lexer);
+    AMLParser def_parser(&def_tokens);
+    def_parser.removeErrorListeners();
+    def_lexer.removeErrorListeners();
+
+    definition_file defs = make_visitor().parse_definitions(def_parser.definitionFile());
+    ASSERT_EQ(defs.functions.size(), 1u);
+
+    lc_expr_pool lc;
+    expr_transpiler tx{lc, lc, lc};
+    global_env env = global_env_from_builtin_names();
+    local_binding_env local;
+    const lc_expr* body = tx.transpile_expr(defs.functions[0].body, local, env);
+    EXPECT_NE(body, nullptr);
+    EXPECT_GT(lc.size(), 5u);
 }
 
-TEST(ParseTranspileTest, StressfulProgramSnippet) {
-    transpiled_program out = parse_and_transpile(
-        "true/0 | false/0\n"
-        "suc/1 | zero/0\n"
-        "cons/2 | nil/0\n"
-        "pos/1 | negsuc/1",
+TEST(ParseTranspileTest, TrainingDataPointFragment) {
+    antlr4::ANTLRInputStream train_stream("multiply 3 4 12.");
+    AMLLexer train_lexer(&train_stream);
+    antlr4::CommonTokenStream train_tokens(&train_lexer);
+    AMLParser train_parser(&train_tokens);
+    train_parser.removeErrorListeners();
+    train_lexer.removeErrorListeners();
+
+    training_file data = make_visitor().parse_training(train_parser.trainingFile());
+    ASSERT_EQ(data.statements.size(), 1u);
+
+    lc_expr_pool lc;
+    expr_transpiler tx{lc, lc, lc};
+    global_env env = global_env_with_builtins_and({"multiply"});
+    local_binding_env local;
+    const lc_expr* stmt = tx.transpile_expr(data.statements[0], local, env);
+    EXPECT_NE(stmt, nullptr);
+}
+
+TEST(ParseTranspileTest, ComposeIdIdFragment) {
+    antlr4::ANTLRInputStream def_stream(
         "id = x => x\n"
         "compose = f => g => x => f (g x)\n"
         "main = compose id id");
-    EXPECT_EQ(out.functions.size(), 3u);
-    EXPECT_GE(out.globals.size(), 9u);
+    AMLLexer def_lexer(&def_stream);
+    antlr4::CommonTokenStream def_tokens(&def_lexer);
+    AMLParser def_parser(&def_tokens);
+    def_parser.removeErrorListeners();
+    def_lexer.removeErrorListeners();
+
+    definition_file defs = make_visitor().parse_definitions(def_parser.definitionFile());
+    ASSERT_EQ(defs.functions.size(), 3u);
+
+    lc_expr_pool lc;
+    expr_transpiler tx{lc, lc, lc};
+    global_env env = global_env_with_builtins_and({"id", "compose", "main"});
+    local_binding_env local;
+    const lc_expr* main_body = tx.transpile_expr(defs.functions[2].body, local, env);
+    auto k_compose = env.lookup_global("compose");
+    auto k_id = env.lookup_global("id");
+    ASSERT_TRUE(k_compose.has_value());
+    ASSERT_TRUE(k_id.has_value());
+    const lc_expr* expected = lc.make_app(
+        lc.make_app(lc_var(lc, *k_compose), lc_var(lc, *k_id)), lc_var(lc, *k_id));
+    EXPECT_EQ(main_body, expected);
 }
