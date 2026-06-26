@@ -3,15 +3,10 @@
 
 #include <string>
 #include <vector>
-#include "infrastructure/builtin_declarations.hpp"
 #include "infrastructure/global_env.hpp"
 
 inline std::vector<std::string> builtin_global_names() {
-    std::vector<std::string> names;
-    for (const declaration_group* group : builtin_declaration_groups)
-        for (const declaration_decl& decl : group->declarations)
-            names.push_back(decl.name);
-    return names;
+    return {"true", "false", "cons", "nil", "pos", "negsuc"};
 }
 
 inline global_env global_env_from_builtin_names() {
