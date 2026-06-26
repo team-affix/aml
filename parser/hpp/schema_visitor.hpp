@@ -9,36 +9,7 @@
 #include "../generated/AMLBaseVisitor.h"
 #include "infrastructure/aml_expr_pool.hpp"
 #include "value_objects/aml_expr.hpp"
-
-// ---------------------------------------------------------------------------
-// Output types
-// ---------------------------------------------------------------------------
-
-struct constructor_decl {
-    std::string name;
-    uint32_t    arity;
-};
-
-// One unlabeled group (e.g. true/0 | false/0).
-// Position of each constructor within the group determines its eliminator index.
-using constructor_group = std::vector<constructor_decl>;
-
-struct function_def {
-    std::string     name;
-    const aml_expr* body;
-};
-
-struct aml_program {
-    aml_expr_pool                  pool;
-    std::vector<constructor_group> groups;
-    std::vector<function_def>      functions;
-
-    aml_program() = default;
-    aml_program(const aml_program&) = delete;
-    aml_program& operator=(const aml_program&) = delete;
-    aml_program(aml_program&&) = default;
-    aml_program& operator=(aml_program&&) = default;
-};
+#include "value_objects/aml_program.hpp"
 
 // ---------------------------------------------------------------------------
 // Visitor
