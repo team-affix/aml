@@ -6,13 +6,17 @@
 #include <string>
 #include <vector>
 #include "infrastructure/aml_expr_pool.hpp"
-#include "infrastructure/global_env_factory.hpp"
 #include "infrastructure/lc_expr_pool.hpp"
+#include "infrastructure/scope.hpp"
 #include "infrastructure/transpiler.hpp"
 #include "value_objects/nat_format.hpp"
 #include "value_objects/list_format.hpp"
 
 namespace {
+
+static const std::vector<std::string> kBuiltinNames = {
+    "true", "false", "cons", "nil", "pos", "negsuc"
+};
 
 struct MockMakeLcVar {
     MOCK_METHOD(const lc_expr*, make_var, (uint32_t index));
@@ -29,12 +33,12 @@ struct MockMakeLcApp {
 struct TranspilerTest : public ::testing::Test {
     aml_expr_pool aml_pool;
     lc_expr_pool  lc_pool;
+    scope         sc;
     MockMakeLcVar mock_var;
     MockMakeLcAbs mock_abs;
     MockMakeLcApp mock_app;
-    transpiler<MockMakeLcVar, MockMakeLcAbs, MockMakeLcApp> tx{mock_var, mock_abs, mock_app};
-    global_env builtins = global_env_from_builtin_names();
-    local_binding_env empty_local;
+    transpiler<MockMakeLcVar, MockMakeLcAbs, MockMakeLcApp, scope, scope, scope>
+        tx{mock_var, mock_abs, mock_app, sc, sc, sc};
 
     void SetUp() override {
         using testing::_;
@@ -55,30 +59,27 @@ struct TranspilerTest : public ::testing::Test {
         return lc_pool.make_app(f, a);
     }
 
-    const lc_expr* tx_expr(const aml_expr* e, const global_env& global) {
-        return tx.transpile(e, empty_local, global);
+    const lc_expr* tx_expr(const aml_expr* e, const std::vector<std::string>& names) {
+        for (const auto& n : names) sc.push(n);
+        const lc_expr* result = tx.transpile(e);
+        for (size_t i = 0; i < names.size(); ++i) sc.pop();
+        return result;
     }
 };
 
 } // namespace
 
 // ---------------------------------------------------------------------------
-// Builtin global_env alignment
+// Scope index alignment (replaces BuiltinIndicesAlignWithGlobalEnv)
 // ---------------------------------------------------------------------------
 
-TEST_F(TranspilerTest, BuiltinIndicesAlignWithGlobalEnv) {
-    auto k_true = builtins.lookup_global("true");
-    auto k_false = builtins.lookup_global("false");
-    auto k_cons = builtins.lookup_global("cons");
-    auto k_nil = builtins.lookup_global("nil");
-    ASSERT_TRUE(k_true.has_value());
-    ASSERT_TRUE(k_false.has_value());
-    ASSERT_TRUE(k_cons.has_value());
-    ASSERT_TRUE(k_nil.has_value());
-    EXPECT_EQ(*k_true, 5u);
-    EXPECT_EQ(*k_false, 4u);
-    EXPECT_EQ(*k_cons, 3u);
-    EXPECT_EQ(*k_nil, 2u);
+TEST_F(TranspilerTest, BuiltinIndicesAlignWithScope) {
+    for (const auto& n : kBuiltinNames) sc.push(n);
+    EXPECT_EQ(sc.get_var_index("true"),  5u);
+    EXPECT_EQ(sc.get_var_index("false"), 4u);
+    EXPECT_EQ(sc.get_var_index("cons"),  3u);
+    EXPECT_EQ(sc.get_var_index("nil"),   2u);
+    for (size_t i = 0; i < kBuiltinNames.size(); ++i) sc.pop();
 }
 
 // ---------------------------------------------------------------------------
@@ -87,13 +88,13 @@ TEST_F(TranspilerTest, BuiltinIndicesAlignWithGlobalEnv) {
 
 TEST_F(TranspilerTest, TranspileIdentity) {
     const aml_expr* e = aml_pool.make_abs("x", aml_pool.make_token("x"));
-    EXPECT_EQ(tx_expr(e, builtins), lc_abs(lc_var(0)));
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), lc_abs(lc_var(0)));
 }
 
 TEST_F(TranspilerTest, TranspileCurriedAbstraction) {
     const aml_expr* e = aml_pool.make_abs("x",
         aml_pool.make_abs("y", aml_pool.make_token("x")));
-    EXPECT_EQ(tx_expr(e, builtins), lc_abs(lc_abs(lc_var(1))));
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), lc_abs(lc_abs(lc_var(1))));
 }
 
 TEST_F(TranspilerTest, TranspileApplication) {
@@ -101,7 +102,7 @@ TEST_F(TranspilerTest, TranspileApplication) {
         aml_pool.make_abs("x",
             aml_pool.make_app(aml_pool.make_token("f"), aml_pool.make_token("x"))));
     const lc_expr* expected = lc_abs(lc_abs(lc_app(lc_var(1), lc_var(0))));
-    EXPECT_EQ(tx_expr(e, builtins), expected);
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, TranspileLeftFoldedApplication) {
@@ -113,7 +114,7 @@ TEST_F(TranspilerTest, TranspileLeftFoldedApplication) {
                     aml_pool.make_token("y")))));
     const lc_expr* expected = lc_abs(lc_abs(lc_abs(
         lc_app(lc_app(lc_var(2), lc_var(1)), lc_var(0)))));
-    EXPECT_EQ(tx_expr(e, builtins), expected);
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, TranspileLocalShadowing) {
@@ -121,19 +122,18 @@ TEST_F(TranspilerTest, TranspileLocalShadowing) {
         aml_pool.make_app(aml_pool.make_token("x"),
             aml_pool.make_abs("x", aml_pool.make_token("x"))));
     const lc_expr* expected = lc_abs(lc_app(lc_var(0), lc_abs(lc_var(0))));
-    EXPECT_EQ(tx_expr(e, builtins), expected);
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, GlobalRefUnderNestedLambda) {
-    global_env env(std::vector<std::string>{"a", "b"});
     const aml_expr* e = aml_pool.make_abs("x", aml_pool.make_token("a"));
-    const lc_expr* got = tx_expr(e, env);
+    const lc_expr* got = tx_expr(e, {"a", "b"});
     EXPECT_EQ(got, lc_abs(lc_var(2)));
 }
 
 TEST_F(TranspilerTest, UnboundNameThrows) {
     const aml_expr* e = aml_pool.make_token("missing");
-    EXPECT_THROW(tx_expr(e, builtins), std::runtime_error);
+    EXPECT_THROW(tx_expr(e, kBuiltinNames), std::out_of_range);
 }
 
 // ---------------------------------------------------------------------------
@@ -142,14 +142,14 @@ TEST_F(TranspilerTest, UnboundNameThrows) {
 
 TEST_F(TranspilerTest, TranspileNatZeroScott) {
     const aml_expr* e = aml_pool.make_nat(0, nat_format::scott);
-    EXPECT_EQ(tx_expr(e, builtins), lc_var(2));
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), lc_var(2));
 }
 
 TEST_F(TranspilerTest, TranspileNatOneScott) {
     const aml_expr* e = aml_pool.make_nat(1, nat_format::scott);
     const lc_expr* expected = lc_app(
         lc_app(lc_var(3), lc_var(5)), lc_var(2));
-    EXPECT_EQ(tx_expr(e, builtins), expected);
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, TranspileNatTwoScott) {
@@ -157,55 +157,55 @@ TEST_F(TranspilerTest, TranspileNatTwoScott) {
     const lc_expr* expected = lc_app(
         lc_app(lc_var(3), lc_var(4)),
         lc_app(lc_app(lc_var(3), lc_var(5)), lc_var(2)));
-    EXPECT_EQ(tx_expr(e, builtins), expected);
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, TranspileNatChurchTwo) {
     const aml_expr* e = aml_pool.make_nat(2, nat_format::church);
     const lc_expr* expected = lc_abs(lc_abs(
         lc_app(lc_var(1), lc_app(lc_var(1), lc_var(0)))));
-    EXPECT_EQ(tx_expr(e, builtins), expected);
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, TranspileIntZero) {
     const aml_expr* e = aml_pool.make_integer(0);
     const lc_expr* expected = lc_app(lc_var(1), lc_var(2));
-    EXPECT_EQ(tx_expr(e, builtins), expected);
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, TranspileIntPositive) {
     const aml_expr* e = aml_pool.make_integer(12);
     const aml_expr* nat = aml_pool.make_nat(12, nat_format::scott);
-    const lc_expr* expected = lc_app(lc_var(1), tx_expr(nat, builtins));
-    EXPECT_EQ(tx_expr(e, builtins), expected);
+    const lc_expr* expected = lc_app(lc_var(1), tx_expr(nat, kBuiltinNames));
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, TranspileIntNegative) {
     const aml_expr* e = aml_pool.make_integer(-12);
     const aml_expr* nat = aml_pool.make_nat(11, nat_format::scott);
-    const lc_expr* expected = lc_app(lc_var(0), tx_expr(nat, builtins));
-    EXPECT_EQ(tx_expr(e, builtins), expected);
+    const lc_expr* expected = lc_app(lc_var(0), tx_expr(nat, kBuiltinNames));
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, TranspileChar) {
     const aml_expr* e = aml_pool.make_character('A');
     const aml_expr* as_nat = aml_pool.make_nat(65, nat_format::scott);
-    EXPECT_EQ(tx_expr(e, builtins), tx_expr(as_nat, builtins));
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), tx_expr(as_nat, kBuiltinNames));
 }
 
 TEST_F(TranspilerTest, TranspileStringEmpty) {
     const aml_expr* e = aml_pool.make_string("");
-    EXPECT_EQ(tx_expr(e, builtins), lc_var(2));
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), lc_var(2));
 }
 
 TEST_F(TranspilerTest, TranspileStringHello) {
     const aml_expr* e = aml_pool.make_string("hi");
-    const lc_expr* h = tx_expr(aml_pool.make_character('h'), builtins);
-    const lc_expr* i = tx_expr(aml_pool.make_character('i'), builtins);
+    const lc_expr* h = tx_expr(aml_pool.make_character('h'), kBuiltinNames);
+    const lc_expr* i = tx_expr(aml_pool.make_character('i'), kBuiltinNames);
     const lc_expr* expected = lc_app(
         lc_app(lc_var(3), h),
         lc_app(lc_app(lc_var(3), i), lc_var(2)));
-    EXPECT_EQ(tx_expr(e, builtins), expected);
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, TranspileListScott) {
@@ -213,23 +213,22 @@ TEST_F(TranspilerTest, TranspileListScott) {
     const aml_expr* b = aml_pool.make_character('b');
     const aml_expr* e = aml_pool.make_list({a, b}, list_format::scott);
     const lc_expr* expected = lc_app(
-        lc_app(lc_var(3), tx_expr(a, builtins)),
-        lc_app(lc_app(lc_var(3), tx_expr(b, builtins)), lc_var(2)));
-    EXPECT_EQ(tx_expr(e, builtins), expected);
+        lc_app(lc_var(3), tx_expr(a, kBuiltinNames)),
+        lc_app(lc_app(lc_var(3), tx_expr(b, kBuiltinNames)), lc_var(2)));
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, TranspileListChurch) {
     const aml_expr* a = aml_pool.make_character('a');
     const aml_expr* e = aml_pool.make_list({a}, list_format::church);
     const lc_expr* expected = lc_abs(lc_abs(
-        lc_app(lc_app(lc_var(1), tx_expr(a, builtins)), lc_var(0))));
-    EXPECT_EQ(tx_expr(e, builtins), expected);
+        lc_app(lc_app(lc_var(1), tx_expr(a, kBuiltinNames)), lc_var(0))));
+    EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
-TEST_F(TranspilerTest, MissingConsInGlobalEnvThrowsOnScottList) {
-    global_env env(std::vector<std::string>{"nil"});
+TEST_F(TranspilerTest, MissingScopeEntryThrowsOnScottList) {
     const aml_expr* e = aml_pool.make_list({aml_pool.make_integer(1)}, list_format::scott);
-    EXPECT_THROW(tx_expr(e, env), std::runtime_error);
+    EXPECT_THROW(tx_expr(e, {"nil"}), std::out_of_range);
 }
 
 // ---------------------------------------------------------------------------
@@ -241,7 +240,7 @@ TEST_F(TranspilerTest, NotFunctionUsesGlobalIndices) {
         aml_pool.make_app(
             aml_pool.make_app(aml_pool.make_token("b"), aml_pool.make_token("false")),
             aml_pool.make_token("true")));
-    const lc_expr* got = tx_expr(body, builtins);
+    const lc_expr* got = tx_expr(body, kBuiltinNames);
     const lc_expr* expected = lc_abs(lc_app(
         lc_app(lc_var(0), lc_var(5)), lc_var(6)));
     EXPECT_EQ(got, expected);
@@ -256,34 +255,38 @@ TEST_F(TranspilerTest, IfThenElseFunction) {
                     aml_pool.make_token("b")))));
     const lc_expr* expected = lc_abs(lc_abs(lc_abs(
         lc_app(lc_app(lc_var(2), lc_var(1)), lc_var(0)))));
-    EXPECT_EQ(tx_expr(body, builtins), expected);
+    EXPECT_EQ(tx_expr(body, kBuiltinNames), expected);
 }
 
-TEST_F(TranspilerTest, MutualDefsSameGlobalEnv) {
-    global_env env(std::vector<std::string>{"f", "g"});
+TEST_F(TranspilerTest, MutualDefsSameScope) {
+    const std::vector<std::string> names = {"f", "g"};
     const aml_expr* f_body = aml_pool.make_abs("x",
         aml_pool.make_app(aml_pool.make_token("g"), aml_pool.make_token("x")));
     const aml_expr* g_body = aml_pool.make_abs("x",
         aml_pool.make_app(aml_pool.make_token("f"), aml_pool.make_token("x")));
-    const lc_expr* f_got = tx_expr(f_body, env);
-    const lc_expr* g_got = tx_expr(g_body, env);
+    const lc_expr* f_got = tx_expr(f_body, names);
+    const lc_expr* g_got = tx_expr(g_body, names);
     EXPECT_EQ(f_got, lc_abs(lc_app(lc_var(1), lc_var(0))));
     EXPECT_EQ(g_got, lc_abs(lc_app(lc_var(2), lc_var(0))));
 }
 
 TEST_F(TranspilerTest, ComposeIdIdNoDoubleInlining) {
-    global_env env = global_env_from_builtin_names_and({"compose", "id"});
+    const std::vector<std::string> names = [] {
+        auto v = kBuiltinNames;
+        v.push_back("compose");
+        v.push_back("id");
+        return v;
+    }();
     const aml_expr* main = aml_pool.make_app(
         aml_pool.make_app(aml_pool.make_token("compose"), aml_pool.make_token("id")),
         aml_pool.make_token("id"));
-    const lc_expr* got = tx_expr(main, env);
+    const lc_expr* got = tx_expr(main, names);
     const lc_expr* expected = lc_app(
         lc_app(lc_var(1), lc_var(0)), lc_var(0));
     EXPECT_EQ(got, expected);
 }
 
 TEST_F(TranspilerTest, TranspileIdentityFunctionFragment) {
-    global_env env(std::vector<std::string>{"id"});
     const aml_expr* id = aml_pool.make_abs("x", aml_pool.make_token("x"));
-    EXPECT_EQ(tx_expr(id, env), lc_abs(lc_var(0)));
+    EXPECT_EQ(tx_expr(id, {"id"}), lc_abs(lc_var(0)));
 }

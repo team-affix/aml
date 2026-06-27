@@ -4,13 +4,16 @@
 #include <string>
 #include <vector>
 #include "infrastructure/aml_expr_pool.hpp"
-#include "infrastructure/global_env_factory.hpp"
 #include "infrastructure/lc_transpile_bundle.hpp"
 #include "parser/generated/AMLLexer.h"
 #include "parser/generated/AMLParser.h"
 #include "parser/hpp/aml_visitor.hpp"
 
 namespace {
+
+static const std::vector<std::string> kBuiltinNames = {
+    "true", "false", "cons", "nil", "pos", "negsuc"
+};
 
 aml_expr_pool& shared_pool() {
     static aml_expr_pool pool;
@@ -21,11 +24,14 @@ aml_visitor<aml_expr_pool> make_visitor() {
     return aml_visitor<aml_expr_pool>{shared_pool()};
 }
 
-const lc_expr* lc_abs(lc_expr_pool& pool, const lc_expr* b) {
-    return pool.make_abs(b);
+const lc_expr* lc_abs(lc_expr_pool& pool, const lc_expr* b) { return pool.make_abs(b); }
+const lc_expr* lc_var(lc_expr_pool& pool, uint32_t i)       { return pool.make_var(i); }
+
+void push_names(lc_transpile_bundle& b, const std::vector<std::string>& names) {
+    for (const auto& n : names) b.sc.push(n);
 }
-const lc_expr* lc_var(lc_expr_pool& pool, uint32_t i) {
-    return pool.make_var(i);
+void pop_names(lc_transpile_bundle& b, size_t count) {
+    for (size_t i = 0; i < count; ++i) b.sc.pop();
 }
 
 } // namespace
@@ -43,10 +49,10 @@ TEST(ParseTranspileTest, IdentityFunction) {
     EXPECT_EQ(defs.definitions[0].name, "id");
 
     lc_transpile_bundle bundle;
-    global_env env({"id"});
-    local_binding_env local;
-    const lc_expr* body =
-        bundle.tx.transpile(defs.definitions[0].body, local, env);
+    push_names(bundle, {"id"});
+    const lc_expr* body = bundle.tx.transpile(defs.definitions[0].body);
+    pop_names(bundle, 1);
+
     EXPECT_EQ(body, lc_abs(bundle.lc, lc_var(bundle.lc, 0)));
 }
 
@@ -72,12 +78,14 @@ TEST(ParseTranspileTest, NotFunctionUsesGlobalIndices) {
     ASSERT_EQ(ctors.groups.size(), 1u);
 
     lc_transpile_bundle bundle;
-    global_env env = global_env_from_builtin_names();
-    local_binding_env local;
-    const lc_expr* body =
-        bundle.tx.transpile(defs.definitions[0].body, local, env);
+    push_names(bundle, kBuiltinNames);
+    const lc_expr* body = bundle.tx.transpile(defs.definitions[0].body);
+    pop_names(bundle, kBuiltinNames.size());
+
+    // "b" is var(0); "false" and "true" are globals shifted by 1 local depth
     const lc_expr* expected = lc_abs(bundle.lc, bundle.lc.make_app(
-        bundle.lc.make_app(lc_var(bundle.lc, 0), lc_var(bundle.lc, 5)), lc_var(bundle.lc, 6)));
+        bundle.lc.make_app(lc_var(bundle.lc, 0), lc_var(bundle.lc, 5)),
+        lc_var(bundle.lc, 6)));
     EXPECT_EQ(body, expected);
 }
 
@@ -93,10 +101,10 @@ TEST(ParseTranspileTest, DeclarationGroupAndNatLiteral) {
     ASSERT_EQ(defs.definitions.size(), 1u);
 
     lc_transpile_bundle bundle;
-    global_env env = global_env_from_builtin_names();
-    local_binding_env local;
-    const lc_expr* body =
-        bundle.tx.transpile(defs.definitions[0].body, local, env);
+    push_names(bundle, kBuiltinNames);
+    const lc_expr* body = bundle.tx.transpile(defs.definitions[0].body);
+    pop_names(bundle, kBuiltinNames.size());
+
     EXPECT_NE(body, nullptr);
     EXPECT_GT(bundle.lc.size(), 1u);
 }
@@ -114,10 +122,15 @@ TEST(ParseTranspileTest, IfThenElseFunctionFragment) {
     ASSERT_EQ(defs.definitions.size(), 1u);
 
     lc_transpile_bundle bundle;
-    global_env env = global_env_from_builtin_names_and({"if_then_else"});
-    local_binding_env local;
-    const lc_expr* body =
-        bundle.tx.transpile(defs.definitions[0].body, local, env);
+    const std::vector<std::string> names = [] {
+        auto v = kBuiltinNames;
+        v.push_back("if_then_else");
+        return v;
+    }();
+    push_names(bundle, names);
+    const lc_expr* body = bundle.tx.transpile(defs.definitions[0].body);
+    pop_names(bundle, names.size());
+
     const lc_expr* expected = lc_abs(bundle.lc, lc_abs(bundle.lc, lc_abs(bundle.lc,
         bundle.lc.make_app(
             bundle.lc.make_app(lc_var(bundle.lc, 2), lc_var(bundle.lc, 1)),
@@ -139,21 +152,24 @@ TEST(ParseTranspileTest, MainUsesGlobalIndicesNotDeltaInlining) {
     ASSERT_EQ(defs.definitions.size(), 2u);
 
     lc_transpile_bundle bundle;
-    global_env env = global_env_from_builtin_names_and({"if_then_else", "main"});
-    local_binding_env local;
-    const lc_expr* main_body =
-        bundle.tx.transpile(defs.definitions[1].body, local, env);
-    auto k_ite = env.lookup_global("if_then_else");
-    auto k_true = env.lookup_global("true");
-    auto k_false = env.lookup_global("false");
-    ASSERT_TRUE(k_ite.has_value());
-    ASSERT_TRUE(k_true.has_value());
-    ASSERT_TRUE(k_false.has_value());
+    const std::vector<std::string> names = [] {
+        auto v = kBuiltinNames;
+        v.push_back("if_then_else");
+        v.push_back("main");
+        return v;
+    }();
+    push_names(bundle, names);
+    const lc_expr* main_body = bundle.tx.transpile(defs.definitions[1].body);
+    const uint32_t k_ite   = bundle.sc.get_var_index("if_then_else");
+    const uint32_t k_true  = bundle.sc.get_var_index("true");
+    const uint32_t k_false = bundle.sc.get_var_index("false");
+    pop_names(bundle, names.size());
+
     const lc_expr* expected = bundle.lc.make_app(
         bundle.lc.make_app(
-            bundle.lc.make_app(lc_var(bundle.lc, *k_ite), lc_var(bundle.lc, *k_true)),
-            lc_var(bundle.lc, *k_false)),
-        lc_var(bundle.lc, *k_true));
+            bundle.lc.make_app(lc_var(bundle.lc, k_ite), lc_var(bundle.lc, k_true)),
+            lc_var(bundle.lc, k_false)),
+        lc_var(bundle.lc, k_true));
     EXPECT_EQ(main_body, expected);
 }
 
@@ -169,10 +185,10 @@ TEST(ParseTranspileTest, ListAndIntegerLiterals) {
     ASSERT_EQ(defs.definitions.size(), 1u);
 
     lc_transpile_bundle bundle;
-    global_env env = global_env_from_builtin_names();
-    local_binding_env local;
-    const lc_expr* body =
-        bundle.tx.transpile(defs.definitions[0].body, local, env);
+    push_names(bundle, kBuiltinNames);
+    const lc_expr* body = bundle.tx.transpile(defs.definitions[0].body);
+    pop_names(bundle, kBuiltinNames.size());
+
     EXPECT_NE(body, nullptr);
     EXPECT_GT(bundle.lc.size(), 5u);
 }
@@ -189,10 +205,15 @@ TEST(ParseTranspileTest, StatementFileDataPointFragment) {
     ASSERT_EQ(data.statements.size(), 1u);
 
     lc_transpile_bundle bundle;
-    global_env env = global_env_from_builtin_names_and({"multiply"});
-    local_binding_env local;
-    const lc_expr* input =
-        bundle.tx.transpile(data.statements[0].input, local, env);
+    const std::vector<std::string> names = [] {
+        auto v = kBuiltinNames;
+        v.push_back("multiply");
+        return v;
+    }();
+    push_names(bundle, names);
+    const lc_expr* input = bundle.tx.transpile(data.statements[0].input);
+    pop_names(bundle, names.size());
+
     EXPECT_NE(input, nullptr);
 }
 
@@ -211,16 +232,21 @@ TEST(ParseTranspileTest, ComposeIdIdFragment) {
     ASSERT_EQ(defs.definitions.size(), 3u);
 
     lc_transpile_bundle bundle;
-    global_env env = global_env_from_builtin_names_and({"id", "compose", "main"});
-    local_binding_env local;
-    const lc_expr* main_body =
-        bundle.tx.transpile(defs.definitions[2].body, local, env);
-    auto k_compose = env.lookup_global("compose");
-    auto k_id = env.lookup_global("id");
-    ASSERT_TRUE(k_compose.has_value());
-    ASSERT_TRUE(k_id.has_value());
+    const std::vector<std::string> names = [] {
+        auto v = kBuiltinNames;
+        v.push_back("id");
+        v.push_back("compose");
+        v.push_back("main");
+        return v;
+    }();
+    push_names(bundle, names);
+    const lc_expr* main_body = bundle.tx.transpile(defs.definitions[2].body);
+    const uint32_t k_compose = bundle.sc.get_var_index("compose");
+    const uint32_t k_id      = bundle.sc.get_var_index("id");
+    pop_names(bundle, names.size());
+
     const lc_expr* expected = bundle.lc.make_app(
-        bundle.lc.make_app(lc_var(bundle.lc, *k_compose), lc_var(bundle.lc, *k_id)),
-        lc_var(bundle.lc, *k_id));
+        bundle.lc.make_app(lc_var(bundle.lc, k_compose), lc_var(bundle.lc, k_id)),
+        lc_var(bundle.lc, k_id));
     EXPECT_EQ(main_body, expected);
 }
