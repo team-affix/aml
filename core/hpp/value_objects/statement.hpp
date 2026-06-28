@@ -4,8 +4,8 @@
 #include "aml_expr.hpp"
 
 struct statement {
-    const aml_expr* input;
-    const aml_expr* label;
+    const aml_expr* lhs;
+    const aml_expr* rhs;
 };
 
 #endif

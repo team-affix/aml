@@ -219,10 +219,10 @@ TEST_F(AmlVisitorTest, ParseStatementFileStatements) {
     parsed_statement_file pt =
         parse_statement_file("not false : true.\nmultiply 3 4 12 : true.");
     ASSERT_EQ(pt.file.statements.size(), 2u);
-    EXPECT_NE(as_app(pt.file.statements[0].input), nullptr);
-    EXPECT_NE(as_token(pt.file.statements[0].label), nullptr);
-    EXPECT_NE(as_app(pt.file.statements[1].input), nullptr);
-    EXPECT_NE(as_token(pt.file.statements[1].label), nullptr);
+    EXPECT_NE(as_app(pt.file.statements[0].lhs), nullptr);
+    EXPECT_NE(as_token(pt.file.statements[0].rhs), nullptr);
+    EXPECT_NE(as_app(pt.file.statements[1].lhs), nullptr);
+    EXPECT_NE(as_token(pt.file.statements[1].rhs), nullptr);
 }
 
 // ---------------------------------------------------------------------------

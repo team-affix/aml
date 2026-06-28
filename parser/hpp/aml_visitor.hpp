@@ -86,7 +86,7 @@ inline statement_file aml_visitor<M>::parse_statement_file(
 
 template<typename M>
 inline statement aml_visitor<M>::statement_from(AMLParser::StatementContext* ctx) {
-    return {expr_from(ctx->expr(0)), expr_from(ctx->expr(1))};
+    return {.lhs = expr_from(ctx->expr(0)), .rhs = expr_from(ctx->expr(1))};
 }
 
 template<typename M>

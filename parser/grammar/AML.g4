@@ -17,10 +17,10 @@ moduleItem
     | definition eol
     ;
 
-// Statement file: input : label pairs (one dataset).
+// Statement file: lhs ':' rhs pairs.
 // Example:
 //   multiply 3 4 12 : true.
-//   multiply 3 4 5 : false.
+//   eq (double 2) 4 : is_correct.
 statementFile
     : (statement eol)* EOF
     ;

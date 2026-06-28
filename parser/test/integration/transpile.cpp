@@ -176,7 +176,7 @@ TEST(ParseTranspileTest, StatementFileDataPointFragment) {
         return v;
     }();
     push_names(bundle, names);
-    const lc_expr* input = bundle.tx.transpile(data.statements[0].input);
+    const lc_expr* input = bundle.tx.transpile(data.statements[0].lhs);
     pop_names(bundle, names.size());
 
     EXPECT_NE(input, nullptr);
