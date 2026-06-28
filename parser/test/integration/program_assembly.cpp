@@ -8,7 +8,7 @@
 #include "infrastructure/aml_expr_pool.hpp"
 #include "infrastructure/declaration_transpiler.hpp"
 #include "infrastructure/global_wrapper.hpp"
-#include "infrastructure/lc_transpile_bundle.hpp"
+#include "infrastructure/transpiler_manifest.hpp"
 #include "parser/generated/AMLLexer.h"
 #include "parser/generated/AMLParser.h"
 #include "parser/hpp/aml_visitor.hpp"
@@ -77,7 +77,7 @@ TEST(ProgramAssemblyTest, MainReferencingDeclarationGlobals) {
     ASSERT_EQ(decls.groups.size(), 1u);
     ASSERT_EQ(defs.definitions.size(), 1u);
 
-    lc_transpile_bundle bundle;
+    transpiler_manifest bundle;
     declaration_transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool> dt{bundle.lc, bundle.lc, bundle.lc};
 
     // Push globals into scope + collect lc terms
@@ -116,7 +116,7 @@ TEST(ProgramAssemblyTest, GlobalWrapperProducesClosedTerm) {
     declaration_file decls = parse_decls("true/0 | false/0.");
     ASSERT_EQ(decls.groups.size(), 1u);
 
-    lc_transpile_bundle bundle;
+    transpiler_manifest bundle;
     declaration_transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool> dt{bundle.lc, bundle.lc, bundle.lc};
     auto pairs = dt.transpile_group(decls.groups[0]);
 

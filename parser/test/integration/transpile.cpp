@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include "infrastructure/aml_expr_pool.hpp"
-#include "infrastructure/lc_transpile_bundle.hpp"
+#include "infrastructure/transpiler_manifest.hpp"
 #include "parser/generated/AMLLexer.h"
 #include "parser/generated/AMLParser.h"
 #include "parser/hpp/aml_visitor.hpp"
@@ -27,10 +27,10 @@ aml_visitor<aml_expr_pool> make_visitor() {
 const lc_expr* lc_abs(lc_expr_pool& pool, const lc_expr* b) { return pool.make_abs(b); }
 const lc_expr* lc_var(lc_expr_pool& pool, uint32_t i)       { return pool.make_var(i); }
 
-void push_names(lc_transpile_bundle& b, const std::vector<std::string>& names) {
+void push_names(transpiler_manifest& b, const std::vector<std::string>& names) {
     for (const auto& n : names) b.sc.push(n);
 }
-void pop_names(lc_transpile_bundle& b, size_t count) {
+void pop_names(transpiler_manifest& b, size_t count) {
     for (size_t i = 0; i < count; ++i) b.sc.pop();
 }
 
@@ -48,7 +48,7 @@ TEST(ParseTranspileTest, IdentityFunction) {
     ASSERT_EQ(defs.definitions.size(), 1u);
     EXPECT_EQ(defs.definitions[0].name, "id");
 
-    lc_transpile_bundle bundle;
+    transpiler_manifest bundle;
     push_names(bundle, {"id"});
     const lc_expr* body = bundle.tx.transpile(defs.definitions[0].body);
     pop_names(bundle, 1);
@@ -77,7 +77,7 @@ TEST(ParseTranspileTest, NotFunctionUsesGlobalIndices) {
     ASSERT_EQ(defs.definitions.size(), 1u);
     ASSERT_EQ(ctors.groups.size(), 1u);
 
-    lc_transpile_bundle bundle;
+    transpiler_manifest bundle;
     push_names(bundle, kBuiltinNames);
     const lc_expr* body = bundle.tx.transpile(defs.definitions[0].body);
     pop_names(bundle, kBuiltinNames.size());
@@ -100,7 +100,7 @@ TEST(ParseTranspileTest, DeclarationGroupAndNatLiteral) {
     definition_file defs = make_visitor().parse_definition_file(def_parser.definitionFile());
     ASSERT_EQ(defs.definitions.size(), 1u);
 
-    lc_transpile_bundle bundle;
+    transpiler_manifest bundle;
     push_names(bundle, kBuiltinNames);
     const lc_expr* body = bundle.tx.transpile(defs.definitions[0].body);
     pop_names(bundle, kBuiltinNames.size());
@@ -121,7 +121,7 @@ TEST(ParseTranspileTest, IfThenElseFunctionFragment) {
     definition_file defs = make_visitor().parse_definition_file(def_parser.definitionFile());
     ASSERT_EQ(defs.definitions.size(), 1u);
 
-    lc_transpile_bundle bundle;
+    transpiler_manifest bundle;
     const std::vector<std::string> names = [] {
         auto v = kBuiltinNames;
         v.push_back("if_then_else");
@@ -151,7 +151,7 @@ TEST(ParseTranspileTest, MainUsesGlobalIndicesNotDeltaInlining) {
     definition_file defs = make_visitor().parse_definition_file(def_parser.definitionFile());
     ASSERT_EQ(defs.definitions.size(), 2u);
 
-    lc_transpile_bundle bundle;
+    transpiler_manifest bundle;
     const std::vector<std::string> names = [] {
         auto v = kBuiltinNames;
         v.push_back("if_then_else");
@@ -184,7 +184,7 @@ TEST(ParseTranspileTest, ListAndIntegerLiterals) {
     definition_file defs = make_visitor().parse_definition_file(def_parser.definitionFile());
     ASSERT_EQ(defs.definitions.size(), 1u);
 
-    lc_transpile_bundle bundle;
+    transpiler_manifest bundle;
     push_names(bundle, kBuiltinNames);
     const lc_expr* body = bundle.tx.transpile(defs.definitions[0].body);
     pop_names(bundle, kBuiltinNames.size());
@@ -204,7 +204,7 @@ TEST(ParseTranspileTest, StatementFileDataPointFragment) {
     statement_file data = make_visitor().parse_statement_file(train_parser.statementFile());
     ASSERT_EQ(data.statements.size(), 1u);
 
-    lc_transpile_bundle bundle;
+    transpiler_manifest bundle;
     const std::vector<std::string> names = [] {
         auto v = kBuiltinNames;
         v.push_back("multiply");
@@ -231,7 +231,7 @@ TEST(ParseTranspileTest, ComposeIdIdFragment) {
     definition_file defs = make_visitor().parse_definition_file(def_parser.definitionFile());
     ASSERT_EQ(defs.definitions.size(), 3u);
 
-    lc_transpile_bundle bundle;
+    transpiler_manifest bundle;
     const std::vector<std::string> names = [] {
         auto v = kBuiltinNames;
         v.push_back("id");
