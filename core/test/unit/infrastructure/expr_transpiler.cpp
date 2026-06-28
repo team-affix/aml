@@ -31,8 +31,10 @@ struct MockMakeLcApp {
 };
 
 struct TranspilerTest : public ::testing::Test {
-    using transpiler_t          = transpiler<MockMakeLcVar, MockMakeLcAbs, MockMakeLcApp, scope, scope, scope>;
+    using transpiler_t             = transpiler<MockMakeLcVar, MockMakeLcAbs, MockMakeLcApp, scope, scope, scope>;
     using token_transpiler_t       = typename transpiler_t::token_transpiler_t;
+    using abs_transpiler_t         = typename transpiler_t::abs_transpiler_t;
+    using app_transpiler_t         = typename transpiler_t::app_transpiler_t;
     using scott_nat_transpiler_t   = typename transpiler_t::scott_nat_transpiler_t;
     using church_nat_transpiler_t  = typename transpiler_t::church_nat_transpiler_t;
     using integer_transpiler_t     = typename transpiler_t::integer_transpiler_t;
@@ -40,8 +42,6 @@ struct TranspilerTest : public ::testing::Test {
     using string_transpiler_t      = typename transpiler_t::string_transpiler_t;
     using scott_list_transpiler_t  = typename transpiler_t::scott_list_transpiler_t;
     using church_list_transpiler_t = typename transpiler_t::church_list_transpiler_t;
-    using abs_transpiler_t         = typename transpiler_t::abs_transpiler_t;
-    using app_transpiler_t         = typename transpiler_t::app_transpiler_t;
 
     aml_expr_pool aml_pool;
     lc_expr_pool  lc_pool;
@@ -51,29 +51,32 @@ struct TranspilerTest : public ::testing::Test {
     MockMakeLcApp mock_app;
 
     // tx declared first: receives forward references to sub-components below.
-    transpiler_t          tx;
+    transpiler_t             tx;
     token_transpiler_t       token_;
+    abs_transpiler_t         abs_;
+    app_transpiler_t         app_;
     scott_nat_transpiler_t   scott_nat_;
     church_nat_transpiler_t  church_nat_;
     integer_transpiler_t     integer_;
     character_transpiler_t   character_;
     string_transpiler_t      string_;
-    abs_transpiler_t         abs_;
-    app_transpiler_t         app_;
     scott_list_transpiler_t  scott_list_;
     church_list_transpiler_t church_list_;
 
     TranspilerTest()
-        : tx(token_, abs_, app_, scott_nat_, church_nat_,
-             integer_, character_, scott_list_, church_list_, string_),
+        : tx(token_, abs_, app_,
+             scott_nat_, church_nat_,
+             integer_, character_,
+             string_,
+             scott_list_, church_list_),
           token_(mock_var, sc),
+          abs_(tx, mock_abs, sc, sc),
+          app_(tx, mock_app),
           scott_nat_(mock_var, mock_app, sc),
           church_nat_(mock_var, mock_abs, mock_app),
           integer_(mock_var, mock_app, scott_nat_, sc),
           character_(scott_nat_),
           string_(scott_nat_, mock_var, mock_app, sc),
-          abs_(tx, mock_abs, sc, sc),
-          app_(tx, mock_app),
           scott_list_(tx, mock_var, mock_app, sc),
           church_list_(tx, mock_var, mock_abs, mock_app) {}
 

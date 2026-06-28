@@ -8,7 +8,7 @@
 
 template<typename ITranspileNat>
 struct character_transpiler {
-    explicit character_transpiler(ITranspileNat& transpile_nat);
+    character_transpiler(ITranspileNat& transpile_nat);
 
     const lc_expr* transpile_character(const aml_expr::character& c);
 

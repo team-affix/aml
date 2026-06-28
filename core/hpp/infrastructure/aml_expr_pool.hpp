@@ -17,7 +17,6 @@ struct aml_expr_pool {
     const aml_expr* make_character(char value);
     const aml_expr* make_string(std::string value);
     const aml_expr* make_list(std::vector<const aml_expr*> elems, list_format format);
-    size_t size() const;
 
     aml_expr_pool() = default;
     aml_expr_pool(const aml_expr_pool&) = delete;

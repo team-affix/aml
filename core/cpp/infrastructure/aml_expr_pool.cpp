@@ -35,7 +35,3 @@ const aml_expr* aml_expr_pool::make_list(std::vector<const aml_expr*> elems, lis
 const aml_expr* aml_expr_pool::intern(aml_expr&& e) {
     return &*exprs.emplace(std::move(e)).first;
 }
-
-size_t aml_expr_pool::size() const {
-    return exprs.size();
-}

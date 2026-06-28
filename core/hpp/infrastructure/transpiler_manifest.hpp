@@ -15,13 +15,15 @@
 //              constructed.  References are only USED after full construction,
 //              so this is safe (same pattern as atlas manifests).
 //   lc, sc   — default-constructed infrastructure.
-//   token_ … string_ — leaf sub-transpilers; depend only on lc and sc.
+//   token_ … string_ — non-recursive sub-transpilers; depend only on lc and sc.
 //   abs_ … church_list_ — recursive sub-transpilers; depend on tx (already
 //              constructed by the time they are initialized).
 struct transpiler_manifest {
-    using transpiler_t          = transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool,
-                                     scope, scope, scope>;
+    using transpiler_t             = transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool,
+                                        scope, scope, scope>;
     using token_transpiler_t       = typename transpiler_t::token_transpiler_t;
+    using abs_transpiler_t         = typename transpiler_t::abs_transpiler_t;
+    using app_transpiler_t         = typename transpiler_t::app_transpiler_t;
     using scott_nat_transpiler_t   = typename transpiler_t::scott_nat_transpiler_t;
     using church_nat_transpiler_t  = typename transpiler_t::church_nat_transpiler_t;
     using integer_transpiler_t     = typename transpiler_t::integer_transpiler_t;
@@ -29,13 +31,11 @@ struct transpiler_manifest {
     using string_transpiler_t      = typename transpiler_t::string_transpiler_t;
     using scott_list_transpiler_t  = typename transpiler_t::scott_list_transpiler_t;
     using church_list_transpiler_t = typename transpiler_t::church_list_transpiler_t;
-    using abs_transpiler_t         = typename transpiler_t::abs_transpiler_t;
-    using app_transpiler_t         = typename transpiler_t::app_transpiler_t;
 
     transpiler_manifest();
 
     // Primary entry points.
-    transpiler_t         tx;
+    transpiler_t tx;
     lc_expr_pool lc;
     scope        sc;
 
@@ -48,9 +48,9 @@ struct transpiler_manifest {
     string_transpiler_t     string_;
 
     // Recursive sub-components (depend on tx).
-    abs_transpiler_t        abs_;
-    app_transpiler_t        app_;
-    scott_list_transpiler_t scott_list_;
+    abs_transpiler_t         abs_;
+    app_transpiler_t         app_;
+    scott_list_transpiler_t  scott_list_;
     church_list_transpiler_t church_list_;
 };
 
@@ -58,8 +58,8 @@ inline transpiler_manifest::transpiler_manifest()
     : tx(token_, abs_, app_,
          scott_nat_, church_nat_,
          integer_, character_,
-         scott_list_, church_list_,
-         string_),
+         string_,
+         scott_list_, church_list_),
       token_(lc, sc),
       scott_nat_(lc, lc, sc),
       church_nat_(lc, lc, lc),

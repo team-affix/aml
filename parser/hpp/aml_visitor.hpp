@@ -26,7 +26,7 @@
 
 template<typename IMakeAml>
 struct aml_visitor : AMLBaseVisitor {
-    explicit aml_visitor(IMakeAml& make_aml);
+    aml_visitor(IMakeAml& make_aml);
 
     declaration_file parse_declaration_file(AMLParser::DeclarationFileContext*);
     definition_file  parse_definition_file(AMLParser::DefinitionFileContext*);
@@ -64,7 +64,7 @@ private:
 // ---------------------------------------------------------------------------
 
 template<typename M>
-inline aml_visitor<M>::aml_visitor(M& make_aml) : make_aml_(make_aml) {}
+aml_visitor<M>::aml_visitor(M& make_aml) : make_aml_(make_aml) {}
 
 template<typename M>
 inline declaration_file aml_visitor<M>::parse_declaration_file(

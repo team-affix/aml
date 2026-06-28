@@ -23,44 +23,46 @@ template<typename IMakeLcVar, typename IMakeLcAbs, typename IMakeLcApp,
 struct transpiler {
     using self = transpiler<IMakeLcVar, IMakeLcAbs, IMakeLcApp, IGetVarIndex, IPushVar, IPopVar>;
 
-    using token_transpiler_t      = token_transpiler<IMakeLcVar, IGetVarIndex>;
-    using scott_nat_transpiler_t  = scott_nat_transpiler<IMakeLcVar, IMakeLcApp, IGetVarIndex>;
-    using church_nat_transpiler_t = church_nat_transpiler<IMakeLcVar, IMakeLcAbs, IMakeLcApp>;
-    using integer_transpiler_t    = integer_transpiler<IMakeLcVar, IMakeLcApp, scott_nat_transpiler_t, IGetVarIndex>;
-    using character_transpiler_t  = character_transpiler<scott_nat_transpiler_t>;
-    using string_transpiler_t     = string_transpiler<scott_nat_transpiler_t, IMakeLcVar, IMakeLcApp, IGetVarIndex>;
-    using scott_list_transpiler_t = scott_list_transpiler<self, IMakeLcVar, IMakeLcApp, IGetVarIndex>;
+    using token_transpiler_t       = token_transpiler<IMakeLcVar, IGetVarIndex>;
+    using abs_transpiler_t         = abs_transpiler<self, IMakeLcAbs, IPushVar, IPopVar>;
+    using app_transpiler_t         = app_transpiler<self, IMakeLcApp>;
+    using scott_nat_transpiler_t   = scott_nat_transpiler<IMakeLcVar, IMakeLcApp, IGetVarIndex>;
+    using church_nat_transpiler_t  = church_nat_transpiler<IMakeLcVar, IMakeLcAbs, IMakeLcApp>;
+    using integer_transpiler_t     = integer_transpiler<IMakeLcVar, IMakeLcApp, scott_nat_transpiler_t, IGetVarIndex>;
+    using character_transpiler_t   = character_transpiler<scott_nat_transpiler_t>;
+    using string_transpiler_t      = string_transpiler<scott_nat_transpiler_t, IMakeLcVar, IMakeLcApp, IGetVarIndex>;
+    using scott_list_transpiler_t  = scott_list_transpiler<self, IMakeLcVar, IMakeLcApp, IGetVarIndex>;
     using church_list_transpiler_t = church_list_transpiler<self, IMakeLcVar, IMakeLcAbs, IMakeLcApp>;
-    using abs_transpiler_t        = abs_transpiler<self, IMakeLcAbs, IPushVar, IPopVar>;
-    using app_transpiler_t        = app_transpiler<self, IMakeLcApp>;
 
-    transpiler(token_transpiler_t&, abs_transpiler_t&, app_transpiler_t&,
+    transpiler(token_transpiler_t&,
+               abs_transpiler_t&, app_transpiler_t&,
                scott_nat_transpiler_t&, church_nat_transpiler_t&,
                integer_transpiler_t&, character_transpiler_t&,
-               scott_list_transpiler_t&, church_list_transpiler_t&,
-               string_transpiler_t&);
+               string_transpiler_t&,
+               scott_list_transpiler_t&, church_list_transpiler_t&);
 
     const lc_expr* transpile(const aml_expr* e);
 
 private:
-    token_transpiler_t&      token_;
-    abs_transpiler_t&        abs_;
-    app_transpiler_t&        app_;
-    scott_nat_transpiler_t&  scott_nat_;
-    church_nat_transpiler_t& church_nat_;
-    integer_transpiler_t&    integer_;
-    character_transpiler_t&  character_;
-    scott_list_transpiler_t& scott_list_;
+    token_transpiler_t&       token_;
+    abs_transpiler_t&         abs_;
+    app_transpiler_t&         app_;
+    scott_nat_transpiler_t&   scott_nat_;
+    church_nat_transpiler_t&  church_nat_;
+    integer_transpiler_t&     integer_;
+    character_transpiler_t&   character_;
+    string_transpiler_t&      string_;
+    scott_list_transpiler_t&  scott_list_;
     church_list_transpiler_t& church_list_;
-    string_transpiler_t&     string_;
 };
 
 template<typename IV, typename IL, typename IA, typename IG, typename IP, typename IO>
-transpiler<IV, IL, IA, IG, IP, IO>::transpiler(token_transpiler_t& token, abs_transpiler_t& abs, app_transpiler_t& app,
+transpiler<IV, IL, IA, IG, IP, IO>::transpiler(token_transpiler_t& token,
+                                               abs_transpiler_t& abs, app_transpiler_t& app,
                                                scott_nat_transpiler_t& scott_nat, church_nat_transpiler_t& church_nat,
                                                integer_transpiler_t& integer, character_transpiler_t& character,
-                                               scott_list_transpiler_t& scott_list, church_list_transpiler_t& church_list,
-                                               string_transpiler_t& string)
+                                               string_transpiler_t& string,
+                                               scott_list_transpiler_t& scott_list, church_list_transpiler_t& church_list)
     : token_(token),
       abs_(abs),
       app_(app),
@@ -68,9 +70,9 @@ transpiler<IV, IL, IA, IG, IP, IO>::transpiler(token_transpiler_t& token, abs_tr
       church_nat_(church_nat),
       integer_(integer),
       character_(character),
+      string_(string),
       scott_list_(scott_list),
-      church_list_(church_list),
-      string_(string) {}
+      church_list_(church_list) {}
 
 template<typename IV, typename IL, typename IA, typename IG, typename IP, typename IO>
 const lc_expr* transpiler<IV, IL, IA, IG, IP, IO>::transpile(const aml_expr* e) {
