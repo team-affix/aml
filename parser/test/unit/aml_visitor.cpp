@@ -1,4 +1,4 @@
-// aml_visitor: parses the three AML file kinds into value objects.
+// aml_visitor: parses AML module files and statement files into value objects.
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -51,42 +51,25 @@ void wire_mock_to_pool(MockMakeAml& mock, aml_expr_pool& pool) {
     });
 }
 
-static std::optional<declaration_file> try_parse_declaration_file(const std::string& src,
-                                                                aml_expr_pool& pool) {
+static std::optional<module_file> try_parse_module_file(const std::string& src,
+                                                        aml_expr_pool& pool) {
     antlr4::ANTLRInputStream stream(src);
     AMLLexer lexer(&stream);
     antlr4::CommonTokenStream tokens(&lexer);
     AMLParser parser(&tokens);
     parser.removeErrorListeners();
     lexer.removeErrorListeners();
-    auto* tree = parser.declarationFile();
+    auto* tree = parser.moduleFile();
     if (parser.getNumberOfSyntaxErrors() != 0 || lexer.getNumberOfSyntaxErrors() != 0)
         return std::nullopt;
     MockMakeAml mock;
     wire_mock_to_pool(mock, pool);
     aml_visitor<MockMakeAml> visitor{mock};
-    return visitor.parse_declaration_file(tree);
-}
-
-static std::optional<definition_file> try_parse_definition_file(const std::string& src,
-                                                            aml_expr_pool& pool) {
-    antlr4::ANTLRInputStream stream(src);
-    AMLLexer lexer(&stream);
-    antlr4::CommonTokenStream tokens(&lexer);
-    AMLParser parser(&tokens);
-    parser.removeErrorListeners();
-    lexer.removeErrorListeners();
-    auto* tree = parser.definitionFile();
-    if (parser.getNumberOfSyntaxErrors() != 0 || lexer.getNumberOfSyntaxErrors() != 0)
-        return std::nullopt;
-    MockMakeAml mock;
-    wire_mock_to_pool(mock, pool);
-    aml_visitor<MockMakeAml> visitor{mock};
-    return visitor.parse_definition_file(tree);
+    return visitor.parse_module_file(tree);
 }
 
 static std::optional<statement_file> try_parse_statement_file(const std::string& src,
-                                                       aml_expr_pool& pool) {
+                                                               aml_expr_pool& pool) {
     antlr4::ANTLRInputStream stream(src);
     AMLLexer lexer(&stream);
     antlr4::CommonTokenStream tokens(&lexer);
@@ -102,36 +85,21 @@ static std::optional<statement_file> try_parse_statement_file(const std::string&
     return visitor.parse_statement_file(tree);
 }
 
-struct parsed_declaration_file {
-    aml_expr_pool    pool;
-    declaration_file file;
-};
-
-struct parsed_definition_file {
-    aml_expr_pool   pool;
-    definition_file file;
+struct parsed_module_file {
+    aml_expr_pool pool;
+    module_file   file;
 };
 
 struct parsed_statement_file {
-    aml_expr_pool pool;
+    aml_expr_pool  pool;
     statement_file file;
 };
 
-static parsed_declaration_file parse_declaration_file(const std::string& src) {
+static parsed_module_file parse_module_file(const std::string& src) {
     aml_expr_pool pool;
-    auto file = try_parse_declaration_file(src, pool);
+    auto file = try_parse_module_file(src, pool);
     if (!file.has_value()) {
-        ADD_FAILURE() << "failed to parse declaration file:\n" << src;
-        return {};
-    }
-    return {std::move(pool), std::move(*file)};
-}
-
-static parsed_definition_file parse_definition_file(const std::string& src) {
-    aml_expr_pool pool;
-    auto file = try_parse_definition_file(src, pool);
-    if (!file.has_value()) {
-        ADD_FAILURE() << "failed to parse definition file:\n" << src;
+        ADD_FAILURE() << "failed to parse module file:\n" << src;
         return {};
     }
     return {std::move(pool), std::move(*file)};
@@ -147,27 +115,44 @@ static parsed_statement_file parse_statement_file(const std::string& src) {
     return {std::move(pool), std::move(*file)};
 }
 
-static const aml_expr* probe_body(const definition_file& defs) {
-    if (defs.definitions.size() != 1u) {
-        ADD_FAILURE() << "expected one definition, got " << defs.definitions.size();
+static std::vector<declaration_group> groups_from(const module_file& mf) {
+    std::vector<declaration_group> result;
+    for (const auto& item : mf.items)
+        if (const auto* g = std::get_if<declaration_group>(&item.content))
+            result.push_back(*g);
+    return result;
+}
+
+static std::vector<definition> definitions_from(const module_file& mf) {
+    std::vector<definition> result;
+    for (const auto& item : mf.items)
+        if (const auto* d = std::get_if<definition>(&item.content))
+            result.push_back(*d);
+    return result;
+}
+
+static const aml_expr* probe_body(const module_file& mf) {
+    auto defs = definitions_from(mf);
+    if (defs.size() != 1u) {
+        ADD_FAILURE() << "expected one definition, got " << defs.size();
         return nullptr;
     }
-    if (defs.definitions[0].name != "_aml_probe") {
-        ADD_FAILURE() << "unexpected probe name: " << defs.definitions[0].name;
+    if (defs[0].name != "_aml_probe") {
+        ADD_FAILURE() << "unexpected probe name: " << defs[0].name;
         return nullptr;
     }
-    return defs.definitions[0].body;
+    return defs[0].body;
 }
 
 struct parsed_expr {
-    aml_expr_pool   pool;
-    definition_file file;
+    aml_expr_pool pool;
+    module_file   file;
     const aml_expr* body() const { return probe_body(file); }
 };
 
 static parsed_expr parse_expr(const std::string& expr_src) {
-    parsed_definition_file pd = parse_definition_file("_aml_probe = " + expr_src + ".");
-    return {std::move(pd.pool), std::move(pd.file)};
+    parsed_module_file pm = parse_module_file("_aml_probe = " + expr_src + ".");
+    return {std::move(pm.pool), std::move(pm.file)};
 }
 
 // ---------------------------------------------------------------------------
@@ -220,14 +205,9 @@ struct AmlVisitorTest : AmlParserFixture {};
 // Program-level
 // ---------------------------------------------------------------------------
 
-TEST_F(AmlVisitorTest, ParseEmptyDeclarationFile) {
-    parsed_declaration_file pd = parse_declaration_file("");
-    EXPECT_TRUE(pd.file.groups.empty());
-}
-
-TEST_F(AmlVisitorTest, ParseEmptyDefinitionFile) {
-    parsed_definition_file pd = parse_definition_file("");
-    EXPECT_TRUE(pd.file.definitions.empty());
+TEST_F(AmlVisitorTest, ParseEmptyModuleFile) {
+    parsed_module_file pm = parse_module_file("");
+    EXPECT_TRUE(pm.file.items.empty());
 }
 
 TEST_F(AmlVisitorTest, ParseEmptyStatementFile) {
@@ -250,47 +230,53 @@ TEST_F(AmlVisitorTest, ParseStatementFileStatements) {
 // ---------------------------------------------------------------------------
 
 TEST_F(AmlVisitorTest, VisitDeclarationSingle) {
-    parsed_declaration_file pd = parse_declaration_file("nil/0.");
-    ASSERT_EQ(pd.file.groups.size(), 1u);
-    ASSERT_EQ(pd.file.groups[0].declarations.size(), 1u);
-    EXPECT_EQ(pd.file.groups[0].declarations[0].name, "nil");
-    EXPECT_EQ(pd.file.groups[0].declarations[0].arity, 0u);
+    parsed_module_file pm = parse_module_file("nil/0.");
+    auto gs = groups_from(pm.file);
+    ASSERT_EQ(gs.size(), 1u);
+    ASSERT_EQ(gs[0].declarations.size(), 1u);
+    EXPECT_EQ(gs[0].declarations[0].name, "nil");
+    EXPECT_EQ(gs[0].declarations[0].arity, 0u);
 }
 
 TEST_F(AmlVisitorTest, VisitDeclarationGroupPair) {
-    parsed_declaration_file pd = parse_declaration_file("true/0 | false/0.");
-    ASSERT_EQ(pd.file.groups.size(), 1u);
-    ASSERT_EQ(pd.file.groups[0].declarations.size(), 2u);
-    EXPECT_EQ(pd.file.groups[0].declarations[0].name, "true");
-    EXPECT_EQ(pd.file.groups[0].declarations[0].arity, 0u);
-    EXPECT_EQ(pd.file.groups[0].declarations[1].name, "false");
-    EXPECT_EQ(pd.file.groups[0].declarations[1].arity, 0u);
+    parsed_module_file pm = parse_module_file("true/0 | false/0.");
+    auto gs = groups_from(pm.file);
+    ASSERT_EQ(gs.size(), 1u);
+    ASSERT_EQ(gs[0].declarations.size(), 2u);
+    EXPECT_EQ(gs[0].declarations[0].name, "true");
+    EXPECT_EQ(gs[0].declarations[0].arity, 0u);
+    EXPECT_EQ(gs[0].declarations[1].name, "false");
+    EXPECT_EQ(gs[0].declarations[1].arity, 0u);
 }
 
 TEST_F(AmlVisitorTest, VisitDeclarationGroupThree) {
-    parsed_declaration_file pd = parse_declaration_file("a/0 | b/1 | c/2.");
-    ASSERT_EQ(pd.file.groups[0].declarations.size(), 3u);
-    EXPECT_EQ(pd.file.groups[0].declarations[0].name, "a");
-    EXPECT_EQ(pd.file.groups[0].declarations[1].arity, 1u);
-    EXPECT_EQ(pd.file.groups[0].declarations[2].name, "c");
-    EXPECT_EQ(pd.file.groups[0].declarations[2].arity, 2u);
+    parsed_module_file pm = parse_module_file("a/0 | b/1 | c/2.");
+    auto gs = groups_from(pm.file);
+    ASSERT_EQ(gs[0].declarations.size(), 3u);
+    EXPECT_EQ(gs[0].declarations[0].name, "a");
+    EXPECT_EQ(gs[0].declarations[1].arity, 1u);
+    EXPECT_EQ(gs[0].declarations[2].name, "c");
+    EXPECT_EQ(gs[0].declarations[2].arity, 2u);
 }
 
 TEST_F(AmlVisitorTest, VisitDeclarationGroupPreservesOrder) {
-    parsed_declaration_file pd = parse_declaration_file("decided/1 | undecided/0.");
-    EXPECT_EQ(pd.file.groups[0].declarations[0].name, "decided");
-    EXPECT_EQ(pd.file.groups[0].declarations[1].name, "undecided");
+    parsed_module_file pm = parse_module_file("decided/1 | undecided/0.");
+    auto gs = groups_from(pm.file);
+    EXPECT_EQ(gs[0].declarations[0].name, "decided");
+    EXPECT_EQ(gs[0].declarations[1].name, "undecided");
 }
 
 TEST_F(AmlVisitorTest, VisitDeclarationHighArity) {
-    parsed_declaration_file pd = parse_declaration_file("cons/2 | nil/0.");
-    EXPECT_EQ(pd.file.groups[0].declarations[0].arity, 2u);
-    EXPECT_EQ(pd.file.groups[0].declarations[1].arity, 0u);
+    parsed_module_file pm = parse_module_file("cons/2 | nil/0.");
+    auto gs = groups_from(pm.file);
+    EXPECT_EQ(gs[0].declarations[0].arity, 2u);
+    EXPECT_EQ(gs[0].declarations[1].arity, 0u);
 }
 
 TEST_F(AmlVisitorTest, VisitDeclarationUnderscoreName) {
-    parsed_declaration_file pd = parse_declaration_file("_internal/0.");
-    EXPECT_EQ(pd.file.groups[0].declarations[0].name, "_internal");
+    parsed_module_file pm = parse_module_file("_internal/0.");
+    auto gs = groups_from(pm.file);
+    EXPECT_EQ(gs[0].declarations[0].name, "_internal");
 }
 
 // ---------------------------------------------------------------------------
@@ -298,9 +284,10 @@ TEST_F(AmlVisitorTest, VisitDeclarationUnderscoreName) {
 // ---------------------------------------------------------------------------
 
 TEST_F(AmlVisitorTest, VisitFunctionDefName) {
-    parsed_definition_file pd = parse_definition_file("foo = x => x.");
-    ASSERT_EQ(pd.file.definitions.size(), 1u);
-    EXPECT_EQ(pd.file.definitions[0].name, "foo");
+    parsed_module_file pm = parse_module_file("foo = x => x.");
+    auto ds = definitions_from(pm.file);
+    ASSERT_EQ(ds.size(), 1u);
+    EXPECT_EQ(ds[0].name, "foo");
 }
 
 TEST_F(AmlVisitorTest, VisitFunctionDefIdentityBody) {
@@ -710,40 +697,56 @@ TEST_F(AmlVisitorTest, VisitListMixedElements) {
 // Realistic programs
 // ---------------------------------------------------------------------------
 
-TEST_F(AmlVisitorTest, VisitStandardLibraryDeclarationFile) {
-    parsed_declaration_file pd = parse_declaration_file(
+TEST_F(AmlVisitorTest, VisitBooleanModule) {
+    parsed_module_file pm = parse_module_file(
         "true/0 | false/0.\n"
-        "suc/1 | zero/0.\n");
-    EXPECT_EQ(pd.file.groups.size(), 2u);
+        "or  = a => b => a true b.\n"
+        "and = a => b => a b false.\n"
+        "not = a => a false true.\n");
+    auto gs = groups_from(pm.file);
+    auto ds = definitions_from(pm.file);
+    ASSERT_EQ(gs.size(), 1u);
+    EXPECT_EQ(gs[0].declarations.size(), 2u);
+    ASSERT_EQ(ds.size(), 3u);
+    EXPECT_EQ(ds[0].name, "or");
+    EXPECT_EQ(ds[1].name, "and");
+    EXPECT_EQ(ds[2].name, "not");
 }
 
-TEST_F(AmlVisitorTest, VisitStandardLibraryDefinitionFile) {
-    parsed_definition_file pd = parse_definition_file(
-        "Y = f => (x => f (x x)) (x => f (x x)).\n"
-        "not = b => b false true.\n"
+TEST_F(AmlVisitorTest, VisitListModule) {
+    parsed_module_file pm = parse_module_file(
+        "nil/0 | cons/2.\n"
+        "Y      = f => (x => f (x x)) (x => f (x x)).\n"
+        "append = Y (self => a => b => a b (h => t => cons h (self t b))).\n");
+    auto gs = groups_from(pm.file);
+    auto ds = definitions_from(pm.file);
+    ASSERT_EQ(gs.size(), 1u);
+    ASSERT_EQ(ds.size(), 2u);
+    EXPECT_EQ(ds[0].name, "Y");
+    EXPECT_EQ(ds[1].name, "append");
+    EXPECT_NE(as_app(ds[1].body), nullptr);
+}
+
+TEST_F(AmlVisitorTest, VisitMultipleDefinitionsInOrder) {
+    parsed_module_file pm = parse_module_file("f = x => x.\ng = y => y.\nh = z => z.");
+    auto ds = definitions_from(pm.file);
+    ASSERT_EQ(ds.size(), 3u);
+    EXPECT_EQ(ds[0].name, "f");
+    EXPECT_EQ(ds[1].name, "g");
+    EXPECT_EQ(ds[2].name, "h");
+}
+
+TEST_F(AmlVisitorTest, ModuleItemOrderPreserved) {
+    parsed_module_file pm = parse_module_file(
+        "true/0 | false/0.\n"
+        "not = a => a false true.\n"
+        "nil/0 | cons/2.\n"
         "id = x => x.\n");
-    ASSERT_EQ(pd.file.definitions.size(), 3u);
-    EXPECT_EQ(pd.file.definitions[0].name, "Y");
-    EXPECT_EQ(pd.file.definitions[1].name, "not");
-    EXPECT_EQ(pd.file.definitions[2].name, "id");
-    EXPECT_NE(as_abs(pd.file.definitions[2].body), nullptr);
-}
-
-TEST_F(AmlVisitorTest, VisitApplicationInFunctionBody) {
-    auto pe = parse_expr("h => g h"); const aml_expr* body = pe.body();
-    const auto* abs = as_abs(body);
-    const auto* app = as_app(abs->body);
-    ASSERT_NE(app, nullptr);
-    EXPECT_TRUE(is_token(app->func, "g"));
-    EXPECT_TRUE(is_token(app->arg, "h"));
-}
-
-TEST_F(AmlVisitorTest, VisitMultipleFunctionDefsInOrder) {
-    parsed_definition_file pd = parse_definition_file("f = x => x.\ng = y => y.\nh = z => z.");
-    ASSERT_EQ(pd.file.definitions.size(), 3u);
-    EXPECT_EQ(pd.file.definitions[0].name, "f");
-    EXPECT_EQ(pd.file.definitions[1].name, "g");
-    EXPECT_EQ(pd.file.definitions[2].name, "h");
+    ASSERT_EQ(pm.file.items.size(), 4u);
+    EXPECT_TRUE(std::get_if<declaration_group>(&pm.file.items[0].content) != nullptr);
+    EXPECT_TRUE(std::get_if<definition>(&pm.file.items[1].content) != nullptr);
+    EXPECT_TRUE(std::get_if<declaration_group>(&pm.file.items[2].content) != nullptr);
+    EXPECT_TRUE(std::get_if<definition>(&pm.file.items[3].content) != nullptr);
 }
 
 // ---------------------------------------------------------------------------
@@ -752,25 +755,25 @@ TEST_F(AmlVisitorTest, VisitMultipleFunctionDefsInOrder) {
 
 TEST_F(AmlVisitorTest, RejectNegZero) {
     aml_expr_pool pool;
-    EXPECT_FALSE(try_parse_definition_file("_aml_probe = -0.", pool).has_value());
+    EXPECT_FALSE(try_parse_module_file("_aml_probe = -0.", pool).has_value());
 }
 
 TEST_F(AmlVisitorTest, RejectEncodingOnInteger) {
     aml_expr_pool pool;
-    EXPECT_FALSE(try_parse_definition_file("_aml_probe = <church> 42.", pool).has_value());
+    EXPECT_FALSE(try_parse_module_file("_aml_probe = <church> 42.", pool).has_value());
 }
 
 TEST_F(AmlVisitorTest, RejectEncodingOnChar) {
     aml_expr_pool pool;
-    EXPECT_FALSE(try_parse_definition_file("_aml_probe = <church> 'a'.", pool).has_value());
+    EXPECT_FALSE(try_parse_module_file("_aml_probe = <church> 'a'.", pool).has_value());
 }
 
 TEST_F(AmlVisitorTest, RejectEncodingOnString) {
     aml_expr_pool pool;
-    EXPECT_FALSE(try_parse_definition_file("_aml_probe = <church> \"hi\".", pool).has_value());
+    EXPECT_FALSE(try_parse_module_file("_aml_probe = <church> \"hi\".", pool).has_value());
 }
 
 TEST_F(AmlVisitorTest, RejectEncodingOnName) {
     aml_expr_pool pool;
-    EXPECT_FALSE(try_parse_definition_file("_aml_probe = <church> foo.", pool).has_value());
+    EXPECT_FALSE(try_parse_module_file("_aml_probe = <church> foo.", pool).has_value());
 }

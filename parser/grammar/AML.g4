@@ -1,22 +1,20 @@
 grammar AML;
 
 // ============================================================
-// File kinds — three separate top-level grammars
+// File kinds
 // ============================================================
 
-// Declaration groups: NAME/arity members separated by |, one group per line.
+// Module: interleaved declaration groups and definitions.
 // Example:
-//   true/0 | false/0.
-//   suc/1 | zero/0.
-declarationFile
-    : (declarationGroup eol)* EOF
+//   nil/0  | cons/2.
+//   append = Y (self => a => b => a b (h => t => cons h (self t b))).
+moduleFile
+    : moduleItem* EOF
     ;
 
-// Definitions: NAME = expr, one per line.
-// Example:
-//   not = b => b false true.
-definitionFile
-    : (definition eol)* EOF
+moduleItem
+    : declarationGroup eol
+    | definition eol
     ;
 
 // Statement file: input : label pairs (one dataset).

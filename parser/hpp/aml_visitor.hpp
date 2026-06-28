@@ -7,9 +7,8 @@
 #include <vector>
 #include "../generated/AMLBaseVisitor.h"
 #include "value_objects/aml_expr.hpp"
-#include "value_objects/declaration_file.hpp"
-#include "value_objects/definition_file.hpp"
 #include "value_objects/list_format.hpp"
+#include "value_objects/module_file.hpp"
 #include "value_objects/nat_format.hpp"
 #include "value_objects/statement_file.hpp"
 
@@ -20,16 +19,14 @@
 // Usage:
 //   aml_expr_pool pool;
 //   aml_visitor v{pool};
-//   declaration_file decls = v.parse_declaration_file(parser.declarationFile());
-//   definition_file  defs  = v.parse_definition_file(parser.definitionFile());
-//   statement_file   data   = v.parse_statement_file(parser.statementFile());
+//   module_file    mod  = v.parse_module_file(parser.moduleFile());
+//   statement_file data = v.parse_statement_file(parser.statementFile());
 
 template<typename IMakeAml>
 struct aml_visitor : AMLBaseVisitor {
     aml_visitor(IMakeAml& make_aml);
 
-    declaration_file parse_declaration_file(AMLParser::DeclarationFileContext*);
-    definition_file  parse_definition_file(AMLParser::DefinitionFileContext*);
+    module_file    parse_module_file(AMLParser::ModuleFileContext*);
     statement_file parse_statement_file(AMLParser::StatementFileContext*);
 
 private:
@@ -67,20 +64,14 @@ template<typename M>
 aml_visitor<M>::aml_visitor(M& make_aml) : make_aml_(make_aml) {}
 
 template<typename M>
-inline declaration_file aml_visitor<M>::parse_declaration_file(
-    AMLParser::DeclarationFileContext* ctx) {
-    declaration_file file;
-    for (auto* group : ctx->declarationGroup())
-        file.groups.push_back(group_from(group));
-    return file;
-}
-
-template<typename M>
-inline definition_file aml_visitor<M>::parse_definition_file(
-    AMLParser::DefinitionFileContext* ctx) {
-    definition_file file;
-    for (auto* def : ctx->definition())
-        file.definitions.push_back(definition_from(def));
+inline module_file aml_visitor<M>::parse_module_file(AMLParser::ModuleFileContext* ctx) {
+    module_file file;
+    for (auto* item : ctx->moduleItem()) {
+        if (auto* dg = item->declarationGroup())
+            file.items.push_back(module_item{group_from(dg)});
+        else
+            file.items.push_back(module_item{definition_from(item->definition())});
+    }
     return file;
 }
 

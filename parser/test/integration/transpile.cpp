@@ -1,4 +1,4 @@
-// End-to-end: parse AML fragments then transpile to lc_expr.
+// End-to-end: parse AML module fragments then transpile to lc_expr.
 
 #include <gtest/gtest.h>
 #include <string>
@@ -24,6 +24,24 @@ aml_visitor<aml_expr_pool> make_visitor() {
     return aml_visitor<aml_expr_pool>{shared_pool()};
 }
 
+module_file parse_module(const std::string& src) {
+    antlr4::ANTLRInputStream stream(src);
+    AMLLexer lexer(&stream);
+    antlr4::CommonTokenStream tokens(&lexer);
+    AMLParser parser(&tokens);
+    parser.removeErrorListeners();
+    lexer.removeErrorListeners();
+    return make_visitor().parse_module_file(parser.moduleFile());
+}
+
+std::vector<definition> definitions_from(const module_file& mf) {
+    std::vector<definition> result;
+    for (const auto& item : mf.items)
+        if (const auto* d = std::get_if<definition>(&item.content))
+            result.push_back(*d);
+    return result;
+}
+
 const lc_expr* lc_abs(lc_expr_pool& pool, const lc_expr* b) { return pool.make_abs(b); }
 const lc_expr* lc_var(lc_expr_pool& pool, uint32_t i)       { return pool.make_var(i); }
 
@@ -37,52 +55,28 @@ void pop_names(transpiler_manifest& b, size_t count) {
 } // namespace
 
 TEST(ParseTranspileTest, IdentityFunction) {
-    antlr4::ANTLRInputStream stream("id = x => x.");
-    AMLLexer lexer(&stream);
-    antlr4::CommonTokenStream tokens(&lexer);
-    AMLParser parser(&tokens);
-    parser.removeErrorListeners();
-    lexer.removeErrorListeners();
-
-    definition_file defs = make_visitor().parse_definition_file(parser.definitionFile());
-    ASSERT_EQ(defs.definitions.size(), 1u);
-    EXPECT_EQ(defs.definitions[0].name, "id");
+    auto ds = definitions_from(parse_module("id = x => x."));
+    ASSERT_EQ(ds.size(), 1u);
+    EXPECT_EQ(ds[0].name, "id");
 
     transpiler_manifest bundle;
     push_names(bundle, {"id"});
-    const lc_expr* body = bundle.tx.transpile(defs.definitions[0].body);
+    const lc_expr* body = bundle.tx.transpile(ds[0].body);
     pop_names(bundle, 1);
 
     EXPECT_EQ(body, lc_abs(bundle.lc, lc_var(bundle.lc, 0)));
 }
 
 TEST(ParseTranspileTest, NotFunctionUsesGlobalIndices) {
-    antlr4::ANTLRInputStream decl_stream("true/0 | false/0.");
-    AMLLexer decl_lexer(&decl_stream);
-    antlr4::CommonTokenStream decl_tokens(&decl_lexer);
-    AMLParser decl_parser(&decl_tokens);
-    decl_parser.removeErrorListeners();
-    decl_lexer.removeErrorListeners();
-
-    antlr4::ANTLRInputStream def_stream("not = b => b false true.");
-    AMLLexer def_lexer(&def_stream);
-    antlr4::CommonTokenStream def_tokens(&def_lexer);
-    AMLParser def_parser(&def_tokens);
-    def_parser.removeErrorListeners();
-    def_lexer.removeErrorListeners();
-
-    auto visitor = make_visitor();
-    declaration_file ctors = visitor.parse_declaration_file(decl_parser.declarationFile());
-    definition_file defs = visitor.parse_definition_file(def_parser.definitionFile());
-    ASSERT_EQ(defs.definitions.size(), 1u);
-    ASSERT_EQ(ctors.groups.size(), 1u);
+    auto mod = parse_module("true/0 | false/0.\nnot = b => b false true.");
+    auto ds = definitions_from(mod);
+    ASSERT_EQ(ds.size(), 1u);
 
     transpiler_manifest bundle;
     push_names(bundle, kBuiltinNames);
-    const lc_expr* body = bundle.tx.transpile(defs.definitions[0].body);
+    const lc_expr* body = bundle.tx.transpile(ds[0].body);
     pop_names(bundle, kBuiltinNames.size());
 
-    // "b" is var(0); "false" and "true" are globals shifted by 1 local depth
     const lc_expr* expected = lc_abs(bundle.lc, bundle.lc.make_app(
         bundle.lc.make_app(lc_var(bundle.lc, 0), lc_var(bundle.lc, 5)),
         lc_var(bundle.lc, 6)));
@@ -90,19 +84,12 @@ TEST(ParseTranspileTest, NotFunctionUsesGlobalIndices) {
 }
 
 TEST(ParseTranspileTest, DeclarationGroupAndNatLiteral) {
-    antlr4::ANTLRInputStream def_stream("main = 2N.");
-    AMLLexer def_lexer(&def_stream);
-    antlr4::CommonTokenStream def_tokens(&def_lexer);
-    AMLParser def_parser(&def_tokens);
-    def_parser.removeErrorListeners();
-    def_lexer.removeErrorListeners();
-
-    definition_file defs = make_visitor().parse_definition_file(def_parser.definitionFile());
-    ASSERT_EQ(defs.definitions.size(), 1u);
+    auto ds = definitions_from(parse_module("main = 2N."));
+    ASSERT_EQ(ds.size(), 1u);
 
     transpiler_manifest bundle;
     push_names(bundle, kBuiltinNames);
-    const lc_expr* body = bundle.tx.transpile(defs.definitions[0].body);
+    const lc_expr* body = bundle.tx.transpile(ds[0].body);
     pop_names(bundle, kBuiltinNames.size());
 
     EXPECT_NE(body, nullptr);
@@ -110,16 +97,8 @@ TEST(ParseTranspileTest, DeclarationGroupAndNatLiteral) {
 }
 
 TEST(ParseTranspileTest, IfThenElseFunctionFragment) {
-    antlr4::ANTLRInputStream def_stream(
-        "if_then_else = cond => a => b => cond a b.");
-    AMLLexer def_lexer(&def_stream);
-    antlr4::CommonTokenStream def_tokens(&def_lexer);
-    AMLParser def_parser(&def_tokens);
-    def_parser.removeErrorListeners();
-    def_lexer.removeErrorListeners();
-
-    definition_file defs = make_visitor().parse_definition_file(def_parser.definitionFile());
-    ASSERT_EQ(defs.definitions.size(), 1u);
+    auto ds = definitions_from(parse_module("if_then_else = cond => a => b => cond a b."));
+    ASSERT_EQ(ds.size(), 1u);
 
     transpiler_manifest bundle;
     const std::vector<std::string> names = [] {
@@ -128,7 +107,7 @@ TEST(ParseTranspileTest, IfThenElseFunctionFragment) {
         return v;
     }();
     push_names(bundle, names);
-    const lc_expr* body = bundle.tx.transpile(defs.definitions[0].body);
+    const lc_expr* body = bundle.tx.transpile(ds[0].body);
     pop_names(bundle, names.size());
 
     const lc_expr* expected = lc_abs(bundle.lc, lc_abs(bundle.lc, lc_abs(bundle.lc,
@@ -139,17 +118,10 @@ TEST(ParseTranspileTest, IfThenElseFunctionFragment) {
 }
 
 TEST(ParseTranspileTest, MainUsesGlobalIndicesNotDeltaInlining) {
-    antlr4::ANTLRInputStream def_stream(
+    auto ds = definitions_from(parse_module(
         "if_then_else = cond => a => b => cond a b.\n"
-        "main = if_then_else true false true.");
-    AMLLexer def_lexer(&def_stream);
-    antlr4::CommonTokenStream def_tokens(&def_lexer);
-    AMLParser def_parser(&def_tokens);
-    def_parser.removeErrorListeners();
-    def_lexer.removeErrorListeners();
-
-    definition_file defs = make_visitor().parse_definition_file(def_parser.definitionFile());
-    ASSERT_EQ(defs.definitions.size(), 2u);
+        "main = if_then_else true false true."));
+    ASSERT_EQ(ds.size(), 2u);
 
     transpiler_manifest bundle;
     const std::vector<std::string> names = [] {
@@ -159,7 +131,7 @@ TEST(ParseTranspileTest, MainUsesGlobalIndicesNotDeltaInlining) {
         return v;
     }();
     push_names(bundle, names);
-    const lc_expr* main_body = bundle.tx.transpile(defs.definitions[1].body);
+    const lc_expr* main_body = bundle.tx.transpile(ds[1].body);
     const uint32_t k_ite   = bundle.sc.get_var_index("if_then_else");
     const uint32_t k_true  = bundle.sc.get_var_index("true");
     const uint32_t k_false = bundle.sc.get_var_index("false");
@@ -174,19 +146,12 @@ TEST(ParseTranspileTest, MainUsesGlobalIndicesNotDeltaInlining) {
 }
 
 TEST(ParseTranspileTest, ListAndIntegerLiterals) {
-    antlr4::ANTLRInputStream def_stream("main = [1, -2, 'a'].");
-    AMLLexer def_lexer(&def_stream);
-    antlr4::CommonTokenStream def_tokens(&def_lexer);
-    AMLParser def_parser(&def_tokens);
-    def_parser.removeErrorListeners();
-    def_lexer.removeErrorListeners();
-
-    definition_file defs = make_visitor().parse_definition_file(def_parser.definitionFile());
-    ASSERT_EQ(defs.definitions.size(), 1u);
+    auto ds = definitions_from(parse_module("main = [1, -2, 'a']."));
+    ASSERT_EQ(ds.size(), 1u);
 
     transpiler_manifest bundle;
     push_names(bundle, kBuiltinNames);
-    const lc_expr* body = bundle.tx.transpile(defs.definitions[0].body);
+    const lc_expr* body = bundle.tx.transpile(ds[0].body);
     pop_names(bundle, kBuiltinNames.size());
 
     EXPECT_NE(body, nullptr);
@@ -218,18 +183,11 @@ TEST(ParseTranspileTest, StatementFileDataPointFragment) {
 }
 
 TEST(ParseTranspileTest, ComposeIdIdFragment) {
-    antlr4::ANTLRInputStream def_stream(
+    auto ds = definitions_from(parse_module(
         "id = x => x.\n"
         "compose = f => g => x => f (g x).\n"
-        "main = compose id id.");
-    AMLLexer def_lexer(&def_stream);
-    antlr4::CommonTokenStream def_tokens(&def_lexer);
-    AMLParser def_parser(&def_tokens);
-    def_parser.removeErrorListeners();
-    def_lexer.removeErrorListeners();
-
-    definition_file defs = make_visitor().parse_definition_file(def_parser.definitionFile());
-    ASSERT_EQ(defs.definitions.size(), 3u);
+        "main = compose id id."));
+    ASSERT_EQ(ds.size(), 3u);
 
     transpiler_manifest bundle;
     const std::vector<std::string> names = [] {
@@ -240,7 +198,7 @@ TEST(ParseTranspileTest, ComposeIdIdFragment) {
         return v;
     }();
     push_names(bundle, names);
-    const lc_expr* main_body = bundle.tx.transpile(defs.definitions[2].body);
+    const lc_expr* main_body = bundle.tx.transpile(ds[2].body);
     const uint32_t k_compose = bundle.sc.get_var_index("compose");
     const uint32_t k_id      = bundle.sc.get_var_index("id");
     pop_names(bundle, names.size());

@@ -9,23 +9,13 @@
 
 namespace {
 
-static bool parses_declaration_file(const std::string& s) {
+static bool parses_module_file(const std::string& s) {
     antlr4::ANTLRInputStream stream(s);
     AMLLexer lexer(&stream);
     antlr4::CommonTokenStream tokens(&lexer);
     AMLParser parser(&tokens);
     parser.removeErrorListeners();
-    parser.declarationFile();
-    return parser.getNumberOfSyntaxErrors() == 0;
-}
-
-static bool parses_definition_file(const std::string& s) {
-    antlr4::ANTLRInputStream stream(s);
-    AMLLexer lexer(&stream);
-    antlr4::CommonTokenStream tokens(&lexer);
-    AMLParser parser(&tokens);
-    parser.removeErrorListeners();
-    parser.definitionFile();
+    parser.moduleFile();
     return parser.getNumberOfSyntaxErrors() == 0;
 }
 
@@ -49,26 +39,32 @@ static bool parses_expr(const std::string& s) {
     return parser.getNumberOfSyntaxErrors() == 0 && lexer.getNumberOfSyntaxErrors() == 0;
 }
 
-static size_t declaration_group_count(const std::string& s) {
+static size_t module_declaration_group_count(const std::string& s) {
     antlr4::ANTLRInputStream stream(s);
     AMLLexer lexer(&stream);
     antlr4::CommonTokenStream tokens(&lexer);
     AMLParser parser(&tokens);
     parser.removeErrorListeners();
-    auto* ctx = parser.declarationFile();
+    auto* ctx = parser.moduleFile();
     if (parser.getNumberOfSyntaxErrors() != 0) return SIZE_MAX;
-    return ctx->declarationGroup().size();
+    size_t count = 0;
+    for (auto* item : ctx->moduleItem())
+        if (item->declarationGroup()) ++count;
+    return count;
 }
 
-static size_t definition_count(const std::string& s) {
+static size_t module_definition_count(const std::string& s) {
     antlr4::ANTLRInputStream stream(s);
     AMLLexer lexer(&stream);
     antlr4::CommonTokenStream tokens(&lexer);
     AMLParser parser(&tokens);
     parser.removeErrorListeners();
-    auto* ctx = parser.definitionFile();
+    auto* ctx = parser.moduleFile();
     if (parser.getNumberOfSyntaxErrors() != 0) return SIZE_MAX;
-    return ctx->definition().size();
+    size_t count = 0;
+    for (auto* item : ctx->moduleItem())
+        if (item->definition()) ++count;
+    return count;
 }
 
 static size_t statement_count(const std::string& s) {
@@ -100,10 +96,10 @@ static size_t group_declaration_count(const std::string& s) {
 // ---------------------------------------------------------------------------
 
 TEST(AmlParseTest, LexDeclarationName) {
-    EXPECT_TRUE(parses_declaration_file("foo/0."));
-    EXPECT_TRUE(parses_declaration_file("bar_baz/1."));
-    EXPECT_TRUE(parses_declaration_file("MyType/2."));
-    EXPECT_TRUE(parses_declaration_file("_internal/0."));
+    EXPECT_TRUE(parses_module_file("foo/0."));
+    EXPECT_TRUE(parses_module_file("bar_baz/1."));
+    EXPECT_TRUE(parses_module_file("MyType/2."));
+    EXPECT_TRUE(parses_module_file("_internal/0."));
 }
 
 TEST(AmlParseTest, LexNatLit) {
@@ -136,11 +132,11 @@ TEST(AmlParseTest, LexStrLit) {
 }
 
 // ---------------------------------------------------------------------------
-// Declaration files
+// Module files
 // ---------------------------------------------------------------------------
 
-TEST(AmlParseTest, ParseEmptyDeclarationFile) {
-    EXPECT_TRUE(parses_declaration_file(""));
+TEST(AmlParseTest, ParseEmptyModuleFile) {
+    EXPECT_TRUE(parses_module_file(""));
 }
 
 TEST(AmlParseTest, ParseDeclarationSingle) {
@@ -163,44 +159,45 @@ TEST(AmlParseTest, ParseMultipleDeclarationGroups) {
     std::string src =
         "true/0 | false/0.\n"
         "suc/1 | zero/0.\n";
-    EXPECT_EQ(declaration_group_count(src), 2u);
-}
-
-TEST(AmlParseTest, RejectFunctionInDeclarationFile) {
-    EXPECT_FALSE(parses_declaration_file("id = x => x."));
-}
-
-TEST(AmlParseTest, RejectStatementInDeclarationFile) {
-    EXPECT_FALSE(parses_declaration_file("not false : true."));
-}
-
-// ---------------------------------------------------------------------------
-// Definition files
-// ---------------------------------------------------------------------------
-
-TEST(AmlParseTest, ParseEmptyDefinitionFile) {
-    EXPECT_TRUE(parses_definition_file(""));
+    EXPECT_EQ(module_declaration_group_count(src), 2u);
 }
 
 TEST(AmlParseTest, ParseDefinitionSimple) {
-    EXPECT_EQ(definition_count("not = b => b false true."), 1u);
+    EXPECT_EQ(module_definition_count("not = b => b false true."), 1u);
 }
 
 TEST(AmlParseTest, ParseDefinitionMultiple) {
-    EXPECT_EQ(definition_count("f = x => x.\ng = x => x."), 2u);
+    EXPECT_EQ(module_definition_count("f = x => x.\ng = x => x."), 2u);
 }
 
 TEST(AmlParseTest, ParseDefinitionSelfRef) {
-    EXPECT_TRUE(
-        parses_definition_file("factorial = n => n (factorial (pred n)) one."));
+    EXPECT_TRUE(parses_module_file("factorial = n => n (factorial (pred n)) one."));
 }
 
-TEST(AmlParseTest, RejectConstructorInDefinitionFile) {
-    EXPECT_FALSE(parses_definition_file("true/0 | false/0."));
+TEST(AmlParseTest, ParseModuleFileMixed) {
+    std::string src =
+        "nil/0 | cons/2.\n"
+        "append = Y (self => a => b => a b (h => t => cons h (self t b))).\n";
+    EXPECT_EQ(module_declaration_group_count(src), 1u);
+    EXPECT_EQ(module_definition_count(src), 1u);
 }
 
-TEST(AmlParseTest, RejectBareExpressionInDefinitionFile) {
-    EXPECT_FALSE(parses_definition_file("not false"));
+TEST(AmlParseTest, ParseModuleFileMixedMultiple) {
+    std::string src =
+        "true/0 | false/0.\n"
+        "or  = a => b => a true b.\n"
+        "and = a => b => a b false.\n"
+        "not = a => a false true.\n";
+    EXPECT_EQ(module_declaration_group_count(src), 1u);
+    EXPECT_EQ(module_definition_count(src), 3u);
+}
+
+TEST(AmlParseTest, RejectBareExpressionInModuleFile) {
+    EXPECT_FALSE(parses_module_file("not false"));
+}
+
+TEST(AmlParseTest, RejectStatementInModuleFile) {
+    EXPECT_FALSE(parses_module_file("not false : true."));
 }
 
 // ---------------------------------------------------------------------------
@@ -229,7 +226,7 @@ TEST(AmlParseTest, RejectDefinitionInStatementFile) {
 }
 
 // ---------------------------------------------------------------------------
-// Expressions (shared across function and statement files)
+// Expressions (shared across module and statement files)
 // ---------------------------------------------------------------------------
 
 TEST(AmlParseTest, ParseAbstractionSimple) {
@@ -317,7 +314,7 @@ TEST(AmlParseTest, ParseStrLit) {
 
 struct TestVisitor : public AMLBaseVisitor {
     int declaration_group_count = 0;
-    int definition_count      = 0;
+    int definition_count        = 0;
     int statement_count         = 0;
 
     std::any visitDeclarationGroup(AMLParser::DeclarationGroupContext* ctx) override {
@@ -334,12 +331,12 @@ struct TestVisitor : public AMLBaseVisitor {
     }
 };
 
-TEST(AmlParseTest, VisitorTraversalDeclarationFile) {
+TEST(AmlParseTest, VisitorTraversalModuleFileDeclaration) {
     antlr4::ANTLRInputStream stream("true/0 | false/0.\n");
     AMLLexer lexer(&stream);
     antlr4::CommonTokenStream tokens(&lexer);
     AMLParser parser(&tokens);
-    auto* tree = parser.declarationFile();
+    auto* tree = parser.moduleFile();
     ASSERT_EQ(parser.getNumberOfSyntaxErrors(), 0);
 
     TestVisitor v;
@@ -349,17 +346,32 @@ TEST(AmlParseTest, VisitorTraversalDeclarationFile) {
     EXPECT_EQ(v.statement_count, 0);
 }
 
-TEST(AmlParseTest, VisitorTraversalDefinitionFile) {
+TEST(AmlParseTest, VisitorTraversalModuleFileDefinition) {
     antlr4::ANTLRInputStream stream("f = x => x.\n");
     AMLLexer lexer(&stream);
     antlr4::CommonTokenStream tokens(&lexer);
     AMLParser parser(&tokens);
-    auto* tree = parser.definitionFile();
+    auto* tree = parser.moduleFile();
     ASSERT_EQ(parser.getNumberOfSyntaxErrors(), 0);
 
     TestVisitor v;
     v.visit(tree);
     EXPECT_EQ(v.declaration_group_count, 0);
+    EXPECT_EQ(v.definition_count, 1);
+    EXPECT_EQ(v.statement_count, 0);
+}
+
+TEST(AmlParseTest, VisitorTraversalModuleFileMixed) {
+    antlr4::ANTLRInputStream stream("nil/0 | cons/2.\nappend = a => b => a.\n");
+    AMLLexer lexer(&stream);
+    antlr4::CommonTokenStream tokens(&lexer);
+    AMLParser parser(&tokens);
+    auto* tree = parser.moduleFile();
+    ASSERT_EQ(parser.getNumberOfSyntaxErrors(), 0);
+
+    TestVisitor v;
+    v.visit(tree);
+    EXPECT_EQ(v.declaration_group_count, 1);
     EXPECT_EQ(v.definition_count, 1);
     EXPECT_EQ(v.statement_count, 0);
 }
