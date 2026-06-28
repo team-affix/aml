@@ -35,7 +35,7 @@ struct TranspilerTest : public ::testing::Test {
     using token_transpiler_t       = typename transpiler_t::token_transpiler_t;
     using abs_transpiler_t         = typename transpiler_t::abs_transpiler_t;
     using app_transpiler_t         = typename transpiler_t::app_transpiler_t;
-    using scott_nat_transpiler_t   = typename transpiler_t::scott_nat_transpiler_t;
+    using binary_nat_transpiler_t  = typename transpiler_t::binary_nat_transpiler_t;
     using church_nat_transpiler_t  = typename transpiler_t::church_nat_transpiler_t;
     using integer_transpiler_t     = typename transpiler_t::integer_transpiler_t;
     using character_transpiler_t   = typename transpiler_t::character_transpiler_t;
@@ -55,7 +55,7 @@ struct TranspilerTest : public ::testing::Test {
     token_transpiler_t       token_;
     abs_transpiler_t         abs_;
     app_transpiler_t         app_;
-    scott_nat_transpiler_t   scott_nat_;
+    binary_nat_transpiler_t  binary_nat_;
     church_nat_transpiler_t  church_nat_;
     integer_transpiler_t     integer_;
     character_transpiler_t   character_;
@@ -65,18 +65,18 @@ struct TranspilerTest : public ::testing::Test {
 
     TranspilerTest()
         : tx(token_, abs_, app_,
-             scott_nat_, church_nat_,
+             binary_nat_, church_nat_,
              integer_, character_,
              string_,
              scott_list_, church_list_),
           token_(mock_var, sc),
           abs_(tx, mock_abs, sc, sc),
           app_(tx, mock_app),
-          scott_nat_(mock_var, mock_app, sc),
+          binary_nat_(mock_var, mock_app, sc),
           church_nat_(mock_var, mock_abs, mock_app),
-          integer_(mock_var, mock_app, scott_nat_, sc),
-          character_(scott_nat_),
-          string_(scott_nat_, mock_var, mock_app, sc),
+          integer_(mock_var, mock_app, binary_nat_, sc),
+          character_(binary_nat_),
+          string_(binary_nat_, mock_var, mock_app, sc),
           scott_list_(tx, mock_var, mock_app, sc),
           church_list_(tx, mock_var, mock_abs, mock_app) {}
 
@@ -177,23 +177,23 @@ TEST_F(TranspilerTest, UnboundNameThrows) {
 }
 
 // ---------------------------------------------------------------------------
-// Literals (Scott uses var(k); Church stays closed)
+// Literals (binary uses var(k); Church stays closed)
 // ---------------------------------------------------------------------------
 
-TEST_F(TranspilerTest, TranspileNatZeroScott) {
-    const aml_expr* e = aml_pool.make_nat(0, nat_format::scott);
+TEST_F(TranspilerTest, TranspileNatZeroBinary) {
+    const aml_expr* e = aml_pool.make_nat(0, nat_format::binary);
     EXPECT_EQ(tx_expr(e, kBuiltinNames), lc_var(2));
 }
 
-TEST_F(TranspilerTest, TranspileNatOneScott) {
-    const aml_expr* e = aml_pool.make_nat(1, nat_format::scott);
+TEST_F(TranspilerTest, TranspileNatOneBinary) {
+    const aml_expr* e = aml_pool.make_nat(1, nat_format::binary);
     const lc_expr* expected = lc_app(
         lc_app(lc_var(3), lc_var(5)), lc_var(2));
     EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
-TEST_F(TranspilerTest, TranspileNatTwoScott) {
-    const aml_expr* e = aml_pool.make_nat(2, nat_format::scott);
+TEST_F(TranspilerTest, TranspileNatTwoBinary) {
+    const aml_expr* e = aml_pool.make_nat(2, nat_format::binary);
     const lc_expr* expected = lc_app(
         lc_app(lc_var(3), lc_var(4)),
         lc_app(lc_app(lc_var(3), lc_var(5)), lc_var(2)));
@@ -215,21 +215,21 @@ TEST_F(TranspilerTest, TranspileIntZero) {
 
 TEST_F(TranspilerTest, TranspileIntPositive) {
     const aml_expr* e = aml_pool.make_integer(12);
-    const aml_expr* nat = aml_pool.make_nat(12, nat_format::scott);
+    const aml_expr* nat = aml_pool.make_nat(12, nat_format::binary);
     const lc_expr* expected = lc_app(lc_var(1), tx_expr(nat, kBuiltinNames));
     EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, TranspileIntNegative) {
     const aml_expr* e = aml_pool.make_integer(-12);
-    const aml_expr* nat = aml_pool.make_nat(11, nat_format::scott);
+    const aml_expr* nat = aml_pool.make_nat(11, nat_format::binary);
     const lc_expr* expected = lc_app(lc_var(0), tx_expr(nat, kBuiltinNames));
     EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, TranspileChar) {
     const aml_expr* e = aml_pool.make_character('A');
-    const aml_expr* as_nat = aml_pool.make_nat(65, nat_format::scott);
+    const aml_expr* as_nat = aml_pool.make_nat(65, nat_format::binary);
     EXPECT_EQ(tx_expr(e, kBuiltinNames), tx_expr(as_nat, kBuiltinNames));
 }
 

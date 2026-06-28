@@ -49,7 +49,7 @@ const aml_expr* build_deep_app(aml_expr_pool& pool, uint32_t depth) {
 TEST_F(TranspilerStressTest, ManyNatLiterals) {
     transpiler_manifest bundle;
     for (uint64_t n = 0; n < 512; ++n) {
-        const aml_expr* e = aml_pool.make_nat(n, nat_format::scott);
+        const aml_expr* e = aml_pool.make_nat(n, nat_format::binary);
         ASSERT_NE(transpile_with_builtins(bundle, e), nullptr);
     }
 }

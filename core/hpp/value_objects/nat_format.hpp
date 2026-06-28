@@ -2,7 +2,7 @@
 #define NAT_FORMAT_HPP
 
 enum class nat_format {
-    scott,
+    binary,
     church,
 };
 

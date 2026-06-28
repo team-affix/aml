@@ -46,8 +46,8 @@ private:
     const aml_expr* encoded_nat_from(AMLParser::EncodedNatContext*);
     const aml_expr* int_lit_from(AMLParser::IntLitContext*);
     const aml_expr* encoded_list_from(AMLParser::EncodedListContext*);
-    static nat_format  nat_format_from(AMLParser::EncodingContext*);
-    static list_format list_format_from(AMLParser::EncodingContext*);
+    static nat_format  nat_format_from(AMLParser::NatEncodingContext*);
+    static list_format list_format_from(AMLParser::ListEncodingContext*);
 
     static uint64_t    parse_natlit(const std::string&);
     static int64_t     parse_posint(const std::string&);
@@ -156,7 +156,7 @@ inline const aml_expr* aml_visitor<M>::atom_from(AMLParser::AtomContext* ctx) {
 template<typename M>
 inline const aml_expr* aml_visitor<M>::encoded_nat_from(AMLParser::EncodedNatContext* ctx) {
     nat_format format =
-        ctx->encoding() ? nat_format_from(ctx->encoding()) : nat_format::scott;
+        ctx->natEncoding() ? nat_format_from(ctx->natEncoding()) : nat_format::binary;
     return make_aml_.make_nat(parse_natlit(ctx->NATLIT()->getText()), format);
 }
 
@@ -170,7 +170,7 @@ inline const aml_expr* aml_visitor<M>::int_lit_from(AMLParser::IntLitContext* ct
 template<typename M>
 inline const aml_expr* aml_visitor<M>::encoded_list_from(AMLParser::EncodedListContext* ctx) {
     list_format format =
-        ctx->encoding() ? list_format_from(ctx->encoding()) : list_format::scott;
+        ctx->listEncoding() ? list_format_from(ctx->listEncoding()) : list_format::scott;
     std::vector<const aml_expr*> elems;
     for (auto* e : ctx->expr())
         elems.push_back(expr_from(e));
@@ -178,12 +178,12 @@ inline const aml_expr* aml_visitor<M>::encoded_list_from(AMLParser::EncodedListC
 }
 
 template<typename M>
-inline nat_format aml_visitor<M>::nat_format_from(AMLParser::EncodingContext* ctx) {
-    return ctx->CHURCH() ? nat_format::church : nat_format::scott;
+inline nat_format aml_visitor<M>::nat_format_from(AMLParser::NatEncodingContext* ctx) {
+    return ctx->CHURCH() ? nat_format::church : nat_format::binary;
 }
 
 template<typename M>
-inline list_format aml_visitor<M>::list_format_from(AMLParser::EncodingContext* ctx) {
+inline list_format aml_visitor<M>::list_format_from(AMLParser::ListEncodingContext* ctx) {
     return ctx->CHURCH() ? list_format::church : list_format::scott;
 }
 

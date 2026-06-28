@@ -97,7 +97,7 @@ atom
     ;
 
 encodedNat
-    : encoding? NATLIT
+    : natEncoding? NATLIT
     ;
 
 intLit
@@ -106,10 +106,14 @@ intLit
     ;
 
 encodedList
-    : encoding? '[' (expr (',' expr)*)? ']'
+    : listEncoding? '[' (expr (',' expr)*)? ']'
     ;
 
-encoding
+natEncoding
+    : '<' ( CHURCH | BINARY ) '>'
+    ;
+
+listEncoding
     : '<' ( CHURCH | SCOTT ) '>'
     ;
 
@@ -119,6 +123,7 @@ encoding
 
 CHURCH : 'church' ;
 SCOTT  : 'scott'  ;
+BINARY : 'binary' ;
 
 NATLIT : [0-9]+ 'N' ;
 

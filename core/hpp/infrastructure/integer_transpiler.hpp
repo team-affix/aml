@@ -32,10 +32,10 @@ const lc_expr* integer_transpiler<IV, IA, IN, IG>::transpile_integer(const aml_e
     if (value >= 0)
         return make_app_.make_app(
             make_var_.make_var(get_var_index_.get_var_index("pos")),
-            transpile_nat_.transpile_nat({static_cast<uint64_t>(value), nat_format::scott}));
+            transpile_nat_.transpile_nat({static_cast<uint64_t>(value), nat_format::binary}));
     return make_app_.make_app(
         make_var_.make_var(get_var_index_.get_var_index("negsuc")),
-        transpile_nat_.transpile_nat({static_cast<uint64_t>(-value - 1), nat_format::scott}));
+        transpile_nat_.transpile_nat({static_cast<uint64_t>(-value - 1), nat_format::binary}));
 }
 
 #endif

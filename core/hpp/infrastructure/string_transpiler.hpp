@@ -32,7 +32,7 @@ const lc_expr* string_transpiler<IN, IV, IA, IG>::transpile_string(const aml_exp
     const lc_expr* list = make_var_.make_var(get_var_index_.get_var_index("nil"));
     for (auto it = s.value.rbegin(); it != s.value.rend(); ++it) {
         const lc_expr* elem = transpile_nat_.transpile_nat(
-            {static_cast<uint64_t>(static_cast<unsigned char>(*it)), nat_format::scott});
+            {static_cast<uint64_t>(static_cast<unsigned char>(*it)), nat_format::binary});
         list = make_app_.make_app(
             make_app_.make_app(make_var_.make_var(get_var_index_.get_var_index("cons")), elem),
             list);

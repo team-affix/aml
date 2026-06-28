@@ -501,18 +501,18 @@ TEST_F(AmlVisitorTest, VisitYCombinatorShape) {
 // Nat literals
 // ---------------------------------------------------------------------------
 
-TEST_F(AmlVisitorTest, VisitNatZeroDefaultScott) {
+TEST_F(AmlVisitorTest, VisitNatZeroDefaultBinary) {
     auto pe = parse_expr("0N"); const auto* nat = as_nat(pe.body());
     ASSERT_NE(nat, nullptr);
     EXPECT_EQ(nat->value, 0u);
-    EXPECT_EQ(nat->format, nat_format::scott);
+    EXPECT_EQ(nat->format, nat_format::binary);
 }
 
 TEST_F(AmlVisitorTest, VisitNatValue) {
     auto pe = parse_expr("42N"); const auto* nat = as_nat(pe.body());
     ASSERT_NE(nat, nullptr);
     EXPECT_EQ(nat->value, 42u);
-    EXPECT_EQ(nat->format, nat_format::scott);
+    EXPECT_EQ(nat->format, nat_format::binary);
 }
 
 TEST_F(AmlVisitorTest, VisitNatChurch) {
@@ -522,11 +522,11 @@ TEST_F(AmlVisitorTest, VisitNatChurch) {
     EXPECT_EQ(nat->format, nat_format::church);
 }
 
-TEST_F(AmlVisitorTest, VisitNatScottExplicit) {
-    auto pe = parse_expr("<scott> 7N"); const auto* nat = as_nat(pe.body());
+TEST_F(AmlVisitorTest, VisitNatBinaryExplicit) {
+    auto pe = parse_expr("<binary> 7N"); const auto* nat = as_nat(pe.body());
     ASSERT_NE(nat, nullptr);
     EXPECT_EQ(nat->value, 7u);
-    EXPECT_EQ(nat->format, nat_format::scott);
+    EXPECT_EQ(nat->format, nat_format::binary);
 }
 
 TEST_F(AmlVisitorTest, VisitNatLarge) {

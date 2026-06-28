@@ -269,8 +269,20 @@ TEST(AmlParseTest, ParseNatLitChurch) {
     EXPECT_TRUE(parses_expr("<church> 42N"));
 }
 
-TEST(AmlParseTest, ParseNatLitScott) {
-    EXPECT_TRUE(parses_expr("<scott> 7N"));
+TEST(AmlParseTest, ParseNatLitBinary) {
+    EXPECT_TRUE(parses_expr("<binary> 7N"));
+}
+
+TEST(AmlParseTest, ParseListScottExplicit) {
+    EXPECT_TRUE(parses_expr("<scott> [a, b]"));
+}
+
+TEST(AmlParseTest, ParseNatScottRejected) {
+    EXPECT_FALSE(parses_expr("<scott> 7N"));
+}
+
+TEST(AmlParseTest, ParseListBinaryRejected) {
+    EXPECT_FALSE(parses_expr("<binary> [a, b]"));
 }
 
 TEST(AmlParseTest, ParseEncodingOnlyNatOrList) {

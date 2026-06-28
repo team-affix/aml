@@ -10,7 +10,7 @@
 #include "infrastructure/church_nat_transpiler.hpp"
 #include "infrastructure/integer_transpiler.hpp"
 #include "infrastructure/scott_list_transpiler.hpp"
-#include "infrastructure/scott_nat_transpiler.hpp"
+#include "infrastructure/binary_nat_transpiler.hpp"
 #include "infrastructure/string_transpiler.hpp"
 #include "infrastructure/token_transpiler.hpp"
 #include "value_objects/aml_expr.hpp"
@@ -26,17 +26,17 @@ struct transpiler {
     using token_transpiler_t       = token_transpiler<IMakeLcVar, IGetVarIndex>;
     using abs_transpiler_t         = abs_transpiler<self, IMakeLcAbs, IPushVar, IPopVar>;
     using app_transpiler_t         = app_transpiler<self, IMakeLcApp>;
-    using scott_nat_transpiler_t   = scott_nat_transpiler<IMakeLcVar, IMakeLcApp, IGetVarIndex>;
+    using binary_nat_transpiler_t  = binary_nat_transpiler<IMakeLcVar, IMakeLcApp, IGetVarIndex>;
     using church_nat_transpiler_t  = church_nat_transpiler<IMakeLcVar, IMakeLcAbs, IMakeLcApp>;
-    using integer_transpiler_t     = integer_transpiler<IMakeLcVar, IMakeLcApp, scott_nat_transpiler_t, IGetVarIndex>;
-    using character_transpiler_t   = character_transpiler<scott_nat_transpiler_t>;
-    using string_transpiler_t      = string_transpiler<scott_nat_transpiler_t, IMakeLcVar, IMakeLcApp, IGetVarIndex>;
+    using integer_transpiler_t     = integer_transpiler<IMakeLcVar, IMakeLcApp, binary_nat_transpiler_t, IGetVarIndex>;
+    using character_transpiler_t   = character_transpiler<binary_nat_transpiler_t>;
+    using string_transpiler_t      = string_transpiler<binary_nat_transpiler_t, IMakeLcVar, IMakeLcApp, IGetVarIndex>;
     using scott_list_transpiler_t  = scott_list_transpiler<self, IMakeLcVar, IMakeLcApp, IGetVarIndex>;
     using church_list_transpiler_t = church_list_transpiler<self, IMakeLcVar, IMakeLcAbs, IMakeLcApp>;
 
     transpiler(token_transpiler_t&,
                abs_transpiler_t&, app_transpiler_t&,
-               scott_nat_transpiler_t&, church_nat_transpiler_t&,
+               binary_nat_transpiler_t&, church_nat_transpiler_t&,
                integer_transpiler_t&, character_transpiler_t&,
                string_transpiler_t&,
                scott_list_transpiler_t&, church_list_transpiler_t&);
@@ -47,7 +47,7 @@ private:
     token_transpiler_t&       token_;
     abs_transpiler_t&         abs_;
     app_transpiler_t&         app_;
-    scott_nat_transpiler_t&   scott_nat_;
+    binary_nat_transpiler_t&  binary_nat_;
     church_nat_transpiler_t&  church_nat_;
     integer_transpiler_t&     integer_;
     character_transpiler_t&   character_;
@@ -59,14 +59,14 @@ private:
 template<typename IV, typename IL, typename IA, typename IG, typename IP, typename IO>
 transpiler<IV, IL, IA, IG, IP, IO>::transpiler(token_transpiler_t& token,
                                                abs_transpiler_t& abs, app_transpiler_t& app,
-                                               scott_nat_transpiler_t& scott_nat, church_nat_transpiler_t& church_nat,
+                                               binary_nat_transpiler_t& binary_nat, church_nat_transpiler_t& church_nat,
                                                integer_transpiler_t& integer, character_transpiler_t& character,
                                                string_transpiler_t& string,
                                                scott_list_transpiler_t& scott_list, church_list_transpiler_t& church_list)
     : token_(token),
       abs_(abs),
       app_(app),
-      scott_nat_(scott_nat),
+      binary_nat_(binary_nat),
       church_nat_(church_nat),
       integer_(integer),
       character_(character),
@@ -84,7 +84,7 @@ const lc_expr* transpiler<IV, IL, IA, IG, IP, IO>::transpile(const aml_expr* e) 
         return app_.transpile_app(*ap);
     if (const auto* n = std::get_if<aml_expr::nat>(&e->content)) {
         switch (n->format) {
-            case nat_format::scott:  return scott_nat_.transpile_nat(*n);
+            case nat_format::binary: return binary_nat_.transpile_nat(*n);
             case nat_format::church: return church_nat_.transpile_nat(*n);
         }
         throw std::runtime_error("unsupported nat_format");
