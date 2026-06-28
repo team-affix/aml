@@ -43,11 +43,11 @@ private:
     const aml_expr* head_from(AMLParser::HeadContext*);
     const aml_expr* arg_from(AMLParser::ArgContext*);
     const aml_expr* atom_from(AMLParser::AtomContext*);
-    const aml_expr* encoded_nat_from(AMLParser::EncodedNatContext*);
-    const aml_expr* int_lit_from(AMLParser::IntLitContext*);
-    const aml_expr* encoded_list_from(AMLParser::EncodedListContext*);
-    static nat_format  nat_format_from(AMLParser::NatEncodingContext*);
-    static list_format list_format_from(AMLParser::ListEncodingContext*);
+    const aml_expr* nat_from(AMLParser::NatContext*);
+    const aml_expr* int_from(AMLParser::IntContext*);
+    const aml_expr* list_from(AMLParser::ListContext*);
+    static nat_format  nat_format_from(antlr4::tree::TerminalNode*);
+    static list_format list_format_from(antlr4::tree::TerminalNode*);
 
     static uint64_t    parse_natlit(const std::string&);
     static int64_t     parse_posint(const std::string&);
@@ -100,7 +100,7 @@ inline declaration_group aml_visitor<M>::group_from(AMLParser::DeclarationGroupC
 template<typename M>
 inline declaration_decl aml_visitor<M>::decl_from(AMLParser::DeclarationContext* ctx) {
     return {ctx->NAME()->getText(),
-            static_cast<uint32_t>(std::stoul(ctx->POSINT()->getText()))};
+            static_cast<uint32_t>(std::stoul(ctx->NATLIT()->getText()))};
 }
 
 template<typename M>
@@ -144,57 +144,60 @@ inline const aml_expr* aml_visitor<M>::arg_from(AMLParser::ArgContext* ctx) {
 
 template<typename M>
 inline const aml_expr* aml_visitor<M>::atom_from(AMLParser::AtomContext* ctx) {
-    if (auto* n  = ctx->NAME())       return make_aml_.make_token(n->getText());
-    if (auto* en = ctx->encodedNat()) return encoded_nat_from(en);
-    if (auto* il = ctx->intLit())     return int_lit_from(il);
-    if (auto* cl = ctx->CHARLIT())    return make_aml_.make_character(parse_charlit(cl->getText()));
-    if (auto* sl = ctx->STRLIT())     return make_aml_.make_string(parse_strlit(sl->getText()));
-    assert(ctx->encodedList());
-    return encoded_list_from(ctx->encodedList());
+    if (auto* n  = ctx->NAME())    return make_aml_.make_token(n->getText());
+    if (auto* na = ctx->nat())     return nat_from(na);
+    if (auto* i  = ctx->int_())    return int_from(i);
+    if (auto* cl = ctx->CHARLIT()) return make_aml_.make_character(parse_charlit(cl->getText()));
+    if (auto* sl = ctx->STRLIT())  return make_aml_.make_string(parse_strlit(sl->getText()));
+    assert(ctx->list());
+    return list_from(ctx->list());
 }
 
 template<typename M>
-inline const aml_expr* aml_visitor<M>::encoded_nat_from(AMLParser::EncodedNatContext* ctx) {
-    nat_format format =
-        ctx->natEncoding() ? nat_format_from(ctx->natEncoding()) : nat_format::binary;
-    return make_aml_.make_nat(parse_natlit(ctx->NATLIT()->getText()), format);
+inline const aml_expr* aml_visitor<M>::nat_from(AMLParser::NatContext* ctx) {
+    return make_aml_.make_nat(parse_natlit(ctx->NATLIT()->getText()),
+                              nat_format_from(ctx->ENCODING()));
 }
 
 template<typename M>
-inline const aml_expr* aml_visitor<M>::int_lit_from(AMLParser::IntLitContext* ctx) {
-    int64_t value = ctx->POSINT() ? parse_posint(ctx->POSINT()->getText())
-                                  : parse_negintlit(ctx->NEGINTLIT()->getText());
-    return make_aml_.make_integer(value);
+inline const aml_expr* aml_visitor<M>::int_from(AMLParser::IntContext* ctx) {
+    int64_t value = ctx->POSINTLIT() ? parse_posint(ctx->POSINTLIT()->getText())
+                                     : parse_negintlit(ctx->NEGINTLIT()->getText());
+    return make_aml_.make_integer(value, nat_format_from(ctx->ENCODING()));
 }
 
 template<typename M>
-inline const aml_expr* aml_visitor<M>::encoded_list_from(AMLParser::EncodedListContext* ctx) {
-    list_format format =
-        ctx->listEncoding() ? list_format_from(ctx->listEncoding()) : list_format::scott;
+inline const aml_expr* aml_visitor<M>::list_from(AMLParser::ListContext* ctx) {
     std::vector<const aml_expr*> elems;
     for (auto* e : ctx->expr())
         elems.push_back(expr_from(e));
-    return make_aml_.make_list(std::move(elems), format);
+    return make_aml_.make_list(std::move(elems), list_format_from(ctx->ENCODING()));
 }
 
 template<typename M>
-inline nat_format aml_visitor<M>::nat_format_from(AMLParser::NatEncodingContext* ctx) {
-    return ctx->CHURCH() ? nat_format::church : nat_format::binary;
+inline nat_format aml_visitor<M>::nat_format_from(antlr4::tree::TerminalNode* enc) {
+    if (!enc) return nat_format::binary;
+    const std::string name = enc->getText().substr(1, enc->getText().size() - 2);
+    if (name == "church") return nat_format::church;
+    return nat_format::binary;
 }
 
 template<typename M>
-inline list_format aml_visitor<M>::list_format_from(AMLParser::ListEncodingContext* ctx) {
-    return ctx->CHURCH() ? list_format::church : list_format::scott;
+inline list_format aml_visitor<M>::list_format_from(antlr4::tree::TerminalNode* enc) {
+    if (!enc) return list_format::scott;
+    const std::string name = enc->getText().substr(1, enc->getText().size() - 2);
+    if (name == "church") return list_format::church;
+    return list_format::scott;
 }
 
 template<typename M>
 inline uint64_t aml_visitor<M>::parse_natlit(const std::string& text) {
-    return std::stoull(text.substr(0, text.size() - 1));
+    return std::stoull(text);
 }
 
 template<typename M>
 inline int64_t aml_visitor<M>::parse_posint(const std::string& text) {
-    return static_cast<int64_t>(std::stoull(text));
+    return static_cast<int64_t>(std::stoull(text.substr(1)));
 }
 
 template<typename M>

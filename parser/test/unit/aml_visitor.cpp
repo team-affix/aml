@@ -17,7 +17,7 @@ struct MockMakeAml {
     MOCK_METHOD(const aml_expr*, make_abs, (std::string param, const aml_expr* body));
     MOCK_METHOD(const aml_expr*, make_token, (std::string name));
     MOCK_METHOD(const aml_expr*, make_nat, (uint64_t value, nat_format format));
-    MOCK_METHOD(const aml_expr*, make_integer, (int64_t value));
+    MOCK_METHOD(const aml_expr*, make_integer, (int64_t value, nat_format format));
     MOCK_METHOD(const aml_expr*, make_character, (char value));
     MOCK_METHOD(const aml_expr*, make_string, (std::string value));
     MOCK_METHOD(const aml_expr*, make_list, (std::vector<const aml_expr*> elems, list_format format));
@@ -37,8 +37,8 @@ void wire_mock_to_pool(MockMakeAml& mock, aml_expr_pool& pool) {
     ON_CALL(mock, make_nat(_, _)).WillByDefault([&](uint64_t v, nat_format f) {
         return pool.make_nat(v, f);
     });
-    ON_CALL(mock, make_integer(_)).WillByDefault([&](int64_t v) {
-        return pool.make_integer(v);
+    ON_CALL(mock, make_integer(_, _)).WillByDefault([&](int64_t v, nat_format f) {
+        return pool.make_integer(v, f);
     });
     ON_CALL(mock, make_character(_)).WillByDefault([&](char ch) {
         return pool.make_character(ch);
@@ -502,35 +502,35 @@ TEST_F(AmlVisitorTest, VisitYCombinatorShape) {
 // ---------------------------------------------------------------------------
 
 TEST_F(AmlVisitorTest, VisitNatZeroDefaultBinary) {
-    auto pe = parse_expr("0N"); const auto* nat = as_nat(pe.body());
+    auto pe = parse_expr("0"); const auto* nat = as_nat(pe.body());
     ASSERT_NE(nat, nullptr);
     EXPECT_EQ(nat->value, 0u);
     EXPECT_EQ(nat->format, nat_format::binary);
 }
 
 TEST_F(AmlVisitorTest, VisitNatValue) {
-    auto pe = parse_expr("42N"); const auto* nat = as_nat(pe.body());
+    auto pe = parse_expr("42"); const auto* nat = as_nat(pe.body());
     ASSERT_NE(nat, nullptr);
     EXPECT_EQ(nat->value, 42u);
     EXPECT_EQ(nat->format, nat_format::binary);
 }
 
 TEST_F(AmlVisitorTest, VisitNatChurch) {
-    auto pe = parse_expr("<church> 42N"); const auto* nat = as_nat(pe.body());
+    auto pe = parse_expr("<church> 42"); const auto* nat = as_nat(pe.body());
     ASSERT_NE(nat, nullptr);
     EXPECT_EQ(nat->value, 42u);
     EXPECT_EQ(nat->format, nat_format::church);
 }
 
 TEST_F(AmlVisitorTest, VisitNatBinaryExplicit) {
-    auto pe = parse_expr("<binary> 7N"); const auto* nat = as_nat(pe.body());
+    auto pe = parse_expr("<binary> 7"); const auto* nat = as_nat(pe.body());
     ASSERT_NE(nat, nullptr);
     EXPECT_EQ(nat->value, 7u);
     EXPECT_EQ(nat->format, nat_format::binary);
 }
 
 TEST_F(AmlVisitorTest, VisitNatLarge) {
-    auto pe = parse_expr("1000N"); const auto* nat = as_nat(pe.body());
+    auto pe = parse_expr("1000"); const auto* nat = as_nat(pe.body());
     ASSERT_NE(nat, nullptr);
     EXPECT_EQ(nat->value, 1000u);
 }
@@ -540,13 +540,13 @@ TEST_F(AmlVisitorTest, VisitNatLarge) {
 // ---------------------------------------------------------------------------
 
 TEST_F(AmlVisitorTest, VisitIntZero) {
-    auto pe = parse_expr("0"); const auto* integer = as_integer(pe.body());
+    auto pe = parse_expr("+0"); const auto* integer = as_integer(pe.body());
     ASSERT_NE(integer, nullptr);
     EXPECT_EQ(integer->value, 0);
 }
 
 TEST_F(AmlVisitorTest, VisitIntPositive) {
-    auto pe = parse_expr("42"); const auto* integer = as_integer(pe.body());
+    auto pe = parse_expr("+42"); const auto* integer = as_integer(pe.body());
     ASSERT_NE(integer, nullptr);
     EXPECT_EQ(integer->value, 42);
 }
@@ -684,7 +684,7 @@ TEST_F(AmlVisitorTest, VisitListScottExplicit) {
 }
 
 TEST_F(AmlVisitorTest, VisitListMixedElements) {
-    auto pe = parse_expr("[x, 42N, \"hi\", 'a']"); const auto* lst = as_list(pe.body());
+    auto pe = parse_expr("[x, 42, \"hi\", 'a']"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     ASSERT_EQ(lst->elems.size(), 4u);
     EXPECT_NE(as_token(lst->elems[0]), nullptr);
@@ -758,9 +758,11 @@ TEST_F(AmlVisitorTest, RejectNegZero) {
     EXPECT_FALSE(try_parse_module_file("_aml_probe = -0.", pool).has_value());
 }
 
-TEST_F(AmlVisitorTest, RejectEncodingOnInteger) {
-    aml_expr_pool pool;
-    EXPECT_FALSE(try_parse_module_file("_aml_probe = <church> 42.", pool).has_value());
+TEST_F(AmlVisitorTest, VisitIntWithEncoding) {
+    auto pe = parse_expr("<binary> +42"); const auto* integer = as_integer(pe.body());
+    ASSERT_NE(integer, nullptr);
+    EXPECT_EQ(integer->value, 42);
+    EXPECT_EQ(integer->format, nat_format::binary);
 }
 
 TEST_F(AmlVisitorTest, RejectEncodingOnChar) {

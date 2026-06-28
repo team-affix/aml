@@ -16,8 +16,8 @@ const aml_expr* aml_expr_pool::make_nat(uint64_t value, nat_format format) {
     return intern(aml_expr{aml_expr::nat{value, format}});
 }
 
-const aml_expr* aml_expr_pool::make_integer(int64_t value) {
-    return intern(aml_expr{aml_expr::integer{value}});
+const aml_expr* aml_expr_pool::make_integer(int64_t value, nat_format format) {
+    return intern(aml_expr{aml_expr::integer{value, format}});
 }
 
 const aml_expr* aml_expr_pool::make_character(char value) {

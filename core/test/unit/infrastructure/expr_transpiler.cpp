@@ -208,20 +208,20 @@ TEST_F(TranspilerTest, TranspileNatChurchTwo) {
 }
 
 TEST_F(TranspilerTest, TranspileIntZero) {
-    const aml_expr* e = aml_pool.make_integer(0);
+    const aml_expr* e = aml_pool.make_integer(0, nat_format::binary);
     const lc_expr* expected = lc_app(lc_var(1), lc_var(2));
     EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, TranspileIntPositive) {
-    const aml_expr* e = aml_pool.make_integer(12);
+    const aml_expr* e = aml_pool.make_integer(12, nat_format::binary);
     const aml_expr* nat = aml_pool.make_nat(12, nat_format::binary);
     const lc_expr* expected = lc_app(lc_var(1), tx_expr(nat, kBuiltinNames));
     EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, TranspileIntNegative) {
-    const aml_expr* e = aml_pool.make_integer(-12);
+    const aml_expr* e = aml_pool.make_integer(-12, nat_format::binary);
     const aml_expr* nat = aml_pool.make_nat(11, nat_format::binary);
     const lc_expr* expected = lc_app(lc_var(0), tx_expr(nat, kBuiltinNames));
     EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
@@ -267,7 +267,7 @@ TEST_F(TranspilerTest, TranspileListChurch) {
 }
 
 TEST_F(TranspilerTest, MissingScopeEntryThrowsOnScottList) {
-    const aml_expr* e = aml_pool.make_list({aml_pool.make_integer(1)}, list_format::scott);
+    const aml_expr* e = aml_pool.make_list({aml_pool.make_integer(1, nat_format::binary)}, list_format::scott);
     EXPECT_THROW(tx_expr(e, {"nil"}), std::out_of_range);
 }
 

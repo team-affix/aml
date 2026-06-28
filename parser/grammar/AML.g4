@@ -38,7 +38,7 @@ declarationGroup
     ;
 
 declaration
-    : NAME '/' POSINT
+    : NAME '/' NATLIT
     ;
 
 // ============================================================
@@ -89,45 +89,34 @@ arg
 
 atom
     : NAME
-    | encodedNat
-    | intLit
+    | nat
+    | int
     | CHARLIT
     | STRLIT
-    | encodedList
+    | list
     ;
 
-encodedNat
-    : natEncoding? NATLIT
+nat
+    : ENCODING? NATLIT
     ;
 
-intLit
-    : POSINT
-    | NEGINTLIT
+int
+    : ENCODING? (POSINTLIT | NEGINTLIT)
     ;
 
-encodedList
-    : listEncoding? '[' (expr (',' expr)*)? ']'
-    ;
-
-natEncoding
-    : '<' ( CHURCH | BINARY ) '>'
-    ;
-
-listEncoding
-    : '<' ( CHURCH | SCOTT ) '>'
+list
+    : ENCODING? '[' (expr (',' expr)*)? ']'
     ;
 
 // ============================================================
 // Lexer rules
 // ============================================================
 
-CHURCH : 'church' ;
-SCOTT  : 'scott'  ;
-BINARY : 'binary' ;
+ENCODING : '<' [a-z]+ '>' ;
 
-NATLIT : [0-9]+ 'N' ;
+NATLIT : [0-9]+ ;
 
-POSINT : [0-9]+ ;
+POSINTLIT : '+' [0-9]+ ;
 
 NEGINTLIT : '-' [1-9][0-9]* ;
 

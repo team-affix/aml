@@ -84,7 +84,7 @@ TEST(ParseTranspileTest, NotFunctionUsesGlobalIndices) {
 }
 
 TEST(ParseTranspileTest, DeclarationGroupAndNatLiteral) {
-    auto ds = definitions_from(parse_module("main = 2N."));
+    auto ds = definitions_from(parse_module("main = 2."));
     ASSERT_EQ(ds.size(), 1u);
 
     transpiler_manifest bundle;

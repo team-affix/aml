@@ -103,13 +103,13 @@ TEST(AmlParseTest, LexDeclarationName) {
 }
 
 TEST(AmlParseTest, LexNatLit) {
-    EXPECT_TRUE(parses_expr("0N"));
-    EXPECT_TRUE(parses_expr("42N"));
+    EXPECT_TRUE(parses_expr("0"));
+    EXPECT_TRUE(parses_expr("42"));
 }
 
 TEST(AmlParseTest, LexPosInt) {
-    EXPECT_TRUE(parses_expr("0"));
-    EXPECT_TRUE(parses_expr("42"));
+    EXPECT_TRUE(parses_expr("+0"));
+    EXPECT_TRUE(parses_expr("+42"));
 }
 
 TEST(AmlParseTest, LexNegInt) {
@@ -262,31 +262,27 @@ TEST(AmlParseTest, ParseNestedApplication) {
 }
 
 TEST(AmlParseTest, ParseNatLitDefault) {
-    EXPECT_TRUE(parses_expr("42N"));
+    EXPECT_TRUE(parses_expr("42"));
 }
 
 TEST(AmlParseTest, ParseNatLitChurch) {
-    EXPECT_TRUE(parses_expr("<church> 42N"));
+    EXPECT_TRUE(parses_expr("<church> 42"));
 }
 
 TEST(AmlParseTest, ParseNatLitBinary) {
-    EXPECT_TRUE(parses_expr("<binary> 7N"));
+    EXPECT_TRUE(parses_expr("<binary> 7"));
 }
 
 TEST(AmlParseTest, ParseListScottExplicit) {
     EXPECT_TRUE(parses_expr("<scott> [a, b]"));
 }
 
-TEST(AmlParseTest, ParseNatScottRejected) {
-    EXPECT_FALSE(parses_expr("<scott> 7N"));
+TEST(AmlParseTest, ParseIntWithEncoding) {
+    EXPECT_TRUE(parses_expr("<binary> +42"));
+    EXPECT_TRUE(parses_expr("<church> -12"));
 }
 
-TEST(AmlParseTest, ParseListBinaryRejected) {
-    EXPECT_FALSE(parses_expr("<binary> [a, b]"));
-}
-
-TEST(AmlParseTest, ParseEncodingOnlyNatOrList) {
-    EXPECT_FALSE(parses_expr("<church> 42"));
+TEST(AmlParseTest, ParseEncodingNotApplicable) {
     EXPECT_FALSE(parses_expr("<church> 'a'"));
     EXPECT_FALSE(parses_expr("<church> \"hi\""));
     EXPECT_FALSE(parses_expr("<church> foo"));

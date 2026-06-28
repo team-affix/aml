@@ -29,7 +29,8 @@ struct aml_expr {
         auto operator<=>(const nat&) const = default;
     };
     struct integer {
-        int64_t value;
+        int64_t    value;
+        nat_format format;
         auto operator<=>(const integer&) const = default;
     };
     struct character {
