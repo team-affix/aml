@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include "infrastructure/aml_expr_pool.hpp"
-#include "infrastructure/transpiler_manifest.hpp"
+#include "value_objects/transpiler_manifest.hpp"
 #include "value_objects/nat_format.hpp"
 #include "value_objects/list_format.hpp"
 

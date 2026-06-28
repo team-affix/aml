@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include "infrastructure/aml_expr_pool.hpp"
-#include "infrastructure/transpiler_manifest.hpp"
+#include "value_objects/transpiler_manifest.hpp"
 #include "parser/generated/AMLLexer.h"
 #include "parser/generated/AMLParser.h"
 #include "parser/hpp/aml_visitor.hpp"

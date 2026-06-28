@@ -1,5 +1,10 @@
-#include "infrastructure/transpiler_manifest.hpp"
+#include "value_objects/transpiler_manifest.hpp"
 
+// tx is initialized first (declaration order) and receives forward references
+// to the sub-components below it.  Those references are only used after full
+// construction, so storing them before the referents are initialized is safe.
+// Non-recursive sub-components (token_ … string_) depend only on lc and sc.
+// Recursive sub-components (abs_ … church_list_) depend on tx.
 transpiler_manifest::transpiler_manifest()
     : tx(token_, abs_, app_,
          scott_nat_, church_nat_,
