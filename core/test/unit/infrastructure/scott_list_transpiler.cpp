@@ -86,3 +86,20 @@ TEST_F(ScottListTranspilerTest, EachElementTranspiledThroughTranspileExpr) {
     EXPECT_CALL(mock_tx, transpile(e2)).Times(1);
     slt.transpile_list(aml_expr::list{{e0, e1, e2}, {}});
 }
+
+TEST_F(ScottListTranspilerTest, ThreeElementsInOrder) {
+    using testing::Return;
+    const aml_expr* e0  = aml.make_token("a");
+    const aml_expr* e1  = aml.make_token("b");
+    const aml_expr* e2  = aml.make_token("c");
+    const lc_expr*  lc0 = lc.make_var(10);
+    const lc_expr*  lc1 = lc.make_var(11);
+    const lc_expr*  lc2 = lc.make_var(12);
+    ON_CALL(mock_tx, transpile(e0)).WillByDefault(Return(lc0));
+    ON_CALL(mock_tx, transpile(e1)).WillByDefault(Return(lc1));
+    ON_CALL(mock_tx, transpile(e2)).WillByDefault(Return(lc2));
+
+    // [e0, e1, e2] → cons(e0, cons(e1, cons(e2, nil)))
+    EXPECT_EQ(slt.transpile_list(aml_expr::list{{e0, e1, e2}, {}}),
+              cons_(lc0, cons_(lc1, cons_(lc2, v(0)))));
+}

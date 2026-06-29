@@ -106,3 +106,13 @@ TEST_F(IntegerTranspilerTest, ForwardsChurchFormatToTranspileNat) {
         .Times(1);
     it.transpile_integer({5, nat_format::church});
 }
+
+TEST_F(IntegerTranspilerTest, ForwardsChurchFormatToTranspileNatForNegative) {
+    // -3 → negsuc(2), i.e. transpile_nat({2, church})
+    EXPECT_CALL(mock_nat, transpile_nat(
+        testing::AllOf(
+            testing::Field(&aml_expr::nat::value, 2u),
+            testing::Field(&aml_expr::nat::format, nat_format::church))))
+        .Times(1);
+    it.transpile_integer({-3, nat_format::church});
+}

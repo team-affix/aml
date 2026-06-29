@@ -61,6 +61,12 @@ TEST_F(LcExprPoolTest, AppDifferentFuncSameArgReturnsDifferentPointers) {
     EXPECT_NE(pool.make_app(f, x), pool.make_app(g, x));
 }
 
+TEST_F(LcExprPoolTest, AppSwappedFuncArgReturnsDifferentPointers) {
+    const lc_expr* a = pool.make_var(0);
+    const lc_expr* b = pool.make_var(1);
+    EXPECT_NE(pool.make_app(a, b), pool.make_app(b, a));
+}
+
 TEST_F(LcExprPoolTest, SizeTracksAbsAndAppNodes) {
     EXPECT_EQ(pool.size(), 0u);
     const lc_expr* v = pool.make_var(0);

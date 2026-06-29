@@ -80,6 +80,19 @@ TEST_F(ScopeTest, PoppedNameThrows) {
     EXPECT_THROW(sc.get_var_index("x"), std::out_of_range);
 }
 
+TEST_F(ScopeTest, TripleShadowingUnwindsCorrectly) {
+    sc.push("x");  // depth 1: x→0
+    sc.push("x");  // depth 2: x→0 (shadows)
+    sc.push("x");  // depth 3: x→0 (shadows again)
+    EXPECT_EQ(sc.get_var_index("x"), 0u);
+    sc.pop();
+    EXPECT_EQ(sc.get_var_index("x"), 0u);  // second x still visible
+    sc.pop();
+    EXPECT_EQ(sc.get_var_index("x"), 0u);  // first x still visible
+    sc.pop();
+    EXPECT_THROW(sc.get_var_index("x"), std::out_of_range);
+}
+
 TEST_F(ScopeTest, GlobalsThenLocalsShiftIndices) {
     sc.push("g0");
     sc.push("g1");
