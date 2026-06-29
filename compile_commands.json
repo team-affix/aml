@@ -1,0 +1,362 @@
+[
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -O3 -c core/cpp/infrastructure/aml_expr_pool.cpp -o build/obj/core/infrastructure/aml_expr_pool.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/aml_expr_pool.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -O3 -c core/cpp/infrastructure/lc_expr_pool.cpp -o build/obj/core/infrastructure/lc_expr_pool.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/lc_expr_pool.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -O3 -c core/cpp/infrastructure/scope.cpp -o build/obj/core/infrastructure/scope.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/scope.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -O3 -c core/cpp/value_objects/transpiler_manifest.cpp -o build/obj/core/value_objects/transpiler_manifest.o",
+    "file": "/home/user/projects/aml/core/cpp/value_objects/transpiler_manifest.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -DDEBUG -g -Igoogletest/googletest/include -Igoogletest/googlemock/include -Igoogletest/googletest -Igoogletest/googlemock -Icli/test -c cli/test/main.cpp -o build/obj/cli_debug_test/main.o",
+    "file": "/home/user/projects/aml/cli/test/main.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/basic_manifest.cpp -o build/obj/core_debug/infrastructure/basic_manifest.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/basic_manifest.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/basic_runtime.cpp -o build/obj/core_debug/infrastructure/basic_runtime.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/basic_runtime.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/bind_map.cpp -o build/obj/core_debug/infrastructure/bind_map.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/bind_map.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/bind_map_factory.cpp -o build/obj/core_debug/infrastructure/bind_map_factory.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/bind_map_factory.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/candidate_frame_offsets.cpp -o build/obj/core_debug/infrastructure/candidate_frame_offsets.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/candidate_frame_offsets.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/chosen_goal_candidates.cpp -o build/obj/core_debug/infrastructure/chosen_goal_candidates.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/chosen_goal_candidates.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/cumulative_grounded_weight.cpp -o build/obj/core_debug/infrastructure/cumulative_grounded_weight.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/cumulative_grounded_weight.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/db.cpp -o build/obj/core_debug/infrastructure/db.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/db.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/decision_memory.cpp -o build/obj/core_debug/infrastructure/decision_memory.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/decision_memory.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/elimination_backlog.cpp -o build/obj/core_debug/infrastructure/elimination_backlog.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/elimination_backlog.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/expr_pool.cpp -o build/obj/core_debug/infrastructure/expr_pool.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/expr_pool.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/expr_printer.cpp -o build/obj/core_debug/infrastructure/expr_printer.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/expr_printer.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/frame_bump_allocator.cpp -o build/obj/core_debug/infrastructure/frame_bump_allocator.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/frame_bump_allocator.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/functor_names.cpp -o build/obj/core_debug/infrastructure/functor_names.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/functor_names.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -I/usr/include/antlr4-runtime -DDEBUG -g -c parser/generated/AMLLexer.cpp -o build/obj/parser_debug/AMLLexer.o",
+    "file": "/home/user/projects/aml/parser/generated/AMLLexer.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -I/usr/include/antlr4-runtime -DDEBUG -g -c parser/generated/AMLParser.cpp -o build/obj/parser_debug/AMLParser.o",
+    "file": "/home/user/projects/aml/parser/generated/AMLParser.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -I/usr/include/antlr4-runtime -DDEBUG -g -c parser/generated/AMLBaseVisitor.cpp -o build/obj/parser_debug/AMLBaseVisitor.o",
+    "file": "/home/user/projects/aml/parser/generated/AMLBaseVisitor.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -I/usr/include/antlr4-runtime -DDEBUG -g -c parser/generated/AMLVisitor.cpp -o build/obj/parser_debug/AMLVisitor.o",
+    "file": "/home/user/projects/aml/parser/generated/AMLVisitor.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/genius_manifest.cpp -o build/obj/core_debug/infrastructure/genius_manifest.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/genius_manifest.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/genius_runtime.cpp -o build/obj/core_debug/infrastructure/genius_runtime.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/genius_runtime.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/globalizer.cpp -o build/obj/core_debug/infrastructure/globalizer.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/globalizer.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/goal_candidate_rules.cpp -o build/obj/core_debug/infrastructure/goal_candidate_rules.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/goal_candidate_rules.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/goal_exprs.cpp -o build/obj/core_debug/infrastructure/goal_exprs.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/goal_exprs.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/goal_weights.cpp -o build/obj/core_debug/infrastructure/goal_weights.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/goal_weights.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/horizon_manifest.cpp -o build/obj/core_debug/infrastructure/horizon_manifest.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/horizon_manifest.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/horizon_runtime.cpp -o build/obj/core_debug/infrastructure/horizon_runtime.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/horizon_runtime.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/initial_goal_exprs.cpp -o build/obj/core_debug/infrastructure/initial_goal_exprs.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/initial_goal_exprs.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/initial_goal_weight.cpp -o build/obj/core_debug/infrastructure/initial_goal_weight.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/initial_goal_weight.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/lineage_pool.cpp -o build/obj/core_debug/infrastructure/lineage_pool.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/lineage_pool.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/non_backtracking_var_sequencer.cpp -o build/obj/core_debug/infrastructure/non_backtracking_var_sequencer.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/non_backtracking_var_sequencer.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/ra_active_goals.cpp -o build/obj/core_debug/infrastructure/ra_active_goals.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/ra_active_goals.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/ra_rule_id_set.cpp -o build/obj/core_debug/infrastructure/ra_rule_id_set.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/ra_rule_id_set.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/ra_rule_id_set_factory.cpp -o build/obj/core_debug/infrastructure/ra_rule_id_set_factory.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/ra_rule_id_set_factory.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/resolution_memory.cpp -o build/obj/core_debug/infrastructure/resolution_memory.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/resolution_memory.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/ridge_manifest.cpp -o build/obj/core_debug/infrastructure/ridge_manifest.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/ridge_manifest.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/ridge_runtime.cpp -o build/obj/core_debug/infrastructure/ridge_runtime.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/ridge_runtime.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/rule_id_set.cpp -o build/obj/core_debug/infrastructure/rule_id_set.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/rule_id_set.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/rule_id_set_factory.cpp -o build/obj/core_debug/infrastructure/rule_id_set_factory.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/rule_id_set_factory.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/solver_driver.cpp -o build/obj/core_debug/infrastructure/solver_driver.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/solver_driver.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/srt_active_goals.cpp -o build/obj/core_debug/infrastructure/srt_active_goals.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/srt_active_goals.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/trail.cpp -o build/obj/core_debug/infrastructure/trail.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/trail.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/unit_goals.cpp -o build/obj/core_debug/infrastructure/unit_goals.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/unit_goals.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/infrastructure/var_names.cpp -o build/obj/core_debug/infrastructure/var_names.o",
+    "file": "/home/user/projects/aml/core/cpp/infrastructure/var_names.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -DDEBUG -g -c core/cpp/value_objects/lemma.cpp -o build/obj/core_debug/value_objects/lemma.o",
+    "file": "/home/user/projects/aml/core/cpp/value_objects/lemma.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -DDEBUG -g -Igoogletest/googletest/include -Igoogletest/googlemock/include -Igoogletest/googletest -Igoogletest/googlemock -Iparser/test -I/usr/include/antlr4-runtime -c parser/test/integration/program_assembly.cpp -o build/obj/parser_debug_test/integration/program_assembly.o",
+    "file": "/home/user/projects/aml/parser/test/integration/program_assembly.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -DDEBUG -g -Igoogletest/googletest/include -Igoogletest/googlemock/include -Igoogletest/googletest -Igoogletest/googlemock -Iparser/test -I/usr/include/antlr4-runtime -c parser/test/integration/transpile.cpp -o build/obj/parser_debug_test/integration/transpile.o",
+    "file": "/home/user/projects/aml/parser/test/integration/transpile.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -DDEBUG -g -Igoogletest/googletest/include -Igoogletest/googlemock/include -Igoogletest/googletest -Igoogletest/googlemock -Iparser/test -I/usr/include/antlr4-runtime -c parser/test/main.cpp -o build/obj/parser_debug_test/main.o",
+    "file": "/home/user/projects/aml/parser/test/main.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -DDEBUG -g -Igoogletest/googletest/include -Igoogletest/googlemock/include -Igoogletest/googletest -Igoogletest/googlemock -Iparser/test -I/usr/include/antlr4-runtime -c parser/test/unit/aml_visitor.cpp -o build/obj/parser_debug_test/unit/aml_visitor.o",
+    "file": "/home/user/projects/aml/parser/test/unit/aml_visitor.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -DDEBUG -g -Igoogletest/googletest/include -Igoogletest/googlemock/include -Igoogletest/googletest -Igoogletest/googlemock -Iparser/test -I/usr/include/antlr4-runtime -c parser/test/unit/grammar/aml_parse.cpp -o build/obj/parser_debug_test/unit/grammar/aml_parse.o",
+    "file": "/home/user/projects/aml/parser/test/unit/grammar/aml_parse.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -I/usr/include/antlr4-runtime -DDEBUG -g -c parser/generated/CHCLexer.cpp -o build/obj/parser_debug/CHCLexer.o",
+    "file": "/home/user/projects/aml/parser/generated/CHCLexer.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -I/usr/include/antlr4-runtime -DDEBUG -g -c parser/generated/CHCParser.cpp -o build/obj/parser_debug/CHCParser.o",
+    "file": "/home/user/projects/aml/parser/generated/CHCParser.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -I/usr/include/antlr4-runtime -DDEBUG -g -c parser/generated/CHCBaseVisitor.cpp -o build/obj/parser_debug/CHCBaseVisitor.o",
+    "file": "/home/user/projects/aml/parser/generated/CHCBaseVisitor.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -I/usr/include/antlr4-runtime -DDEBUG -g -c parser/generated/CHCVisitor.cpp -o build/obj/parser_debug/CHCVisitor.o",
+    "file": "/home/user/projects/aml/parser/generated/CHCVisitor.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -I/usr/include/antlr4-runtime -DDEBUG -g -c parser/cpp/body_visitor.cpp -o build/obj/parser_debug/body_visitor.o",
+    "file": "/home/user/projects/aml/parser/cpp/body_visitor.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -I/usr/include/antlr4-runtime -DDEBUG -g -c parser/cpp/clause_visitor.cpp -o build/obj/parser_debug/clause_visitor.o",
+    "file": "/home/user/projects/aml/parser/cpp/clause_visitor.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -I/usr/include/antlr4-runtime -DDEBUG -g -c parser/cpp/database_visitor.cpp -o build/obj/parser_debug/database_visitor.o",
+    "file": "/home/user/projects/aml/parser/cpp/database_visitor.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -I/usr/include/antlr4-runtime -DDEBUG -g -c parser/cpp/expr_visitor.cpp -o build/obj/parser_debug/expr_visitor.o",
+    "file": "/home/user/projects/aml/parser/cpp/expr_visitor.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -I/usr/include/antlr4-runtime -DDEBUG -g -c parser/cpp/import_database_from_file.cpp -o build/obj/parser_debug/import_database_from_file.o",
+    "file": "/home/user/projects/aml/parser/cpp/import_database_from_file.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Imcts/include -MMD -MP -I/usr/include/antlr4-runtime -DDEBUG -g -c parser/cpp/import_goals_from_string.cpp -o build/obj/parser_debug/import_goals_from_string.o",
+    "file": "/home/user/projects/aml/parser/cpp/import_goals_from_string.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -DDEBUG -g -Igoogletest/googletest/include -Igoogletest/googlemock/include -Igoogletest/googletest -Igoogletest/googlemock -Icore/test -Iatlas/parser/hpp -I/usr/include/antlr4-runtime -c core/test/integration/lambda_calculus.cpp -o build/obj/core_debug_test/integration/lambda_calculus.o",
+    "file": "/home/user/projects/aml/core/test/integration/lambda_calculus.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -DDEBUG -g -Igoogletest/googletest/include -Igoogletest/googlemock/include -Igoogletest/googletest -Igoogletest/googlemock -Icore/test -Iatlas/parser/hpp -I/usr/include/antlr4-runtime -c core/test/main.cpp -o build/obj/core_debug_test/main.o",
+    "file": "/home/user/projects/aml/core/test/main.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -DDEBUG -g -Igoogletest/googletest/include -Igoogletest/googlemock/include -Igoogletest/googletest -Igoogletest/googlemock -Icore/test -Iatlas/parser/hpp -I/usr/include/antlr4-runtime -c core/test/stress/expr_transpiler_stress.cpp -o build/obj/core_debug_test/stress/expr_transpiler_stress.o",
+    "file": "/home/user/projects/aml/core/test/stress/expr_transpiler_stress.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -DDEBUG -g -Igoogletest/googletest/include -Igoogletest/googlemock/include -Igoogletest/googletest -Igoogletest/googlemock -Icore/test -Iatlas/parser/hpp -I/usr/include/antlr4-runtime -c core/test/unit/infrastructure/declaration_transpiler.cpp -o build/obj/core_debug_test/unit/infrastructure/declaration_transpiler.o",
+    "file": "/home/user/projects/aml/core/test/unit/infrastructure/declaration_transpiler.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -DDEBUG -g -Igoogletest/googletest/include -Igoogletest/googlemock/include -Igoogletest/googletest -Igoogletest/googlemock -Icore/test -Iatlas/parser/hpp -I/usr/include/antlr4-runtime -c core/test/unit/infrastructure/expr_transpiler.cpp -o build/obj/core_debug_test/unit/infrastructure/expr_transpiler.o",
+    "file": "/home/user/projects/aml/core/test/unit/infrastructure/expr_transpiler.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -DDEBUG -g -Igoogletest/googletest/include -Igoogletest/googlemock/include -Igoogletest/googletest -Igoogletest/googlemock -Icore/test -Iatlas/parser/hpp -I/usr/include/antlr4-runtime -c core/test/unit/infrastructure/global_wrapper.cpp -o build/obj/core_debug_test/unit/infrastructure/global_wrapper.o",
+    "file": "/home/user/projects/aml/core/test/unit/infrastructure/global_wrapper.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -DDEBUG -g -Igoogletest/googletest/include -Igoogletest/googlemock/include -Igoogletest/googletest -Igoogletest/googlemock -Icore/test -Iatlas/parser/hpp -I/usr/include/antlr4-runtime -c core/test/unit/infrastructure/lc_expr_pool.cpp -o build/obj/core_debug_test/unit/infrastructure/lc_expr_pool.o",
+    "file": "/home/user/projects/aml/core/test/unit/infrastructure/lc_expr_pool.cpp"
+  },
+  {
+    "directory": "/home/user/projects/aml",
+    "command": "g++ -std=c++20 -I. -Icore/hpp -Icli/hpp -Iatlas -Iatlas/core/hpp -Iatlas/mcts/include -MMD -MP -DDEBUG -g -Igoogletest/googletest/include -Igoogletest/googlemock/include -Igoogletest/googletest -Igoogletest/googlemock -Icore/test -Iatlas/parser/hpp -I/usr/include/antlr4-runtime -c core/test/unit/infrastructure/scope.cpp -o build/obj/core_debug_test/unit/infrastructure/scope.o",
+    "file": "/home/user/projects/aml/core/test/unit/infrastructure/scope.cpp"
+  }
+]
