@@ -31,15 +31,6 @@ TEST_F(LcExprPoolTest, DifferentAppsReturnDifferentPointers) {
     EXPECT_NE(pool.make_app(f, x), pool.make_app(f, y));
 }
 
-TEST_F(LcExprPoolTest, SizeTracksInternedNodes) {
-    EXPECT_EQ(pool.size(), 0u);
-    pool.make_var(0);
-    EXPECT_EQ(pool.size(), 1u);
-    pool.make_var(0);
-    EXPECT_EQ(pool.size(), 1u);
-    pool.make_var(1);
-    EXPECT_EQ(pool.size(), 2u);
-}
 
 TEST_F(LcExprPoolTest, AbsDifferentBodiesReturnDifferentPointers) {
     const lc_expr* b0 = pool.make_var(0);
@@ -67,16 +58,3 @@ TEST_F(LcExprPoolTest, AppSwappedFuncArgReturnsDifferentPointers) {
     EXPECT_NE(pool.make_app(a, b), pool.make_app(b, a));
 }
 
-TEST_F(LcExprPoolTest, SizeTracksAbsAndAppNodes) {
-    EXPECT_EQ(pool.size(), 0u);
-    const lc_expr* v = pool.make_var(0);
-    EXPECT_EQ(pool.size(), 1u);
-    const lc_expr* a = pool.make_abs(v);
-    EXPECT_EQ(pool.size(), 2u);
-    pool.make_app(a, v);
-    EXPECT_EQ(pool.size(), 3u);
-    // repeating the same nodes does not grow the pool
-    pool.make_abs(v);
-    pool.make_app(a, v);
-    EXPECT_EQ(pool.size(), 3u);
-}

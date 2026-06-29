@@ -1,11 +1,13 @@
-#include "value_objects/transpiler_manifest.hpp"
+#include "value_objects/manifest.hpp"
 
 // tx is initialized first (declaration order) and receives forward references
 // to the sub-components below it.  Those references are only used after full
 // construction, so storing them before the referents are initialized is safe.
 // Non-recursive sub-components (token_ … string_) depend only on lc and sc.
 // Recursive sub-components (abs_ … church_list_) depend on tx.
-transpiler_manifest::transpiler_manifest()
+// globals is default-initialized (empty stack); asm_ holds references to lc
+// and globals, both of which are fully initialized before asm_ (declaration order).
+manifest::manifest()
     : tx(token_, abs_, app_,
          binary_nat_, church_nat_,
          integer_, character_,
@@ -20,4 +22,5 @@ transpiler_manifest::transpiler_manifest()
       abs_(tx, lc, sc, sc),
       app_(tx, lc),
       scott_list_(tx, lc, lc, sc),
-      church_list_(tx, lc, lc, lc) {}
+      church_list_(tx, lc, lc, lc),
+      asm_(lc, lc, globals, globals) {}

@@ -15,7 +15,3 @@ const lc_expr* lc_expr_pool::make_app(const lc_expr* func, const lc_expr* arg) {
 const lc_expr* lc_expr_pool::intern(lc_expr&& e) {
     return &*exprs.emplace(std::move(e)).first;
 }
-
-size_t lc_expr_pool::size() const {
-    return exprs.size();
-}

@@ -12,7 +12,7 @@
 #include "infrastructure/lc_expr_pool.hpp"
 #include "value_objects/declaration_decl.hpp"
 #include "value_objects/declaration_group.hpp"
-#include "value_objects/transpiler_manifest.hpp"
+#include "value_objects/manifest.hpp"
 
 namespace {
 
@@ -33,14 +33,14 @@ static declaration_group make_group(std::initializer_list<declaration_decl> decl
 TEST(AssemblerIntegrationTest, EmptyGlobalsReturnsNullptr) {
     lc_expr_pool lc;
     GlobalStack globals;
-    assembler<lc_expr_pool, lc_expr_pool, GlobalStack> asm_{lc, lc, globals};
+    assembler<lc_expr_pool, lc_expr_pool, GlobalStack, GlobalStack> asm_{lc, lc, globals, globals};
     EXPECT_EQ(asm_.assemble(), nullptr);
 }
 
 TEST(AssemblerIntegrationTest, TwoGlobalsFirstDefinedIsOutermost) {
     lc_expr_pool lc;
     GlobalStack globals;
-    assembler<lc_expr_pool, lc_expr_pool, GlobalStack> asm_{lc, lc, globals};
+    assembler<lc_expr_pool, lc_expr_pool, GlobalStack, GlobalStack> asm_{lc, lc, globals, globals};
 
     const lc_expr* g0 = lc.make_var(0);
     const lc_expr* g1 = lc.make_var(1);
@@ -70,7 +70,7 @@ TEST(AssemblerIntegrationTest, TwoGlobalsFirstDefinedIsOutermost) {
 TEST(AssemblerIntegrationTest, DefinitionOrderMatchesScopeOrder) {
     lc_expr_pool lc;
     GlobalStack globals;
-    assembler<lc_expr_pool, lc_expr_pool, GlobalStack> asm_{lc, lc, globals};
+    assembler<lc_expr_pool, lc_expr_pool, GlobalStack, GlobalStack> asm_{lc, lc, globals, globals};
 
     declaration_transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool> dt{lc, lc, lc};
     auto pairs = dt.transpile_group(make_group({{"true", 0u}, {"false", 0u}}));
@@ -90,9 +90,8 @@ TEST(AssemblerIntegrationTest, DefinitionOrderMatchesScopeOrder) {
 // ---------------------------------------------------------------------------
 // BooleanDeclarationsAndNotDefinition
 //
-// Full pipeline: declaration_transpiler → transpiler_manifest → assembler.
-// Replicates the removed NotFunctionWrappedWithBooleans test from
-// program_assembly.cpp, now driven through assembler::assemble.
+// Full pipeline using manifest directly: declaration_transpiler →
+// manifest.tx (transpiler) → manifest.asm_ (assembler).
 //
 // Stack pushed in definition order: true (bottom), false, not (top).
 // After pushing all three names to scope (depth 3):
@@ -112,10 +111,8 @@ TEST(AssemblerIntegrationTest, DefinitionOrderMatchesScopeOrder) {
 
 TEST(AssemblerIntegrationTest, BooleanDeclarationsAndNotDefinition) {
     aml_expr_pool aml;
-    transpiler_manifest b;
+    manifest b;
     declaration_transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool> dt{b.lc, b.lc, b.lc};
-    GlobalStack globals;
-    assembler<lc_expr_pool, lc_expr_pool, GlobalStack> asm_{b.lc, b.lc, globals};
 
     // true/0 | false/0
     auto pairs = dt.transpile_group(make_group({{"true", 0u}, {"false", 0u}}));
@@ -146,13 +143,14 @@ TEST(AssemblerIntegrationTest, BooleanDeclarationsAndNotDefinition) {
     // Clean up scope (assembler does not touch it).
     b.sc.pop(); b.sc.pop(); b.sc.pop();
 
-    globals.push(true_term);
-    globals.push(false_term);
-    globals.push(not_lc);
+    // Push globals onto manifest's stack in definition order, then assemble.
+    b.globals.push(true_term);
+    b.globals.push(false_term);
+    b.globals.push(not_lc);
 
     const lc_expr* step1 = b.lc.make_app(b.lc.make_abs(nullptr),  not_lc);
     const lc_expr* step2 = b.lc.make_app(b.lc.make_abs(step1),    false_term);
     const lc_expr* step3 = b.lc.make_app(b.lc.make_abs(step2),    true_term);
 
-    EXPECT_EQ(asm_.assemble(), step3);
+    EXPECT_EQ(b.asm_.assemble(), step3);
 }
