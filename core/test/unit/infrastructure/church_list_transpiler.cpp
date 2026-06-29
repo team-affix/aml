@@ -92,3 +92,23 @@ TEST_F(ChurchListTranspilerTest, EachElementTranspiledExactlyOnce) {
     EXPECT_CALL(mock_tx, transpile(e1)).Times(1);
     clt.transpile_list(aml_expr::list{{e0, e1}, {}});
 }
+
+TEST_F(ChurchListTranspilerTest, ThreeElementsProduceCorrectFold) {
+    using testing::Return;
+    const aml_expr* e0  = aml.make_token("a");
+    const aml_expr* e1  = aml.make_token("b");
+    const aml_expr* e2  = aml.make_token("c");
+    const lc_expr*  lc0 = lc.make_var(5);
+    const lc_expr*  lc1 = lc.make_var(6);
+    const lc_expr*  lc2 = lc.make_var(7);
+    ON_CALL(mock_tx, transpile(e0)).WillByDefault(Return(lc0));
+    ON_CALL(mock_tx, transpile(e1)).WillByDefault(Return(lc1));
+    ON_CALL(mock_tx, transpile(e2)).WillByDefault(Return(lc2));
+
+    // [e0, e1, e2]_church = abs(abs(f e0 (f e1 (f e2 x))))
+    // f = var(1), x = var(0)
+    const lc_expr* inner = ap(ap(v(1), lc2), v(0));
+    const lc_expr* mid   = ap(ap(v(1), lc1), inner);
+    const lc_expr* body  = ap(ap(v(1), lc0), mid);
+    EXPECT_EQ(clt.transpile_list(aml_expr::list{{e0, e1, e2}, {}}), ab(ab(body)));
+}

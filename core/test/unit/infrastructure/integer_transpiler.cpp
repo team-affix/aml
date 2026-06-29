@@ -97,3 +97,12 @@ TEST_F(IntegerTranspilerTest, ForwardsBinaryFormatToTranspileNat) {
         .Times(1);
     it.transpile_integer({3, nat_format::binary});
 }
+
+TEST_F(IntegerTranspilerTest, ForwardsChurchFormatToTranspileNat) {
+    EXPECT_CALL(mock_nat, transpile_nat(
+        testing::AllOf(
+            testing::Field(&aml_expr::nat::value, 5u),
+            testing::Field(&aml_expr::nat::format, nat_format::church))))
+        .Times(1);
+    it.transpile_integer({5, nat_format::church});
+}

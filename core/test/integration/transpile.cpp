@@ -306,3 +306,81 @@ TEST_F(TranspileIntegrationTest, MutualDefsFromSameScope) {
     EXPECT_EQ(transpile(b, g_body, names),
               b.lc.make_abs(b.lc.make_app(b.lc.make_var(2), b.lc.make_var(0))));
 }
+
+// ---------------------------------------------------------------------------
+// 3-level nested abstraction through a real manifest
+// ---------------------------------------------------------------------------
+
+TEST_F(TranspileIntegrationTest, TriplyCurriedAbstractionOutermostVar) {
+    transpiler_manifest b;
+    // λx.λy.λz.x — x is under 3 binders; de Bruijn index = 2
+    const aml_expr* e = aml.make_abs("x",
+        aml.make_abs("y",
+            aml.make_abs("z", aml.make_token("x"))));
+    EXPECT_EQ(transpile(b, e, {}),
+              b.lc.make_abs(b.lc.make_abs(b.lc.make_abs(b.lc.make_var(2)))));
+}
+
+TEST_F(TranspileIntegrationTest, TriplyCurriedAbstractionMiddleVar) {
+    transpiler_manifest b;
+    // λx.λy.λz.y — y is one binder below the reference; de Bruijn index = 1
+    const aml_expr* e = aml.make_abs("x",
+        aml.make_abs("y",
+            aml.make_abs("z", aml.make_token("y"))));
+    EXPECT_EQ(transpile(b, e, {}),
+              b.lc.make_abs(b.lc.make_abs(b.lc.make_abs(b.lc.make_var(1)))));
+}
+
+// ---------------------------------------------------------------------------
+// List elements that are abstractions — scope hygiene check
+//
+// If transpile_abs leaks a push (fails to pop), the post-element lookups
+// for nil/cons in scope will shift and the test fails or throws.
+// ---------------------------------------------------------------------------
+
+TEST_F(TranspileIntegrationTest, ScottListWithAbsElement) {
+    transpiler_manifest b;
+    // [λx.x]_scott — element transpiles to abs(var(0)); scope must be
+    // restored before nil/cons are looked up.
+    // With kBuiltinNames: cons=idx3, nil=idx2.
+    // Result: app(app(var(3), abs(var(0))), var(2))
+    const aml_expr* id   = aml.make_abs("x", aml.make_token("x"));
+    const aml_expr* list = aml.make_list({id}, list_format::scott);
+
+    const lc_expr* id_lc     = b.lc.make_abs(b.lc.make_var(0));
+    const lc_expr* expected  = b.lc.make_app(
+        b.lc.make_app(b.lc.make_var(3), id_lc),
+        b.lc.make_var(2));
+    EXPECT_EQ(transpile_builtins(b, list), expected);
+}
+
+TEST_F(TranspileIntegrationTest, ChurchListWithAbsElement) {
+    transpiler_manifest b;
+    // [λx.x]_church = abs(abs(app(app(var(1), abs(var(0))), var(0))))
+    // var(1)=f combinator, var(0)=x accumulator (church lambda's own params).
+    // The element abs(var(0)) is computed in the enclosing scope (builtins),
+    // not influenced by the two church-level lambdas (those are from make_abs,
+    // not real scope pushes).
+    const aml_expr* id   = aml.make_abs("x", aml.make_token("x"));
+    const aml_expr* list = aml.make_list({id}, list_format::church);
+
+    const lc_expr* id_lc    = b.lc.make_abs(b.lc.make_var(0));
+    const lc_expr* body     = b.lc.make_app(
+        b.lc.make_app(b.lc.make_var(1), id_lc),
+        b.lc.make_var(0));
+    const lc_expr* expected = b.lc.make_abs(b.lc.make_abs(body));
+    EXPECT_EQ(transpile_builtins(b, list), expected);
+}
+
+// ---------------------------------------------------------------------------
+// Two transpiler_manifest instances are fully independent
+// ---------------------------------------------------------------------------
+
+TEST_F(TranspileIntegrationTest, TwoManifestInstancesAreIndependent) {
+    transpiler_manifest m1, m2;
+    m1.sc.push("x");
+    // m2 has its own fresh scope — "x" must not be visible in m2.
+    const aml_expr* tok = aml.make_token("x");
+    EXPECT_THROW(m2.tx.transpile(tok), std::out_of_range);
+    m1.sc.pop();
+}

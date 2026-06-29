@@ -87,3 +87,60 @@ TEST_F(AbsTranspilerTest, PopCalledEvenWhenBodyIsSimple) {
     EXPECT_CALL(mock_pop, pop()).Times(1);
     at.transpile_abs(aml_expr::abs{"z", aml.make_token("z")});
 }
+
+// ---------------------------------------------------------------------------
+// Multi-layer nesting: λx.(λy.body) — the LIFO push/pop invariant
+// ---------------------------------------------------------------------------
+
+// When the body of an abs is itself an abs, transpile_abs is called
+// recursively (simulated here by the mock calling back into at).
+// The scope contract requires: outer push → inner push → inner pop → outer pop.
+
+TEST_F(AbsTranspilerTest, NestedAbsHasProperlySequencedPushPop) {
+    using testing::InSequence;
+    using testing::_;
+
+    const aml_expr* inner_leaf = aml.make_token("inner_leaf");
+    const aml_expr* outer_body = aml.make_abs("y", inner_leaf);
+
+    // Simulate the real dispatcher: when transpile sees an abs node, it
+    // calls transpile_abs recursively.
+    ON_CALL(mock_tx, transpile(outer_body))
+        .WillByDefault([this](const aml_expr* e) -> const lc_expr* {
+            return at.transpile_abs(std::get<aml_expr::abs>(e->content));
+        });
+    // inner_leaf is a leaf — return a stable sentinel.
+    ON_CALL(mock_tx, transpile(inner_leaf))
+        .WillByDefault(testing::Return(lc.make_var(42)));
+
+    // gmock records calls synchronously in the order they are made.
+    // push("y") fires inside the transpile(outer_body) action, so it arrives
+    // between push("x") and the outer pop().
+    {
+        InSequence seq;
+        EXPECT_CALL(mock_push, push(std::string("x")));  // (1) outer push
+        EXPECT_CALL(mock_push, push(std::string("y")));  // (2) inner push
+        EXPECT_CALL(mock_pop,  pop());                   // (3) inner pop
+        EXPECT_CALL(mock_pop,  pop());                   // (4) outer pop
+    }
+
+    at.transpile_abs(aml_expr::abs{"x", outer_body});
+}
+
+TEST_F(AbsTranspilerTest, NestedAbsReturnsCorrectStructure) {
+    using testing::_;
+
+    const aml_expr* inner_leaf = aml.make_token("inner_leaf");
+    const aml_expr* outer_body = aml.make_abs("y", inner_leaf);
+
+    ON_CALL(mock_tx, transpile(outer_body))
+        .WillByDefault([this](const aml_expr* e) -> const lc_expr* {
+            return at.transpile_abs(std::get<aml_expr::abs>(e->content));
+        });
+    ON_CALL(mock_tx, transpile(inner_leaf))
+        .WillByDefault(testing::Return(lc.make_var(42)));
+
+    // make_abs(make_abs(var(42))): outermost wraps the inner result.
+    const lc_expr* expected = lc.make_abs(lc.make_abs(lc.make_var(42)));
+    EXPECT_EQ(at.transpile_abs(aml_expr::abs{"x", outer_body}), expected);
+}

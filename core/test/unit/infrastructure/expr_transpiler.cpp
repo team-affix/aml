@@ -330,3 +330,31 @@ TEST_F(TranspilerTest, TranspileIdentityFunctionFragment) {
     const aml_expr* id = aml_pool.make_abs("x", aml_pool.make_token("x"));
     EXPECT_EQ(tx_expr(id, {"id"}), lc_abs(lc_var(0)));
 }
+
+// ---------------------------------------------------------------------------
+// 3-level nested abstraction — de Bruijn indices at depth 3
+// ---------------------------------------------------------------------------
+
+TEST_F(TranspilerTest, TranspileTriplyCurriedOutermostVar) {
+    // λx.λy.λz.x — x is under 3 binders, index = 2
+    const aml_expr* e = aml_pool.make_abs("x",
+        aml_pool.make_abs("y",
+            aml_pool.make_abs("z", aml_pool.make_token("x"))));
+    EXPECT_EQ(tx_expr(e, {}), lc_abs(lc_abs(lc_abs(lc_var(2)))));
+}
+
+TEST_F(TranspilerTest, TranspileTriplyCurriedMiddleVar) {
+    // λx.λy.λz.y — y is under 2 binders below it, index = 1
+    const aml_expr* e = aml_pool.make_abs("x",
+        aml_pool.make_abs("y",
+            aml_pool.make_abs("z", aml_pool.make_token("y"))));
+    EXPECT_EQ(tx_expr(e, {}), lc_abs(lc_abs(lc_abs(lc_var(1)))));
+}
+
+TEST_F(TranspilerTest, TranspileTriplyCurriedInnermostVar) {
+    // λx.λy.λz.z — z is the most recently bound, index = 0
+    const aml_expr* e = aml_pool.make_abs("x",
+        aml_pool.make_abs("y",
+            aml_pool.make_abs("z", aml_pool.make_token("z"))));
+    EXPECT_EQ(tx_expr(e, {}), lc_abs(lc_abs(lc_abs(lc_var(0)))));
+}

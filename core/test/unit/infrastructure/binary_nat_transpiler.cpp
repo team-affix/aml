@@ -109,3 +109,14 @@ TEST_F(BinaryNatTranspilerTest, ZeroCallsMakeVarOnce) {
     EXPECT_CALL(mock_var, make_var(0u)).Times(1);
     bnt.transpile_nat({0u, nat_format::binary});
 }
+
+// ---------------------------------------------------------------------------
+// Eight — 0b1000: three false bits followed by one true bit (LSB first)
+// ---------------------------------------------------------------------------
+
+TEST_F(BinaryNatTranspilerTest, EightHasFourBitsLsbFirst) {
+    // 8 = 0b1000 → LSB-first list: [false, false, false, true]
+    // = cons(false, cons(false, cons(false, cons(true, nil))))
+    EXPECT_EQ(bnt.transpile_nat({8u, nat_format::binary}),
+              cons_(v(2), cons_(v(2), cons_(v(2), cons_(v(1), v(0))))));
+}
