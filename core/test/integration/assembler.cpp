@@ -74,9 +74,9 @@ TEST(AssemblerIntegrationTest, DefinitionOrderMatchesScopeOrder) {
     assembler<lc_expr_pool, lc_expr_pool, GlobalStack, GlobalStack> asm_{lc, lc, globals, globals};
 
     declaration_transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool> dt{lc, lc, lc};
-    auto pairs = dt.transpile_group(make_group({{"true", 0u}, {"false", 0u}}));
-    const lc_expr* true_term  = pairs[0].second;  // abs(abs(var(1)))
-    const lc_expr* false_term = pairs[1].second;  // abs(abs(var(0)))
+    auto terms = dt.transpile_group(make_group({{"true", 0u}, {"false", 0u}}));
+    const lc_expr* true_term  = terms[0];  // abs(abs(var(1)))
+    const lc_expr* false_term = terms[1];  // abs(abs(var(0)))
 
     globals.push(true_term);
     globals.push(false_term);
@@ -118,9 +118,9 @@ TEST(AssemblerIntegrationTest, BooleanDeclarationsAndNotDefinition) {
     declaration_transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool> dt{lc_m.lc, lc_m.lc, lc_m.lc};
 
     // true/0 | false/0  — terms live in lc_m.lc
-    auto pairs = dt.transpile_group(make_group({{"true", 0u}, {"false", 0u}}));
-    const lc_expr* true_term  = pairs[0].second;
-    const lc_expr* false_term = pairs[1].second;
+    auto terms = dt.transpile_group(make_group({{"true", 0u}, {"false", 0u}}));
+    const lc_expr* true_term  = terms[0];
+    const lc_expr* false_term = terms[1];
 
     // Push in definition order so the transpiler sees the right indices.
     lc_m.sc.push("true");

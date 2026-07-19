@@ -48,22 +48,19 @@ struct DeclarationTranspilerTest : public ::testing::Test {
 
 TEST_F(DeclarationTranspilerTest, SingleVariantArity0) {
     // n=1, k=0, a=0: abs(var(0))
-    auto pairs = dt.transpile_group(make_group({{"only", 0u}}));
-    ASSERT_EQ(pairs.size(), 1u);
-    EXPECT_EQ(pairs[0].first,  "only");
-    EXPECT_EQ(pairs[0].second, ab(v(0)));
+    auto terms = dt.transpile_group(make_group({{"only", 0u}}));
+    ASSERT_EQ(terms.size(), 1u);
+    EXPECT_EQ(terms[0], ab(v(0)));
 }
 
 TEST_F(DeclarationTranspilerTest, BooleanEncoding) {
     // true/0 | false/0  (n=2)
     // true  (k=0, a=0): abs(abs(var(1)))
     // false (k=1, a=0): abs(abs(var(0)))
-    auto pairs = dt.transpile_group(make_group({{"true", 0u}, {"false", 0u}}));
-    ASSERT_EQ(pairs.size(), 2u);
-    EXPECT_EQ(pairs[0].first,  "true");
-    EXPECT_EQ(pairs[0].second, ab(ab(v(1))));
-    EXPECT_EQ(pairs[1].first,  "false");
-    EXPECT_EQ(pairs[1].second, ab(ab(v(0))));
+    auto terms = dt.transpile_group(make_group({{"true", 0u}, {"false", 0u}}));
+    ASSERT_EQ(terms.size(), 2u);
+    EXPECT_EQ(terms[0], ab(ab(v(1))));
+    EXPECT_EQ(terms[1], ab(ab(v(0))));
 }
 
 TEST_F(DeclarationTranspilerTest, ThreeVariantGroupFromPlanExample) {
@@ -71,38 +68,28 @@ TEST_F(DeclarationTranspilerTest, ThreeVariantGroupFromPlanExample) {
     // abc (k=0, a=0): abs(abs(abs(var(2))))
     // def (k=1, a=0): abs(abs(abs(var(1))))
     // ghi (k=2, a=1): abs(abs(abs(abs(app(var(1),var(0))))))
-    auto pairs = dt.transpile_group(make_group({{"abc", 0u}, {"def", 0u}, {"ghi", 1u}}));
-    ASSERT_EQ(pairs.size(), 3u);
-
-    EXPECT_EQ(pairs[0].first,  "abc");
-    EXPECT_EQ(pairs[0].second, ab(ab(ab(v(2)))));
-
-    EXPECT_EQ(pairs[1].first,  "def");
-    EXPECT_EQ(pairs[1].second, ab(ab(ab(v(1)))));
-
-    EXPECT_EQ(pairs[2].first,  "ghi");
-    EXPECT_EQ(pairs[2].second, ab(ab(ab(ab(ap(v(1), v(0)))))));
+    auto terms = dt.transpile_group(make_group({{"abc", 0u}, {"def", 0u}, {"ghi", 1u}}));
+    ASSERT_EQ(terms.size(), 3u);
+    EXPECT_EQ(terms[0], ab(ab(ab(v(2)))));
+    EXPECT_EQ(terms[1], ab(ab(ab(v(1)))));
+    EXPECT_EQ(terms[2], ab(ab(ab(ab(ap(v(1), v(0)))))));
 }
 
 TEST_F(DeclarationTranspilerTest, ListEncoding) {
     // nil/0 | cons/2  (n=2)
     // nil  (k=0, a=0): abs(abs(var(1)))
     // cons (k=1, a=2): abs(abs(abs(abs(app(app(var(2),var(1)),var(0))))))
-    auto pairs = dt.transpile_group(make_group({{"nil", 0u}, {"cons", 2u}}));
-    ASSERT_EQ(pairs.size(), 2u);
-
-    EXPECT_EQ(pairs[0].first,  "nil");
-    EXPECT_EQ(pairs[0].second, ab(ab(v(1))));
-
-    EXPECT_EQ(pairs[1].first,  "cons");
-    EXPECT_EQ(pairs[1].second, ab(ab(ab(ab(ap(ap(v(2), v(1)), v(0)))))));
+    auto terms = dt.transpile_group(make_group({{"nil", 0u}, {"cons", 2u}}));
+    ASSERT_EQ(terms.size(), 2u);
+    EXPECT_EQ(terms[0], ab(ab(v(1))));
+    EXPECT_EQ(terms[1], ab(ab(ab(ab(ap(ap(v(2), v(1)), v(0)))))));
 }
 
 TEST_F(DeclarationTranspilerTest, HighAritySingleVariant) {
     // only/3  (n=1, k=0, a=3)
     // elim_idx = 3+(1-1-0) = 3; body = app(app(app(var(3),var(2)),var(1)),var(0))
     // wrapped in 4 abs
-    auto pairs = dt.transpile_group(make_group({{"only", 3u}}));
-    ASSERT_EQ(pairs.size(), 1u);
-    EXPECT_EQ(pairs[0].second, ab(ab(ab(ab(ap(ap(ap(v(3), v(2)), v(1)), v(0)))))));
+    auto terms = dt.transpile_group(make_group({{"only", 3u}}));
+    ASSERT_EQ(terms.size(), 1u);
+    EXPECT_EQ(terms[0], ab(ab(ab(ab(ap(ap(ap(v(3), v(2)), v(1)), v(0)))))));
 }
