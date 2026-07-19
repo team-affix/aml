@@ -20,4 +20,5 @@ lc_transpiler_manifest::lc_transpiler_manifest()
       abs_(tx, lc, sc, sc),
       app_(tx, lc),
       scott_list_(tx, lc, lc, sc),
-      church_list_(tx, lc, lc, lc) {}
+      church_list_(tx, lc, lc, lc),
+      decl_(lc, lc, lc) {}

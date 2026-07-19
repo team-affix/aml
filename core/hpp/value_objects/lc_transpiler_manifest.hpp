@@ -1,6 +1,7 @@
 #ifndef LC_TRANSPILER_MANIFEST_HPP
 #define LC_TRANSPILER_MANIFEST_HPP
 
+#include "infrastructure/declaration_transpiler.hpp"
 #include "infrastructure/lc_expr_pool.hpp"
 #include "infrastructure/scope.hpp"
 #include "infrastructure/transpiler.hpp"
@@ -18,6 +19,7 @@ struct lc_transpiler_manifest {
     using string_transpiler_t      = typename transpiler_t::string_transpiler_t;
     using scott_list_transpiler_t  = typename transpiler_t::scott_list_transpiler_t;
     using church_list_transpiler_t = typename transpiler_t::church_list_transpiler_t;
+    using declaration_transpiler_t = declaration_transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool>;
 
     lc_transpiler_manifest();
 
@@ -36,6 +38,7 @@ struct lc_transpiler_manifest {
     app_transpiler_t         app_;
     scott_list_transpiler_t  scott_list_;
     church_list_transpiler_t church_list_;
+    declaration_transpiler_t decl_;
 };
 
 #endif
