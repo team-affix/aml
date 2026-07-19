@@ -14,11 +14,14 @@ struct MockGetVarIndex  { MOCK_METHOD(uint32_t,       get_var_index, (const std:
 // Standard bindings: pos=0, negsuc=1
 struct IntegerTranspilerTest : public ::testing::Test {
     lc_expr_pool    lc;
-    MockMakeLcVar   mock_var;
-    MockMakeLcApp   mock_app;
-    MockTranspileNat mock_nat;
-    MockGetVarIndex  mock_idx;
-    integer_transpiler<MockMakeLcVar, MockMakeLcApp, MockTranspileNat, MockGetVarIndex>
+    testing::NiceMock<MockMakeLcVar>   mock_var;
+    testing::NiceMock<MockMakeLcApp>   mock_app;
+    testing::NiceMock<MockTranspileNat> mock_nat;
+    testing::NiceMock<MockGetVarIndex>  mock_idx;
+    integer_transpiler<testing::NiceMock<MockMakeLcVar>,
+                       testing::NiceMock<MockMakeLcApp>,
+                       testing::NiceMock<MockTranspileNat>,
+                       testing::NiceMock<MockGetVarIndex>>
         it{mock_var, mock_app, mock_nat, mock_idx};
 
     void SetUp() override {

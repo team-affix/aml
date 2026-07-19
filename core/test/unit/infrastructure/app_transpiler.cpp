@@ -13,10 +13,11 @@ struct AppTranspilerTest : public ::testing::Test {
     aml_expr_pool aml;
     lc_expr_pool  lc;
 
-    MockTranspileExpr mock_tx;
-    MockMakeLcApp     mock_app;
+    testing::NiceMock<MockTranspileExpr> mock_tx;
+    testing::NiceMock<MockMakeLcApp>     mock_app;
 
-    app_transpiler<MockTranspileExpr, MockMakeLcApp> apt{mock_tx, mock_app};
+    app_transpiler<testing::NiceMock<MockTranspileExpr>,
+                   testing::NiceMock<MockMakeLcApp>> apt{mock_tx, mock_app};
 
     void SetUp() override {
         using testing::_;

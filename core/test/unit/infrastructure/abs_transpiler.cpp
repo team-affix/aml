@@ -15,12 +15,15 @@ struct AbsTranspilerTest : public ::testing::Test {
     aml_expr_pool aml;
     lc_expr_pool  lc;
 
-    MockTranspileExpr mock_tx;
-    MockMakeLcAbs     mock_abs;
-    MockPushVar       mock_push;
-    MockPopVar        mock_pop;
+    testing::NiceMock<MockTranspileExpr> mock_tx;
+    testing::NiceMock<MockMakeLcAbs>     mock_abs;
+    testing::NiceMock<MockPushVar>       mock_push;
+    testing::NiceMock<MockPopVar>        mock_pop;
 
-    abs_transpiler<MockTranspileExpr, MockMakeLcAbs, MockPushVar, MockPopVar>
+    abs_transpiler<testing::NiceMock<MockTranspileExpr>,
+                   testing::NiceMock<MockMakeLcAbs>,
+                   testing::NiceMock<MockPushVar>,
+                   testing::NiceMock<MockPopVar>>
         at{mock_tx, mock_abs, mock_push, mock_pop};
 
     void SetUp() override {

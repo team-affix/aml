@@ -12,10 +12,12 @@ struct MockMakeLcApp { MOCK_METHOD(const lc_expr*, make_app, (const lc_expr*, co
 
 struct ChurchNatTranspilerTest : public ::testing::Test {
     lc_expr_pool  lc;
-    MockMakeLcVar mock_var;
-    MockMakeLcAbs mock_abs;
-    MockMakeLcApp mock_app;
-    church_nat_transpiler<MockMakeLcVar, MockMakeLcAbs, MockMakeLcApp>
+    testing::NiceMock<MockMakeLcVar> mock_var;
+    testing::NiceMock<MockMakeLcAbs> mock_abs;
+    testing::NiceMock<MockMakeLcApp> mock_app;
+    church_nat_transpiler<testing::NiceMock<MockMakeLcVar>,
+                          testing::NiceMock<MockMakeLcAbs>,
+                          testing::NiceMock<MockMakeLcApp>>
         cnt{mock_var, mock_abs, mock_app};
 
     void SetUp() override {

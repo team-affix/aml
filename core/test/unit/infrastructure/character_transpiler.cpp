@@ -12,8 +12,8 @@ struct MockTranspileNat {
 
 struct CharacterTranspilerTest : public ::testing::Test {
     lc_expr_pool    lc;
-    MockTranspileNat mock_nat;
-    character_transpiler<MockTranspileNat> ct{mock_nat};
+    testing::NiceMock<MockTranspileNat> mock_nat;
+    character_transpiler<testing::NiceMock<MockTranspileNat>> ct{mock_nat};
 
     void SetUp() override {
         using testing::_;

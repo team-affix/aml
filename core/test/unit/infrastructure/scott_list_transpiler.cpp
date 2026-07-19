@@ -15,11 +15,14 @@ struct MockGetVarIndex   { MOCK_METHOD(uint32_t,       get_var_index,   (const s
 struct ScottListTranspilerTest : public ::testing::Test {
     aml_expr_pool    aml;
     lc_expr_pool     lc;
-    MockTranspileExpr mock_tx;
-    MockMakeLcVar     mock_var;
-    MockMakeLcApp     mock_app;
-    MockGetVarIndex   mock_idx;
-    scott_list_transpiler<MockTranspileExpr, MockMakeLcVar, MockMakeLcApp, MockGetVarIndex>
+    testing::NiceMock<MockTranspileExpr> mock_tx;
+    testing::NiceMock<MockMakeLcVar>     mock_var;
+    testing::NiceMock<MockMakeLcApp>     mock_app;
+    testing::NiceMock<MockGetVarIndex>   mock_idx;
+    scott_list_transpiler<testing::NiceMock<MockTranspileExpr>,
+                          testing::NiceMock<MockMakeLcVar>,
+                          testing::NiceMock<MockMakeLcApp>,
+                          testing::NiceMock<MockGetVarIndex>>
         slt{mock_tx, mock_var, mock_app, mock_idx};
 
     void SetUp() override {

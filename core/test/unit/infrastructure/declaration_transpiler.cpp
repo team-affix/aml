@@ -13,10 +13,12 @@ struct MockMakeLcApp { MOCK_METHOD(const lc_expr*, make_app, (const lc_expr*, co
 
 struct DeclarationTranspilerTest : public ::testing::Test {
     lc_expr_pool  lc;
-    MockMakeLcVar mock_var;
-    MockMakeLcAbs mock_abs;
-    MockMakeLcApp mock_app;
-    declaration_transpiler<MockMakeLcVar, MockMakeLcAbs, MockMakeLcApp> dt{mock_var, mock_abs, mock_app};
+    testing::NiceMock<MockMakeLcVar> mock_var;
+    testing::NiceMock<MockMakeLcAbs> mock_abs;
+    testing::NiceMock<MockMakeLcApp> mock_app;
+    declaration_transpiler<testing::NiceMock<MockMakeLcVar>,
+                           testing::NiceMock<MockMakeLcAbs>,
+                           testing::NiceMock<MockMakeLcApp>> dt{mock_var, mock_abs, mock_app};
 
     void SetUp() override {
         using testing::_;

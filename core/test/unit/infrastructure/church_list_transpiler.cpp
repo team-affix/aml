@@ -14,11 +14,14 @@ struct MockMakeLcApp     { MOCK_METHOD(const lc_expr*, make_app,  (const lc_expr
 struct ChurchListTranspilerTest : public ::testing::Test {
     aml_expr_pool    aml;
     lc_expr_pool     lc;
-    MockTranspileExpr mock_tx;
-    MockMakeLcVar     mock_var;
-    MockMakeLcAbs     mock_abs;
-    MockMakeLcApp     mock_app;
-    church_list_transpiler<MockTranspileExpr, MockMakeLcVar, MockMakeLcAbs, MockMakeLcApp>
+    testing::NiceMock<MockTranspileExpr> mock_tx;
+    testing::NiceMock<MockMakeLcVar>     mock_var;
+    testing::NiceMock<MockMakeLcAbs>     mock_abs;
+    testing::NiceMock<MockMakeLcApp>     mock_app;
+    church_list_transpiler<testing::NiceMock<MockTranspileExpr>,
+                           testing::NiceMock<MockMakeLcVar>,
+                           testing::NiceMock<MockMakeLcAbs>,
+                           testing::NiceMock<MockMakeLcApp>>
         clt{mock_tx, mock_var, mock_abs, mock_app};
 
     void SetUp() override {

@@ -31,7 +31,10 @@ struct MockMakeLcApp {
 };
 
 struct TranspilerTest : public ::testing::Test {
-    using transpiler_t             = transpiler<MockMakeLcVar, MockMakeLcAbs, MockMakeLcApp, scope, scope, scope>;
+    using transpiler_t             = transpiler<testing::NiceMock<MockMakeLcVar>,
+                                               testing::NiceMock<MockMakeLcAbs>,
+                                               testing::NiceMock<MockMakeLcApp>,
+                                               scope, scope, scope>;
     using token_transpiler_t       = typename transpiler_t::token_transpiler_t;
     using abs_transpiler_t         = typename transpiler_t::abs_transpiler_t;
     using app_transpiler_t         = typename transpiler_t::app_transpiler_t;
@@ -46,9 +49,9 @@ struct TranspilerTest : public ::testing::Test {
     aml_expr_pool aml_pool;
     lc_expr_pool  lc_pool;
     scope         sc;
-    MockMakeLcVar mock_var;
-    MockMakeLcAbs mock_abs;
-    MockMakeLcApp mock_app;
+    testing::NiceMock<MockMakeLcVar> mock_var;
+    testing::NiceMock<MockMakeLcAbs> mock_abs;
+    testing::NiceMock<MockMakeLcApp> mock_app;
 
     // tx declared first: receives forward references to sub-components below.
     transpiler_t             tx;

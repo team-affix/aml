@@ -9,10 +9,11 @@ struct MockMakeLcVar  { MOCK_METHOD(const lc_expr*, make_var,       (uint32_t));
 struct MockGetVarIndex { MOCK_METHOD(uint32_t,       get_var_index, (const std::string&)); };
 
 struct TokenTranspilerTest : public ::testing::Test {
-    lc_expr_pool                                                 lc;
-    MockMakeLcVar                                                mock_var;
-    MockGetVarIndex                                              mock_idx;
-    token_transpiler<MockMakeLcVar, MockGetVarIndex>             tt{mock_var, mock_idx};
+    lc_expr_pool                                                     lc;
+    testing::NiceMock<MockMakeLcVar>                                 mock_var;
+    testing::NiceMock<MockGetVarIndex>                               mock_idx;
+    token_transpiler<testing::NiceMock<MockMakeLcVar>,
+                     testing::NiceMock<MockGetVarIndex>>             tt{mock_var, mock_idx};
 
     void SetUp() override {
         using testing::_;
