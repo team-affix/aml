@@ -46,6 +46,7 @@ constexpr size_t   kMediumMaxResolutions  = 1'000'000;
 constexpr size_t   kHeavyMaxResolutions   = 5'000'000;
 constexpr uint32_t kSeed                  = 42;
 constexpr double   kExploration           = 1.414;
+constexpr double   kHorizonExploration    = 2.0;
 
 // ============================================================
 // Test fixture
@@ -81,7 +82,7 @@ struct LambdaCalculusTest : public ::testing::Test {
         auto next_id = s_next_id;
         import_goals_from_string(
             goal_str, s_pool, s_pool, var_seq, goals, fmap, next_id);
-        genius_runtime rt(s_db, goals, var_seq.peek(), max_res, kSeed, kExploration);
+        genius_runtime rt(s_db, goals, var_seq.peek(), max_res, kSeed, kExploration, kHorizonExploration);
         while (rt.next())
             if (rt.solved()) return true;
         return false;
@@ -99,7 +100,7 @@ struct LambdaCalculusTest : public ::testing::Test {
         auto var_idx_map = import_goals_from_string(
             goal_str, s_pool, s_pool, var_seq, goals, fmap, next_id);
         const uint32_t frame = var_seq.peek();
-        genius_runtime rt(s_db, goals, frame, max_res, kSeed, kExploration);
+        genius_runtime rt(s_db, goals, frame, max_res, kSeed, kExploration, kHorizonExploration);
         while (rt.next()) {
             if (rt.solved()) {
                 auto it = var_idx_map.find(var_name);
