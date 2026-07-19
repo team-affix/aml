@@ -5,8 +5,6 @@
 #include "value_objects/declaration_group.hpp"
 #include "value_objects/definition.hpp"
 
-struct module_item {
-    std::variant<declaration_group, definition> content;
-};
+using module_item = std::variant<declaration_group, definition>;
 
 #endif

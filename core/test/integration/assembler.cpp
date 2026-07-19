@@ -6,14 +6,14 @@
 
 #include <gtest/gtest.h>
 #include <stack>
+#include <variant>
 #include "infrastructure/assembler.hpp"
 #include "infrastructure/aml_expr_pool.hpp"
+#include "infrastructure/aml_runtime.hpp"
 #include "infrastructure/declaration_transpiler.hpp"
 #include "infrastructure/lc_expr_pool.hpp"
 #include "value_objects/declaration_decl.hpp"
 #include "value_objects/declaration_group.hpp"
-#include "value_objects/lc_transpiler_manifest.hpp"
-#include "value_objects/assembler_manifest.hpp"
 
 namespace {
 
@@ -91,70 +91,36 @@ TEST(AssemblerIntegrationTest, DefinitionOrderMatchesScopeOrder) {
 // ---------------------------------------------------------------------------
 // BooleanDeclarationsAndNotDefinition
 //
-// Full pipeline using split manifests: declaration_transpiler + lc_transpiler_manifest
-// for transpilation, assembler_manifest for assembly.
-//
-// Stack pushed in definition order: true (bottom), false, not (top).
-// After pushing all three names to scope (depth 3):
-//   "not"   → var(0)
-//   "false" → var(1)
-//   "true"  → var(2)
-//
-// not = a => a false true
-//   → abs(app(app(var(0), var(1)), var(2)))
-//       a=var(0), false=var(1), true=var(2) inside the abs
-//
-// assemble():
-//   pop not_lc   → step1 = app(abs(nullptr),  not_lc)    [wrappers from asm_m.lc]
-//   pop false    → step2 = app(abs(step1),     false_term)
-//   pop true     → step3 = app(abs(step2),     true_term) ← true_term outermost
+// Full pipeline via aml_runtime: {true/0, false/0} + not = a => a false true.
+// assemble() must return a three-binding let-chain:
+//   app(abs(app(abs(app(abs(nullptr), not_lc)), false_term)), true_term)
 // ---------------------------------------------------------------------------
 
 TEST(AssemblerIntegrationTest, BooleanDeclarationsAndNotDefinition) {
-    aml_expr_pool          aml;
-    lc_transpiler_manifest lc_m;
-    assembler_manifest     asm_m;
+    aml_expr_pool aml;
+    aml_runtime   rt;
 
-    declaration_transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool> dt{lc_m.lc, lc_m.lc, lc_m.lc};
+    rt.visit_declaration_group(make_group({{"true", 0u}, {"false", 0u}}));
 
-    // true/0 | false/0  — terms live in lc_m.lc
-    auto terms = dt.transpile_group(make_group({{"true", 0u}, {"false", 0u}}));
-    const lc_expr* true_term  = terms[0];
-    const lc_expr* false_term = terms[1];
-
-    // Push in definition order so the transpiler sees the right indices.
-    lc_m.sc.push("true");
-    lc_m.sc.push("false");
-
-    // not = a => a false true
     const aml_expr* not_body = aml.make_abs("a",
         aml.make_app(
             aml.make_app(aml.make_token("a"), aml.make_token("false")),
             aml.make_token("true")));
-    const lc_expr* not_lc = lc_m.tx.transpile(not_body);
+    rt.visit_definition({"not", not_body});
 
-    lc_m.sc.push("not");
+    const lc_expr* result = rt.assemble();
+    ASSERT_NE(result, nullptr);
 
-    // Verify the transpiled not body before assembly.
-    // Inside abs("a"): a=var(0), false=var(1), true=var(2).  Uses lc_m.lc for comparison.
-    EXPECT_EQ(not_lc,
-              lc_m.lc.make_abs(
-                  lc_m.lc.make_app(
-                      lc_m.lc.make_app(lc_m.lc.make_var(0), lc_m.lc.make_var(1)),
-                      lc_m.lc.make_var(2))));
+    // Three-level let-chain: outermost arg = true_term = abs(abs(var(1)))
+    ASSERT_TRUE(std::holds_alternative<lc_expr::app>(result->content));
+    const auto& outer = std::get<lc_expr::app>(result->content);
+    ASSERT_TRUE(std::holds_alternative<lc_expr::abs>(outer.func->content));
 
-    // Clean up scope (assembler does not touch it).
-    lc_m.sc.pop(); lc_m.sc.pop(); lc_m.sc.pop();
-
-    // Push globals onto assembler stage in definition order, then assemble.
-    // asm_m.lc creates the app/abs wrapper nodes; inner terms come from lc_m.lc.
-    asm_m.globals.push(true_term);
-    asm_m.globals.push(false_term);
-    asm_m.globals.push(not_lc);
-
-    const lc_expr* step1 = asm_m.lc.make_app(asm_m.lc.make_abs(nullptr),  not_lc);
-    const lc_expr* step2 = asm_m.lc.make_app(asm_m.lc.make_abs(step1),    false_term);
-    const lc_expr* step3 = asm_m.lc.make_app(asm_m.lc.make_abs(step2),    true_term);
-
-    EXPECT_EQ(asm_m.asm_.assemble(), step3);
+    // true_term structure: abs(abs(var(1)))
+    ASSERT_TRUE(std::holds_alternative<lc_expr::abs>(outer.arg->content));
+    const auto& true_outer_abs = std::get<lc_expr::abs>(outer.arg->content);
+    ASSERT_TRUE(std::holds_alternative<lc_expr::abs>(true_outer_abs.body->content));
+    const auto& true_inner_abs = std::get<lc_expr::abs>(true_outer_abs.body->content);
+    ASSERT_TRUE(std::holds_alternative<lc_expr::var>(true_inner_abs.body->content));
+    EXPECT_EQ(std::get<lc_expr::var>(true_inner_abs.body->content).index, 1u);
 }

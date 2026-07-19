@@ -1,14 +1,17 @@
-#ifndef LC_TRANSPILER_MANIFEST_HPP
-#define LC_TRANSPILER_MANIFEST_HPP
+#ifndef AML_MANIFEST_HPP
+#define AML_MANIFEST_HPP
 
+#include <stack>
+#include "infrastructure/assembler.hpp"
 #include "infrastructure/declaration_transpiler.hpp"
 #include "infrastructure/lc_expr_pool.hpp"
 #include "infrastructure/scope.hpp"
 #include "infrastructure/transpiler.hpp"
 
-struct lc_transpiler_manifest {
-    using transpiler_t             = transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool,
-                                        scope, scope, scope>;
+struct aml_manifest {
+    using global_stack_t       = std::stack<const lc_expr*>;
+    using transpiler_t         = transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool,
+                                            scope, scope, scope>;
     using token_transpiler_t       = typename transpiler_t::token_transpiler_t;
     using abs_transpiler_t         = typename transpiler_t::abs_transpiler_t;
     using app_transpiler_t         = typename transpiler_t::app_transpiler_t;
@@ -20,12 +23,16 @@ struct lc_transpiler_manifest {
     using scott_list_transpiler_t  = typename transpiler_t::scott_list_transpiler_t;
     using church_list_transpiler_t = typename transpiler_t::church_list_transpiler_t;
     using declaration_transpiler_t = declaration_transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool>;
+    using assembler_t              = assembler<lc_expr_pool, lc_expr_pool,
+                                               global_stack_t, global_stack_t>;
 
-    lc_transpiler_manifest();
+    aml_manifest();
 
-    transpiler_t tx;
-    lc_expr_pool lc;
-    scope        sc;
+    transpiler_t   tx;
+    lc_expr_pool   lc;
+    scope          sc;
+    global_stack_t globals;
+    assembler_t    asm_;
 
     token_transpiler_t      token_;
     binary_nat_transpiler_t binary_nat_;
