@@ -5,13 +5,17 @@
 // solved vs. refuted; for queries with a result variable we normalise the
 // binding and compare it against an expression built from the shared pool.
 //
-// Run with: ./build/cli_debug --gtest_filter='LambdaCalculusTest.*'
+// Run with: ./build/core_debug_fast --gtest_filter='LambdaCalculusTest.*'
 // Working directory must be the aml repo root so that "chc/aml.chc" resolves.
 //
 // Term constructors in the database (all Peano-indexed):
 //   var(N)     -- de Bruijn variable; var(zero) is the innermost binder
 //   abs(B)     -- abstraction
 //   app(F, A)  -- application
+//
+// The CHC file uses Normalization by Evaluation (NBE): eval/3 drives terms to
+// weak head normal form via a Krivine machine (no substitution), and reify/3
+// converts the resulting value back to a beta-normal term.
 //
 // Notable combinators used in tests:
 //   id  = abs(var(zero))                          -- λx.x
@@ -188,6 +192,45 @@ struct LambdaCalculusTest : public ::testing::Test {
     }
 
     // --------------------------------------------------------
+    // NBE value / environment constructors
+    // (build the runtime values produced by eval/3 and reify/3)
+    // --------------------------------------------------------
+
+    // nil  — the empty environment
+    static const expr* nil_env() {
+        return s_pool.make_functor(fid("nil"), {});
+    }
+
+    // env(Arg, ArgEnv, Outer)
+    static const expr* env_node(const expr* arg,
+                                const expr* arg_env,
+                                const expr* outer) {
+        return s_pool.make_functor(fid("env"), {arg, arg_env, outer});
+    }
+
+    // clo(Body, Env)
+    static const expr* clo_val(const expr* body, const expr* env) {
+        return s_pool.make_functor(fid("clo"), {body, env});
+    }
+
+    // fvar(Level) — reification sentinel at Peano level
+    static const expr* fvar_val(uint32_t level) {
+        return s_pool.make_functor(fid("fvar"), {peano(level)});
+    }
+
+    // global_free(N) — free variable from input at de Bruijn index N
+    static const expr* gfree(uint32_t n) {
+        return s_pool.make_functor(fid("global_free"), {peano(n)});
+    }
+
+    // napp(Head, Arg, ArgEnv) — neutral application
+    static const expr* napp_val(const expr* head,
+                                const expr* arg,
+                                const expr* arg_env) {
+        return s_pool.make_functor(fid("napp"), {head, arg, arg_env});
+    }
+
+    // --------------------------------------------------------
     // Expr → CHC string converter + normalize_expr helper
     // --------------------------------------------------------
 
@@ -275,6 +318,223 @@ TEST_F(LambdaCalculusTest, PredTwoIsOne) {
 }
 
 // ============================================================
+// Peano addition (plus/3)
+// ============================================================
+
+TEST_F(LambdaCalculusTest, PlusZeroZeroIsZero) {
+    EXPECT_EQ(solve_for("plus(zero, zero, R)", "R"), peano(0));
+}
+
+TEST_F(LambdaCalculusTest, PlusZeroOneIsOne) {
+    EXPECT_EQ(solve_for("plus(zero, suc(zero), R)", "R"), peano(1));
+}
+
+TEST_F(LambdaCalculusTest, PlusOneZeroIsOne) {
+    EXPECT_EQ(solve_for("plus(suc(zero), zero, R)", "R"), peano(1));
+}
+
+TEST_F(LambdaCalculusTest, PlusTwoOneIsThree) {
+    EXPECT_EQ(solve_for("plus(suc(suc(zero)), suc(zero), R)", "R"), peano(3));
+}
+
+TEST_F(LambdaCalculusTest, PlusOneTwoIsThree) {
+    EXPECT_EQ(solve_for("plus(suc(zero), suc(suc(zero)), R)", "R"), peano(3));
+}
+
+// ============================================================
+// Level to de Bruijn index (level_to_idx/3)
+//
+// level_to_idx(FvarLevel, CurrentLevel, Index)
+//   Index = CurrentLevel - FvarLevel - 1
+//   i.e. variable introduced at reification level L,
+//        seen from level Level, has de Bruijn index Level-L-1.
+// ============================================================
+
+TEST_F(LambdaCalculusTest, LevelToIdxBase) {
+    // level 0, current 1 → index 0
+    EXPECT_EQ(solve_for("level_to_idx(zero, suc(zero), R)", "R"), peano(0));
+}
+
+TEST_F(LambdaCalculusTest, LevelToIdxOneStep) {
+    // level 0, current 2 → index 1
+    EXPECT_EQ(solve_for("level_to_idx(zero, suc(suc(zero)), R)", "R"), peano(1));
+}
+
+TEST_F(LambdaCalculusTest, LevelToIdxTwoSteps) {
+    // level 0, current 3 → index 2
+    EXPECT_EQ(solve_for("level_to_idx(zero, suc(suc(suc(zero))), R)", "R"), peano(2));
+}
+
+TEST_F(LambdaCalculusTest, LevelToIdxInnerLevel) {
+    // level 1, current 2 → index 0
+    EXPECT_EQ(solve_for("level_to_idx(suc(zero), suc(suc(zero)), R)", "R"), peano(0));
+}
+
+TEST_F(LambdaCalculusTest, LevelToIdxInnerLevelDeeper) {
+    // level 1, current 3 → index 1
+    EXPECT_EQ(solve_for("level_to_idx(suc(zero), suc(suc(suc(zero))), R)", "R"), peano(1));
+}
+
+// ============================================================
+// eval/3 — Krivine machine (WHNF evaluation)
+// ============================================================
+
+TEST_F(LambdaCalculusTest, EvalAbsInNilGivesClosure) {
+    // eval(abs(var(zero)), nil, R) → clo(var(zero), nil)
+    EXPECT_EQ(solve_for("eval(abs(var(zero)), nil, R)", "R"),
+              clo_val(dv(0), nil_env()));
+}
+
+TEST_F(LambdaCalculusTest, EvalVarZeroInNilGivesGlobalFree) {
+    // eval(var(zero), nil, R) → global_free(zero)
+    EXPECT_EQ(solve_for("eval(var(zero), nil, R)", "R"), gfree(0));
+}
+
+TEST_F(LambdaCalculusTest, EvalVarOneInNilGivesGlobalFreeOne) {
+    // eval(var(suc(zero)), nil, R) → global_free(suc(zero))
+    EXPECT_EQ(solve_for("eval(var(suc(zero)), nil, R)", "R"), gfree(1));
+}
+
+TEST_F(LambdaCalculusTest, EvalVarZeroInEnvLookupsBinding) {
+    // eval(var(zero), env(abs(var(zero)), nil, nil), R)
+    //   → eval abs(var(zero)) in nil → clo(var(zero), nil)
+    EXPECT_EQ(solve_for("eval(var(zero), env(abs(var(zero)), nil, nil), R)", "R"),
+              clo_val(dv(0), nil_env()));
+}
+
+TEST_F(LambdaCalculusTest, EvalVarOneInEnvSkipsToOuterBinding) {
+    // eval(var(suc(zero)), env(abs(var(zero)), nil,
+    //                         env(abs(abs(var(suc(zero)))), nil, nil)), R)
+    //   → skip one slot → eval var(zero) in outer
+    //   → eval K in nil → clo(abs(var(suc(zero))), nil)
+    EXPECT_EQ(solve_for(
+        "eval(var(suc(zero)),"
+        "     env(abs(var(zero)), nil,"
+        "         env(abs(abs(var(suc(zero)))), nil, nil)), R)", "R"),
+        clo_val(lm(dv(1)), nil_env()));
+}
+
+TEST_F(LambdaCalculusTest, EvalAppBetaStep) {
+    // eval(app(abs(var(zero)), abs(var(zero))), nil, R)
+    //   → drive function to clo(var(zero), nil)
+    //   → eval var(zero) in env(abs(var(zero)), nil, nil) → clo(var(zero), nil)
+    EXPECT_EQ(solve_for("eval(app(abs(var(zero)), abs(var(zero))), nil, R)", "R"),
+              clo_val(dv(0), nil_env()));
+}
+
+TEST_F(LambdaCalculusTest, EvalAppNeutralFreeHead) {
+    // eval(app(var(zero), abs(var(zero))), nil, R)
+    //   → var(zero) in nil → global_free(zero) (neutral)
+    //   → napp(global_free(zero), abs(var(zero)), nil)
+    EXPECT_EQ(solve_for("eval(app(var(zero), abs(var(zero))), nil, R)", "R"),
+              napp_val(gfree(0), lm(dv(0)), nil_env()));
+}
+
+TEST_F(LambdaCalculusTest, EvalFvarReturnsSelf) {
+    // eval(fvar(zero), nil, R) → fvar(zero)   (sentinel passes through unchanged)
+    EXPECT_EQ(solve_for("eval(fvar(zero), nil, R)", "R"), fvar_val(0));
+}
+
+// ============================================================
+// eval_app/4 — dispatch on function value kind
+// ============================================================
+
+TEST_F(LambdaCalculusTest, EvalAppCloFiresBeta) {
+    // eval_app(clo(var(zero), nil), abs(var(zero)), nil, R)
+    //   → eval var(zero) in env(abs(var(zero)), nil, nil) → clo(var(zero), nil)
+    EXPECT_EQ(solve_for(
+        "eval_app(clo(var(zero), nil), abs(var(zero)), nil, R)", "R"),
+        clo_val(dv(0), nil_env()));
+}
+
+TEST_F(LambdaCalculusTest, EvalAppFvarBuildsNapp) {
+    // eval_app(fvar(zero), abs(var(zero)), nil, R)
+    //   → napp(fvar(zero), abs(var(zero)), nil)
+    EXPECT_EQ(solve_for(
+        "eval_app(fvar(zero), abs(var(zero)), nil, R)", "R"),
+        napp_val(fvar_val(0), lm(dv(0)), nil_env()));
+}
+
+TEST_F(LambdaCalculusTest, EvalAppGlobalFreeBuildsNapp) {
+    // eval_app(global_free(zero), abs(var(zero)), nil, R)
+    //   → napp(global_free(zero), abs(var(zero)), nil)
+    EXPECT_EQ(solve_for(
+        "eval_app(global_free(zero), abs(var(zero)), nil, R)", "R"),
+        napp_val(gfree(0), lm(dv(0)), nil_env()));
+}
+
+TEST_F(LambdaCalculusTest, EvalAppNappBuildsNestedNapp) {
+    // eval_app(napp(global_free(zero), var(zero), nil), abs(var(zero)), nil, R)
+    //   → napp(napp(global_free(zero), var(zero), nil), abs(var(zero)), nil)
+    const expr* inner = napp_val(gfree(0), dv(0), nil_env());
+    EXPECT_EQ(solve_for(
+        "eval_app(napp(global_free(zero), var(zero), nil), abs(var(zero)), nil, R)", "R"),
+        napp_val(inner, lm(dv(0)), nil_env()));
+}
+
+// ============================================================
+// reify/3 — value → beta-normal term
+// ============================================================
+
+TEST_F(LambdaCalculusTest, ReifyClosureAtLevelZeroGivesId) {
+    // reify(clo(var(zero), nil), zero, R)
+    //   → body eval under env(fvar(0), nil, nil) → fvar(0)
+    //   → level_to_idx(0, 1, 0) → var(zero)
+    //   → abs(var(zero)) = id
+    EXPECT_EQ(solve_for("reify(clo(var(zero), nil), zero, R)", "R"), id_term());
+}
+
+TEST_F(LambdaCalculusTest, ReifyFvarAtImmediateLevel) {
+    // reify(fvar(zero), suc(zero), R): level_to_idx(0,1) → index 0
+    EXPECT_EQ(solve_for("reify(fvar(zero), suc(zero), R)", "R"), dv(0));
+}
+
+TEST_F(LambdaCalculusTest, ReifyFvarAtHigherLevel) {
+    // reify(fvar(zero), suc(suc(zero)), R): level_to_idx(0,2) → index 1
+    EXPECT_EQ(solve_for("reify(fvar(zero), suc(suc(zero)), R)", "R"), dv(1));
+}
+
+TEST_F(LambdaCalculusTest, ReifyInnerFvarAtHigherLevel) {
+    // reify(fvar(suc(zero)), suc(suc(zero)), R): level_to_idx(1,2) → index 0
+    EXPECT_EQ(solve_for("reify(fvar(suc(zero)), suc(suc(zero)), R)", "R"), dv(0));
+}
+
+TEST_F(LambdaCalculusTest, ReifyGlobalFreeAtLevelZero) {
+    // reify(global_free(zero), zero, R): plus(0,0) → index 0
+    EXPECT_EQ(solve_for("reify(global_free(zero), zero, R)", "R"), dv(0));
+}
+
+TEST_F(LambdaCalculusTest, ReifyGlobalFreeAtLevelOne) {
+    // reify(global_free(zero), suc(zero), R): plus(0,1) → index 1
+    EXPECT_EQ(solve_for("reify(global_free(zero), suc(zero), R)", "R"), dv(1));
+}
+
+TEST_F(LambdaCalculusTest, ReifyGlobalFreeOneAtLevelOne) {
+    // reify(global_free(suc(zero)), suc(zero), R): plus(1,1) → index 2
+    EXPECT_EQ(solve_for("reify(global_free(suc(zero)), suc(zero), R)", "R"), dv(2));
+}
+
+TEST_F(LambdaCalculusTest, ReifyNappGivesApp) {
+    // reify(napp(global_free(zero), abs(var(zero)), nil), zero, R)
+    //   head: global_free(0) at level 0 → var(zero)
+    //   arg:  eval abs(var(zero)) in nil → clo → reify → abs(var(zero)) = id
+    //   → app(var(zero), abs(var(zero)))
+    EXPECT_EQ(solve_for(
+        "reify(napp(global_free(zero), abs(var(zero)), nil), zero, R)", "R"),
+        ap(dv(0), id_term()));
+}
+
+TEST_F(LambdaCalculusTest, ReifyNestedNappGivesNestedApp) {
+    // reify(napp(napp(global_free(zero), var(zero), nil), abs(var(zero)), nil), zero, R)
+    //   → app(app(var(zero), var(zero)), abs(var(zero)))
+    const expr* inner_napp = napp_val(gfree(0), dv(0), nil_env());
+    EXPECT_EQ(solve_for(
+        "reify(napp(napp(global_free(zero), var(zero), nil),"
+        "          abs(var(zero)), nil), zero, R)", "R"),
+        ap(ap(dv(0), dv(0)), id_term()));
+}
+
+// ============================================================
 // Well-formed terms
 // ============================================================
 
@@ -292,178 +552,6 @@ TEST_F(LambdaCalculusTest, TermApp) {
 
 TEST_F(LambdaCalculusTest, TermNestedApp) {
     EXPECT_TRUE(solves("term(app(app(abs(abs(var(suc(zero)))), var(zero)), abs(var(zero))))"));
-}
-
-// ============================================================
-// not_abs
-// ============================================================
-
-TEST_F(LambdaCalculusTest, NotAbsVar) {
-    EXPECT_TRUE(solves("not_abs(var(zero))"));
-}
-
-TEST_F(LambdaCalculusTest, NotAbsApp) {
-    EXPECT_TRUE(solves("not_abs(app(var(zero), var(zero)))"));
-}
-
-TEST_F(LambdaCalculusTest, NotAbsRefutedForAbs) {
-    // abs is an abstraction — not_abs must not hold for it
-    EXPECT_FALSE(solves("not_abs(abs(var(zero)))", 500));
-}
-
-// ============================================================
-// Normal form detection
-// ============================================================
-
-TEST_F(LambdaCalculusTest, NormalVar) {
-    EXPECT_TRUE(solves("normal(var(zero))"));
-}
-
-TEST_F(LambdaCalculusTest, NormalAbsVar) {
-    EXPECT_TRUE(solves("normal(abs(var(zero)))"));
-}
-
-TEST_F(LambdaCalculusTest, NormalAbsAbsVar) {
-    EXPECT_TRUE(solves("normal(abs(abs(var(suc(zero)))))"));
-}
-
-TEST_F(LambdaCalculusTest, NormalAppVarVar) {
-    // app(var(0), var(0)) — head is a var, not an abs, so this is in normal form
-    EXPECT_TRUE(solves("normal(app(var(zero), var(zero)))"));
-}
-
-TEST_F(LambdaCalculusTest, NormalRefutedForBetaRedex) {
-    // app(abs(var(zero)), var(zero)) contains a beta-redex — not normal
-    EXPECT_FALSE(solves("normal(app(abs(var(zero)), var(zero)))", 500));
-}
-
-// ============================================================
-// Shift
-// ============================================================
-
-TEST_F(LambdaCalculusTest, ShiftFreeVarIncrements) {
-    // shift(var(0), 0, R): index 0 >= cutoff 0, so R = var(1)
-    const expr* result = solve_for("shift(var(zero), zero, R)", "R");
-    EXPECT_EQ(result, dv(1));
-}
-
-TEST_F(LambdaCalculusTest, ShiftBoundVarUnchanged) {
-    // shift(var(0), suc(zero), R): index 0 < cutoff 1, bound, R = var(0)
-    const expr* result = solve_for("shift(var(zero), suc(zero), R)", "R");
-    EXPECT_EQ(result, dv(0));
-}
-
-TEST_F(LambdaCalculusTest, ShiftVarOneAtCutoffZeroIncrements) {
-    // shift(var(1), 0, R): index 1 >= cutoff 0, R = var(2)
-    const expr* result = solve_for("shift(var(suc(zero)), zero, R)", "R");
-    EXPECT_EQ(result, dv(2));
-}
-
-TEST_F(LambdaCalculusTest, ShiftUnderAbsLeavesAbsBoundVar) {
-    // shift(abs(var(0)), 0, R): under abs the cutoff becomes 1;
-    // var(0) < 1 so it is bound — R = abs(var(0))
-    const expr* result = solve_for("shift(abs(var(zero)), zero, R)", "R");
-    EXPECT_EQ(result, lm(dv(0)));
-}
-
-TEST_F(LambdaCalculusTest, ShiftUnderAbsShiftsFreeVar) {
-    // shift(abs(var(1)), 0, R): under abs cutoff = 1; var(1) >= 1 so free — R = abs(var(2))
-    const expr* result = solve_for("shift(abs(var(suc(zero))), zero, R)", "R");
-    EXPECT_EQ(result, lm(dv(2)));
-}
-
-TEST_F(LambdaCalculusTest, ShiftAppShiftsBothSides) {
-    // shift(app(var(0), var(1)), 0, R): both free — R = app(var(1), var(2))
-    const expr* result = solve_for("shift(app(var(zero), var(suc(zero))), zero, R)", "R");
-    EXPECT_EQ(result, ap(dv(1), dv(2)));
-}
-
-// ============================================================
-// Substitution
-// ============================================================
-
-TEST_F(LambdaCalculusTest, SubstVarAtDepthReplacedByArg) {
-    // subst(var(0), 0, abs(var(0)), R): depth matches — R = shift_n(abs(var(0)), 0) = abs(var(0))
-    const expr* result = solve_for("subst(var(zero), zero, abs(var(zero)), R)", "R");
-    EXPECT_EQ(result, lm(dv(0)));
-}
-
-TEST_F(LambdaCalculusTest, SubstFreeVarAboveDepthDecremented) {
-    // subst(var(1), 0, var(zero), R): var(1) > depth 0 — pred(1)=0, R = var(0)
-    const expr* result = solve_for("subst(var(suc(zero)), zero, var(zero), R)", "R");
-    EXPECT_EQ(result, dv(0));
-}
-
-TEST_F(LambdaCalculusTest, SubstBoundVarBelowDepthUnchanged) {
-    // subst(var(0), 1, var(zero), R): var(0) < depth 1 — bound, R = var(0)
-    const expr* result = solve_for("subst(var(zero), suc(zero), var(zero), R)", "R");
-    EXPECT_EQ(result, dv(0));
-}
-
-TEST_F(LambdaCalculusTest, SubstUnderAbsIncrementsDepth) {
-    // subst(abs(var(0)), 0, var(zero), R):
-    //   descend: subst(var(0), 1, var(zero), R2) — var(0) < 1 — R2 = var(0)
-    //   result: R = abs(var(0))
-    const expr* result = solve_for("subst(abs(var(zero)), zero, var(zero), R)", "R");
-    EXPECT_EQ(result, lm(dv(0)));
-}
-
-TEST_F(LambdaCalculusTest, SubstInAppRecursesBothSides) {
-    // subst(app(var(0), var(1)), 0, var(zero), R):
-    //   left:  subst(var(0), 0, var(zero), L) — depth matches — L = var(0)
-    //   right: subst(var(1), 0, var(zero), Rr) — 1 > 0, decrement — Rr = var(0)
-    //   R = app(var(0), var(0))
-    const expr* result = solve_for("subst(app(var(zero), var(suc(zero))), zero, var(zero), R)", "R");
-    EXPECT_EQ(result, ap(dv(0), dv(0)));
-}
-
-TEST_F(LambdaCalculusTest, SubstArgShiftedByDepth) {
-    // subst(var(1), 1, var(zero), R):
-    //   depth matches (D=1) — R = shift_n(var(0), 1) = var(1)
-    const expr* result = solve_for("subst(var(suc(zero)), suc(zero), var(zero), R)", "R");
-    EXPECT_EQ(result, dv(1));
-}
-
-// ============================================================
-// Reduce (single beta step)
-// ============================================================
-
-TEST_F(LambdaCalculusTest, ReduceIdentityAppliedToVar) {
-    // (λ.0) var(0) → var(0)
-    const expr* result = solve_for(
-        "reduce(app(abs(var(zero)), var(zero)), R)", "R");
-    EXPECT_EQ(result, dv(0));
-}
-
-TEST_F(LambdaCalculusTest, ReduceIdentityAppliedToIdentity) {
-    // (λ.0)(λ.0) → λ.0
-    const expr* result = solve_for(
-        "reduce(app(abs(var(zero)), abs(var(zero))), R)", "R");
-    EXPECT_EQ(result, id_term());
-}
-
-TEST_F(LambdaCalculusTest, ReduceInsideRhs) {
-    // app(var(0), app(abs(var(0)), var(0))) — rhs is the redex
-    // → app(var(0), var(0))
-    const expr* result = solve_for(
-        "reduce(app(var(zero), app(abs(var(zero)), var(zero))), R)", "R");
-    EXPECT_EQ(result, ap(dv(0), dv(0)));
-}
-
-TEST_F(LambdaCalculusTest, ReduceKAppliedToTwoArgs_FirstStep) {
-    // K = abs(abs(var(1))); first reduction: (K A) consumes outer abs
-    // app(abs(abs(var(suc(zero)))), abs(var(zero))) → abs(abs(var(zero)))
-    const expr* result = solve_for(
-        "reduce(app(abs(abs(var(suc(zero)))), abs(var(zero))), R)", "R");
-    EXPECT_EQ(result, lm(lm(dv(0))));
-}
-
-TEST_F(LambdaCalculusTest, ReduceUnderAbs) {
-    // abs(app(abs(var(zero)), var(zero))) — redex is inside the body
-    // → abs(var(zero))
-    const expr* result = solve_for(
-        "reduce(abs(app(abs(var(zero)), var(zero))), R)", "R");
-    EXPECT_EQ(result, lm(dv(0)));
 }
 
 // ============================================================
@@ -510,10 +598,7 @@ TEST_F(LambdaCalculusTest, NormalizeIdentityOnIdentity) {
 // ============================================================
 
 TEST_F(LambdaCalculusTest, NormalizeSelfApplicationOfIdentity) {
-    // (λx.xx)(id) = id id = id
-    // abs(app(var(0), var(0))) applied to id:
-    // step 1: subst(app(var(0),var(0)), 0, id) = app(id, id)
-    // step 2: app(id, id) → id
+    // (λx.xx)(id) → id id → id
     const expr* result = solve_for(
         "normalize(app(abs(app(var(zero), var(zero))), abs(var(zero))), R)", "R");
     EXPECT_EQ(result, id_term());
@@ -570,11 +655,6 @@ TEST_F(LambdaCalculusTest, NormalizeSKKIsIdentity) {
 // ============================================================
 // Church numeral — successor
 // succ = λn.λf.λx. f(n f x)     c_n = λf.λx. f^n(x)
-//
-// Each call exercises: two outer beta steps (succ applied to its
-// argument then to f), plus one inner beta step where n is applied
-// to f and x.  The subst and shift predicates recurse into the
-// body of succ and the body of c_n.
 // ============================================================
 
 TEST_F(LambdaCalculusTest, ChurchSuccZeroEqualsOne) {
@@ -590,9 +670,7 @@ TEST_F(LambdaCalculusTest, ChurchSuccTwoEqualsThree) {
               church(3));
 }
 
-// succ(succ(c0)) = c2: the outer succ must reduce before the inner
-// result is itself in normal form, so normalize recurses twice
-// through the full succ reduction sequence.
+// succ(succ(c0)) = c2
 TEST_F(LambdaCalculusTest, ChurchSuccAppliedTwiceToZero) {
     EXPECT_EQ(normalize_expr(ap(succ_comb(), ap(succ_comb(), church(0))),
                              kMediumMaxResolutions),
@@ -623,11 +701,6 @@ TEST_F(LambdaCalculusTest, ChurchPlusTwoOneEqualsThree) {
 // ============================================================
 // Church numeral — multiplication
 // times = λm.λn.λf. m (n f)
-//
-// times c2 c2 reduces as: λf. c2 (c2 f).
-// c2 f → λx.f(f x), then c2 applies that function twice, giving
-// λx.f(f(f(f x))) = c4.  This is the longest single-term reduction
-// in the suite and stresses subst/shift recursion depth.
 // ============================================================
 
 TEST_F(LambdaCalculusTest, ChurchTimesOneTwoEqualsTwo) {
@@ -732,6 +805,84 @@ TEST_F(LambdaCalculusTest, OmegaDivergesWithinBudget) {
     const expr* omega_small = lm(ap(dv(0), dv(0)));   // λx.x x
     const expr* omega       = ap(omega_small, omega_small);   // Ω
     EXPECT_EQ(normalize_expr(omega, 500), nullptr);
+}
+
+// ============================================================
+// Normalize — open terms (free variables in the input)
+//
+// With NBE, free variables evaluate to global_free(N) and are
+// reified back to var(N + reification_level), so they shift
+// correctly when passed under binders.
+// ============================================================
+
+TEST_F(LambdaCalculusTest, NormalizeFreeVarPassesThroughUnchanged) {
+    // var(zero) at top level is free — no binders, already normal.
+    EXPECT_EQ(normalize_expr(dv(0)), dv(0));
+}
+
+TEST_F(LambdaCalculusTest, NormalizeAbsWithFreeVarUnchanged) {
+    // abs(var(suc(zero))): var(1) refers to the free variable
+    // outside the lambda — already in normal form.
+    EXPECT_EQ(normalize_expr(lm(dv(1))), lm(dv(1)));
+}
+
+TEST_F(LambdaCalculusTest, BetaDropsArgReturnsOuterFreeVar) {
+    // (λx. outer_free) arg  =  outer_free
+    // abs(var(suc(zero))) ignores its argument and returns the
+    // outer free variable.  After reduction the free variable is
+    // at index 0 from the top level.
+    EXPECT_EQ(normalize_expr(ap(lm(dv(1)), id_term())), dv(0));
+}
+
+TEST_F(LambdaCalculusTest, BetaUnderAbsWithFreeVar) {
+    // abs(app(abs(var(suc(zero))), var(zero)))
+    //   = λx. (λ_. x) x
+    //   Under the abs, var(zero)=x and var(suc(zero))=x (the outer bound var).
+    //   Inner beta: (λ_. x) x → x = var(zero) from inside the outer abs.
+    //   Result: abs(var(zero)) = id
+    EXPECT_EQ(normalize_expr(lm(ap(lm(dv(1)), dv(0)))), id_term());
+}
+
+// ============================================================
+// Normalize — neutral terms
+//
+// When the head of an application is a free variable, no beta
+// reduction is possible.  reify must recursively normalise the
+// arguments and produce a structurally identical term.
+// ============================================================
+
+TEST_F(LambdaCalculusTest, NormalizeNeutralAppFreeVarTimesAbs) {
+    // app(var(zero), abs(var(zero))): head is free → neutral, unchanged
+    EXPECT_EQ(normalize_expr(ap(dv(0), id_term())), ap(dv(0), id_term()));
+}
+
+TEST_F(LambdaCalculusTest, NormalizeNeutralNestedApp) {
+    // app(app(var(zero), var(zero)), abs(var(zero))): double neutral, unchanged
+    EXPECT_EQ(normalize_expr(ap(ap(dv(0), dv(0)), id_term())),
+              ap(ap(dv(0), dv(0)), id_term()));
+}
+
+TEST_F(LambdaCalculusTest, NeutralArgGetsNormalisedBeforeResult) {
+    // app(var(zero), app(abs(var(zero)), abs(var(zero))))
+    //   head is free, but the argument is a redex that normalises to id.
+    //   Result: app(var(zero), abs(var(zero)))
+    EXPECT_EQ(normalize_expr(ap(dv(0), ap(id_term(), id_term()))),
+              ap(dv(0), id_term()));
+}
+
+TEST_F(LambdaCalculusTest, NormalizeAbsNeutralBodyUnchanged) {
+    // abs(app(var(suc(zero)), var(zero))): body is neutral —
+    // outer free var applied to the bound var. Already normal.
+    EXPECT_EQ(normalize_expr(lm(ap(dv(1), dv(0)))), lm(ap(dv(1), dv(0))));
+}
+
+TEST_F(LambdaCalculusTest, NeutralBodyArgGetsNormalisedUnderAbs) {
+    // abs(app(var(suc(zero)), app(abs(var(zero)), var(zero))))
+    //   Under the abs: outer free var applied to a redex.
+    //   Inner redex: (λx.x) var(zero) → var(zero)
+    //   Result: abs(app(var(suc(zero)), var(zero)))
+    EXPECT_EQ(normalize_expr(lm(ap(dv(1), ap(id_term(), dv(0))))),
+              lm(ap(dv(1), dv(0))));
 }
 
 } // namespace
