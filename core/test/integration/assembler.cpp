@@ -7,6 +7,7 @@
 #include "infrastructure/assembler.hpp"
 #include "infrastructure/declaration_transpiler.hpp"
 #include "infrastructure/global_stack.hpp"
+#include "infrastructure/initial_goal_exprs.hpp"
 #include "infrastructure/lc_expr_pool.hpp"
 #include "value_objects/declaration.hpp"
 #include "value_objects/declaration_group.hpp"
@@ -63,6 +64,7 @@ TEST_F(AssemblerIntegrationTest, DefinitionOrderMatchesScopeOrder) {
 
 TEST_F(AssemblerIntegrationTest, BooleanDeclarationsAndNotDefinition) {
     aml_expr_pool aml;
+    initial_goal_exprs goals;
 
     module_file mod;
     mod.items.push_back(global{make_group({{"true", 0u}, {"false", 0u}})});
@@ -74,7 +76,7 @@ TEST_F(AssemblerIntegrationTest, BooleanDeclarationsAndNotDefinition) {
 
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
-    elaborator_manifest em{mods, stmts};
+    elaborator_manifest em{mods, stmts, goals};
     em.global_pump_.pump();
 
     const lc_expr* result = em.asm_.assemble();

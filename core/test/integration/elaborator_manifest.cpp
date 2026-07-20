@@ -9,6 +9,7 @@
 #include "value_objects/declaration.hpp"
 #include "value_objects/declaration_group.hpp"
 #include "value_objects/definition.hpp"
+#include "infrastructure/initial_goal_exprs.hpp"
 #include "value_objects/elaborator_manifest.hpp"
 #include "value_objects/global.hpp"
 #include "value_objects/module_file.hpp"
@@ -48,6 +49,7 @@ static const lc_expr* second_arg(const lc_expr* assembled) {
 
 struct ElaboratorManifestIntegrationTest : public ::testing::Test {
     aml_expr_pool aml;
+    initial_goal_exprs goals;
     lc_expr_pool  lc;
 };
 
@@ -58,7 +60,7 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionSingleIdentity) {
     mod.items.push_back(global{definition{"f", aml.make_abs("x", aml.make_token("x"))}});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
-    elaborator_manifest em{mods, stmts};
+    elaborator_manifest em{mods, stmts, goals};
     em.global_pump_.pump();
 
     const lc_expr* result = em.asm_.assemble();
@@ -72,7 +74,7 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionBodyCannotSeeOwnName)
     mod.items.push_back(global{definition{"f", aml.make_abs("x", aml.make_token("f"))}});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
-    elaborator_manifest em{mods, stmts};
+    elaborator_manifest em{mods, stmts, goals};
     EXPECT_THROW(em.global_pump_.pump(), std::out_of_range);
 }
 
@@ -82,7 +84,7 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionSecondSeesFirst) {
     mod.items.push_back(global{definition{"g", aml.make_abs("y", aml.make_token("f"))}});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
-    elaborator_manifest em{mods, stmts};
+    elaborator_manifest em{mods, stmts, goals};
     em.global_pump_.pump();
 
     const lc_expr* result = em.asm_.assemble();
@@ -97,7 +99,7 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessDeclarationGroupBooleans) {
     mod.items.push_back(global{make_group({{"true", 0u}, {"false", 0u}})});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
-    elaborator_manifest em{mods, stmts};
+    elaborator_manifest em{mods, stmts, goals};
     em.global_pump_.pump();
 
     const lc_expr* result = em.asm_.assemble();
@@ -119,7 +121,7 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessStatementsFillTrainingData) {
     mod.items.push_back(global{make_group({{"true", 0u}, {"false", 0u}})});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
-    elaborator_manifest em{mods, stmts};
+    elaborator_manifest em{mods, stmts, goals};
     em.global_pump_.pump();
     em.statement_pump_.pump();
 

@@ -16,6 +16,7 @@
 #include "infrastructure/aml_expr_pool.hpp"
 #include "value_objects/list_format.hpp"
 #include "value_objects/nat_format.hpp"
+#include "infrastructure/initial_goal_exprs.hpp"
 #include "value_objects/elaborator_manifest.hpp"
 #include "value_objects/module_file.hpp"
 #include "value_objects/statement_file.hpp"
@@ -31,6 +32,7 @@ static const std::vector<std::string> kBuiltinNames = {
 
 struct TranspileIntegrationTest : public ::testing::Test {
     aml_expr_pool aml;
+    initial_goal_exprs goals;
 
     const lc_expr* transpile(elaborator_manifest& b, const aml_expr* e,
                               const std::vector<std::string>& names) {
@@ -52,14 +54,14 @@ struct TranspileIntegrationTest : public ::testing::Test {
 // ---------------------------------------------------------------------------
 
 TEST_F(TranspileIntegrationTest, IdentityFunction) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     // λx.x  →  abs(var(0))
     const aml_expr* e = aml.make_abs("x", aml.make_token("x"));
     EXPECT_EQ(transpile(b, e, {"id"}), b.lc.make_abs(b.lc.make_var(0)));
 }
 
 TEST_F(TranspileIntegrationTest, CurriedAbstraction) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     // λx.λy.x  →  abs(abs(var(1)))
     const aml_expr* e = aml.make_abs("x", aml.make_abs("y", aml.make_token("x")));
     EXPECT_EQ(transpile_builtins(b, e),
@@ -67,7 +69,7 @@ TEST_F(TranspileIntegrationTest, CurriedAbstraction) {
 }
 
 TEST_F(TranspileIntegrationTest, Application) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     // λf.λx. f x  →  abs(abs(app(var(1), var(0))))
     const aml_expr* e = aml.make_abs("f", aml.make_abs("x",
         aml.make_app(aml.make_token("f"), aml.make_token("x"))));
@@ -77,7 +79,7 @@ TEST_F(TranspileIntegrationTest, Application) {
 }
 
 TEST_F(TranspileIntegrationTest, LocalShadowingOfGlobal) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     // λx. x (λx.x)  →  abs(app(var(0), abs(var(0))))
     const aml_expr* e = aml.make_abs("x",
         aml.make_app(aml.make_token("x"),
@@ -88,7 +90,7 @@ TEST_F(TranspileIntegrationTest, LocalShadowingOfGlobal) {
 }
 
 TEST_F(TranspileIntegrationTest, GlobalRefShiftsUnderNestedLambda) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     // scope: ["a", "b"], then λx.a  →  abs(var(2))
     const aml_expr* e = aml.make_abs("x", aml.make_token("a"));
     EXPECT_EQ(transpile(b, e, {"a", "b"}),
@@ -96,7 +98,7 @@ TEST_F(TranspileIntegrationTest, GlobalRefShiftsUnderNestedLambda) {
 }
 
 TEST_F(TranspileIntegrationTest, UnboundNameThrows) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* e = aml.make_token("missing");
     EXPECT_THROW(transpile_builtins(b, e), std::out_of_range);
 }
@@ -106,7 +108,7 @@ TEST_F(TranspileIntegrationTest, UnboundNameThrows) {
 // ---------------------------------------------------------------------------
 
 TEST_F(TranspileIntegrationTest, NotFunctionUsesGlobalIndices) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     // "not = b => b false true"
     // builtins pushed: true(idx5), false(idx4), cons(idx3), nil(idx2), pos(idx1), negsuc(idx0)
     // after push "b" (depth=7): b→0, negsuc→1, pos→2, nil→3, cons→4, false→5, true→6
@@ -128,7 +130,7 @@ TEST_F(TranspileIntegrationTest, NotFunctionUsesGlobalIndices) {
 // ---------------------------------------------------------------------------
 
 TEST_F(TranspileIntegrationTest, IfThenElseFunction) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* body = aml.make_abs("cond",
         aml.make_abs("a",
             aml.make_abs("b",
@@ -147,7 +149,7 @@ TEST_F(TranspileIntegrationTest, IfThenElseFunction) {
 // ---------------------------------------------------------------------------
 
 TEST_F(TranspileIntegrationTest, ComposeIdIdNoInlining) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     const std::vector<std::string> names = [&]{
         auto v = kBuiltinNames;
         v.push_back("compose");
@@ -173,14 +175,14 @@ TEST_F(TranspileIntegrationTest, ComposeIdIdNoInlining) {
 // ---------------------------------------------------------------------------
 
 TEST_F(TranspileIntegrationTest, NatZeroBinary) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* e = aml.make_nat(0u, nat_format::binary);
     // nil is at index 2 in kBuiltinNames order (depth 6, get_var_index("nil")=2)
     EXPECT_EQ(transpile_builtins(b, e), b.lc.make_var(2));
 }
 
 TEST_F(TranspileIntegrationTest, NatOneBinary) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* e = aml.make_nat(1u, nat_format::binary);
     // 1 = cons(true, nil); cons=idx3, true=idx5, nil=idx2
     const lc_expr* expected = b.lc.make_app(
@@ -190,7 +192,7 @@ TEST_F(TranspileIntegrationTest, NatOneBinary) {
 }
 
 TEST_F(TranspileIntegrationTest, NatZeroChurch) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* e = aml.make_nat(0u, nat_format::church);
     // c_0 = abs(abs(var(0)))  (closed — no scope dependency)
     EXPECT_EQ(transpile_builtins(b, e),
@@ -198,7 +200,7 @@ TEST_F(TranspileIntegrationTest, NatZeroChurch) {
 }
 
 TEST_F(TranspileIntegrationTest, NatTwoChurch) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* e = aml.make_nat(2u, nat_format::church);
     // c_2 = abs(abs(app(var(1), app(var(1), var(0)))))
     const lc_expr* expected = b.lc.make_abs(b.lc.make_abs(
@@ -212,7 +214,7 @@ TEST_F(TranspileIntegrationTest, NatTwoChurch) {
 // ---------------------------------------------------------------------------
 
 TEST_F(TranspileIntegrationTest, IntegerZeroIsPos) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* e = aml.make_integer(0, nat_format::binary);
     // pos=idx1 in kBuiltinNames, nil (zero)=idx2
     EXPECT_EQ(transpile_builtins(b, e),
@@ -220,7 +222,7 @@ TEST_F(TranspileIntegrationTest, IntegerZeroIsPos) {
 }
 
 TEST_F(TranspileIntegrationTest, IntegerNegativeOneIsNegsucZero) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* e    = aml.make_integer(-1, nat_format::binary);
     const aml_expr* zero = aml.make_nat(0u, nat_format::binary);
     // negsuc=idx0, transpile_nat(0)=nil=idx2
@@ -233,7 +235,7 @@ TEST_F(TranspileIntegrationTest, IntegerNegativeOneIsNegsucZero) {
 // ---------------------------------------------------------------------------
 
 TEST_F(TranspileIntegrationTest, CharEqualsNatOfAsciiCode) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* ch  = aml.make_character('A');
     const aml_expr* nat = aml.make_nat(65u, nat_format::binary);
     EXPECT_EQ(transpile_builtins(b, ch), transpile_builtins(b, nat));
@@ -244,12 +246,12 @@ TEST_F(TranspileIntegrationTest, CharEqualsNatOfAsciiCode) {
 // ---------------------------------------------------------------------------
 
 TEST_F(TranspileIntegrationTest, EmptyStringIsNil) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     EXPECT_EQ(transpile_builtins(b, aml.make_string("")), b.lc.make_var(2));
 }
 
 TEST_F(TranspileIntegrationTest, StringHiHasCorrectOrder) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* h = aml.make_character('h');
     const aml_expr* i = aml.make_character('i');
     const lc_expr*  lc_h = transpile_builtins(b, h);
@@ -267,7 +269,7 @@ TEST_F(TranspileIntegrationTest, StringHiHasCorrectOrder) {
 // ---------------------------------------------------------------------------
 
 TEST_F(TranspileIntegrationTest, ScottListTwoElements) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* a  = aml.make_character('a');
     const aml_expr* bb = aml.make_character('b');
     const lc_expr*  lc_a  = transpile_builtins(b, a);
@@ -281,7 +283,7 @@ TEST_F(TranspileIntegrationTest, ScottListTwoElements) {
 }
 
 TEST_F(TranspileIntegrationTest, ChurchListOneElement) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* a    = aml.make_character('a');
     const lc_expr*  lc_a = transpile_builtins(b, a);
     // [a]_church = abs(abs(app(app(var(1), a_lc), var(0))))
@@ -297,7 +299,7 @@ TEST_F(TranspileIntegrationTest, ChurchListOneElement) {
 // ---------------------------------------------------------------------------
 
 TEST_F(TranspileIntegrationTest, MutualDefsFromSameScope) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     const std::vector<std::string> names = {"f", "g"};
     // f = x => g x  →  abs(app(var(1), var(0)))  (g is at outer depth)
     // g = x => f x  →  abs(app(var(2), var(0)))  (f is one deeper than g)
@@ -317,7 +319,7 @@ TEST_F(TranspileIntegrationTest, MutualDefsFromSameScope) {
 // ---------------------------------------------------------------------------
 
 TEST_F(TranspileIntegrationTest, TriplyCurriedAbstractionOutermostVar) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     // λx.λy.λz.x — x is under 3 binders; de Bruijn index = 2
     const aml_expr* e = aml.make_abs("x",
         aml.make_abs("y",
@@ -327,7 +329,7 @@ TEST_F(TranspileIntegrationTest, TriplyCurriedAbstractionOutermostVar) {
 }
 
 TEST_F(TranspileIntegrationTest, TriplyCurriedAbstractionMiddleVar) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     // λx.λy.λz.y — y is one binder below the reference; de Bruijn index = 1
     const aml_expr* e = aml.make_abs("x",
         aml.make_abs("y",
@@ -344,7 +346,7 @@ TEST_F(TranspileIntegrationTest, TriplyCurriedAbstractionMiddleVar) {
 // ---------------------------------------------------------------------------
 
 TEST_F(TranspileIntegrationTest, ScottListWithAbsElement) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     // [λx.x]_scott — element transpiles to abs(var(0)); scope must be
     // restored before nil/cons are looked up.
     // With kBuiltinNames: cons=idx3, nil=idx2.
@@ -360,7 +362,7 @@ TEST_F(TranspileIntegrationTest, ScottListWithAbsElement) {
 }
 
 TEST_F(TranspileIntegrationTest, ChurchListWithAbsElement) {
-    elaborator_manifest b{empty_mods, empty_stmts};
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
     // [λx.x]_church = abs(abs(app(app(var(1), abs(var(0))), var(0))))
     // var(1)=f combinator, var(0)=x accumulator (church lambda's own params).
     // The element abs(var(0)) is computed in the enclosing scope (builtins),
@@ -382,8 +384,8 @@ TEST_F(TranspileIntegrationTest, ChurchListWithAbsElement) {
 // ---------------------------------------------------------------------------
 
 TEST_F(TranspileIntegrationTest, TwoManifestInstancesAreIndependent) {
-    elaborator_manifest m1{empty_mods, empty_stmts};
-    elaborator_manifest m2{empty_mods, empty_stmts};
+    elaborator_manifest m1{empty_mods, empty_stmts, goals};
+    elaborator_manifest m2{empty_mods, empty_stmts, goals};
     m1.sc.push("x");
     // m2 has its own fresh scope — "x" must not be visible in m2.
     const aml_expr* tok = aml.make_token("x");

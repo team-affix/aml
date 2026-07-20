@@ -7,12 +7,14 @@
 // Recursive sub-components (abs_ … church_list_) depend on tx.
 // Iterators hold const refs to the caller's file vectors. Processors take refs
 // to transpile/push collaborators. Pumps wire iterator → processor.
-// Assembler is constructed against lc + globals but not orchestrated yet.
-// lc_tx / lc_*_ convert lc_expr* → Atlas expr*; constructed, not orchestrated yet.
-// data_point_tx builds normalize(app(M, x), y) goals; not orchestrated yet.
+// Assembler drains globals LIFO into a let-chain with nullptr innermost body.
+// lc_tx / lc_*_ convert lc_expr* → Atlas expr*.
+// data_point_tx builds normalize(app(M, x), y) goals.
+// elaborator_ orchestrates pumps → assemble → transpile → push initial goals.
 elaborator_manifest::elaborator_manifest(
         const std::vector<module_file>& module_files,
-        const std::vector<statement_file>& statement_files)
+        const std::vector<statement_file>& statement_files,
+        initial_goal_exprs& initial_goals)
     : tx(token_, abs_, app_,
          binary_nat_, church_nat_,
          integer_, character_,
@@ -41,4 +43,6 @@ elaborator_manifest::elaborator_manifest(
       lc_abs_(lc_tx, chc),
       lc_app_(lc_tx, chc),
       lc_nullptr_(chc),
-      data_point_tx(lc_tx, chc, chc) {}
+      data_point_tx(lc_tx, chc, chc),
+      elaborator_(global_pump_, statement_pump_, asm_, lc_tx, training,
+                  data_point_tx, chc, chc, initial_goals) {}

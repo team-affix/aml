@@ -5,11 +5,13 @@
 #include "infrastructure/assembler.hpp"
 #include "infrastructure/data_point_transpiler.hpp"
 #include "infrastructure/declaration_transpiler.hpp"
+#include "infrastructure/elaborator.hpp"
 #include "infrastructure/expr_pool.hpp"
 #include "infrastructure/global_iterator.hpp"
 #include "infrastructure/global_processor.hpp"
 #include "infrastructure/global_pump.hpp"
 #include "infrastructure/global_stack.hpp"
+#include "infrastructure/initial_goal_exprs.hpp"
 #include "infrastructure/lc_expr_pool.hpp"
 #include "infrastructure/lc_expr_transpiler.hpp"
 #include "infrastructure/scope.hpp"
@@ -48,9 +50,13 @@ struct elaborator_manifest {
     using lc_abs_transpiler_t      = typename lc_tx_t::lc_abs_transpiler_t;
     using lc_app_transpiler_t      = typename lc_tx_t::lc_app_transpiler_t;
     using data_point_transpiler_t  = data_point_transpiler<lc_tx_t, expr_pool, expr_pool>;
+    using elaborator_t             = elaborator<global_pump_t, statement_pump_t, assembler_t,
+                                                lc_tx_t, training_data, data_point_transpiler_t,
+                                                expr_pool, expr_pool, initial_goal_exprs>;
 
     elaborator_manifest(const std::vector<module_file>& module_files,
-                        const std::vector<statement_file>& statement_files);
+                        const std::vector<statement_file>& statement_files,
+                        initial_goal_exprs& initial_goals);
 
     lc_expr_pool          lc;
     scope                 sc;
@@ -85,6 +91,7 @@ struct elaborator_manifest {
     lc_app_transpiler_t       lc_app_;
     lc_nullptr_transpiler_t   lc_nullptr_;
     data_point_transpiler_t   data_point_tx;
+    elaborator_t              elaborator_;
 };
 
 #endif
