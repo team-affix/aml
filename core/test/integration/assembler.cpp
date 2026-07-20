@@ -32,21 +32,19 @@ struct AssemblerIntegrationTest : public ::testing::Test {
 
 } // namespace
 
-TEST_F(AssemblerIntegrationTest, EmptyGlobalsReturnsBody) {
-    const lc_expr* body = lc.make_var(0);
-    EXPECT_EQ(asm_.assemble(body), body);
+TEST_F(AssemblerIntegrationTest, EmptyGlobalsReturnsNullptr) {
+    EXPECT_EQ(asm_.assemble(), nullptr);
 }
 
 TEST_F(AssemblerIntegrationTest, TwoGlobalsFirstDefinedIsOutermost) {
-    const lc_expr* body = nullptr;
     const lc_expr* g0 = lc.make_var(0);
     const lc_expr* g1 = lc.make_var(1);
     globals.push(g0);
     globals.push(g1);
 
     const lc_expr* expected =
-        lc.make_app(lc.make_abs(lc.make_app(lc.make_abs(body), g1)), g0);
-    EXPECT_EQ(asm_.assemble(body), expected);
+        lc.make_app(lc.make_abs(lc.make_app(lc.make_abs(nullptr), g1)), g0);
+    EXPECT_EQ(asm_.assemble(), expected);
     EXPECT_TRUE(globals.empty());
 }
 
@@ -60,7 +58,7 @@ TEST_F(AssemblerIntegrationTest, DefinitionOrderMatchesScopeOrder) {
 
     const lc_expr* expected =
         lc.make_app(lc.make_abs(lc.make_app(lc.make_abs(nullptr), false_term)), true_term);
-    EXPECT_EQ(asm_.assemble(nullptr), expected);
+    EXPECT_EQ(asm_.assemble(), expected);
 }
 
 TEST_F(AssemblerIntegrationTest, BooleanDeclarationsAndNotDefinition) {
@@ -77,12 +75,9 @@ TEST_F(AssemblerIntegrationTest, BooleanDeclarationsAndNotDefinition) {
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
     elaborator_manifest em{mods, stmts};
-    while (auto g = em.global_it.get_next_global())
-        em.global_proc.process_global(*g);
+    em.global_pump_.pump();
 
-    assembler<lc_expr_pool, lc_expr_pool, global_stack>
-        assemble{em.lc, em.lc, em.globals};
-    const lc_expr* result = assemble.assemble(nullptr);
+    const lc_expr* result = em.asm_.assemble();
     ASSERT_NE(result, nullptr);
 
     ASSERT_TRUE(std::holds_alternative<lc_expr::app>(result->content));

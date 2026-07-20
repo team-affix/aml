@@ -5,8 +5,6 @@
 #include <vector>
 #include <gtest/gtest.h>
 #include "infrastructure/aml_expr_pool.hpp"
-#include "infrastructure/assembler.hpp"
-#include "infrastructure/global_stack.hpp"
 #include "infrastructure/lc_expr_pool.hpp"
 #include "value_objects/declaration.hpp"
 #include "value_objects/declaration_group.hpp"
@@ -61,12 +59,9 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionSingleIdentity) {
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
     elaborator_manifest em{mods, stmts};
-    while (auto g = em.global_it.get_next_global())
-        em.global_proc.process_global(*g);
+    em.global_pump_.pump();
 
-    assembler<lc_expr_pool, lc_expr_pool, global_stack>
-        asm_{em.lc, em.lc, em.globals};
-    const lc_expr* result = asm_.assemble(nullptr);
+    const lc_expr* result = em.asm_.assemble();
 
     ASSERT_NE(result, nullptr);
     EXPECT_TRUE(struct_eq(outermost_arg(result), lc.make_abs(lc.make_var(0))));
@@ -78,12 +73,7 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionBodyCannotSeeOwnName)
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
     elaborator_manifest em{mods, stmts};
-    EXPECT_THROW(
-        {
-            while (auto g = em.global_it.get_next_global())
-                em.global_proc.process_global(*g);
-        },
-        std::out_of_range);
+    EXPECT_THROW(em.global_pump_.pump(), std::out_of_range);
 }
 
 TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionSecondSeesFirst) {
@@ -93,12 +83,9 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionSecondSeesFirst) {
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
     elaborator_manifest em{mods, stmts};
-    while (auto g = em.global_it.get_next_global())
-        em.global_proc.process_global(*g);
+    em.global_pump_.pump();
 
-    assembler<lc_expr_pool, lc_expr_pool, global_stack>
-        asm_{em.lc, em.lc, em.globals};
-    const lc_expr* result = asm_.assemble(nullptr);
+    const lc_expr* result = em.asm_.assemble();
 
     ASSERT_NE(result, nullptr);
     EXPECT_TRUE(struct_eq(outermost_arg(result), lc.make_abs(lc.make_var(0))));
@@ -111,12 +98,9 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessDeclarationGroupBooleans) {
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
     elaborator_manifest em{mods, stmts};
-    while (auto g = em.global_it.get_next_global())
-        em.global_proc.process_global(*g);
+    em.global_pump_.pump();
 
-    assembler<lc_expr_pool, lc_expr_pool, global_stack>
-        asm_{em.lc, em.lc, em.globals};
-    const lc_expr* result = asm_.assemble(nullptr);
+    const lc_expr* result = em.asm_.assemble();
 
     ASSERT_NE(result, nullptr);
     EXPECT_TRUE(struct_eq(outermost_arg(result),
@@ -136,10 +120,8 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessStatementsFillTrainingData) {
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
     elaborator_manifest em{mods, stmts};
-    while (auto g = em.global_it.get_next_global())
-        em.global_proc.process_global(*g);
-    while (auto s = em.statement_it.get_next_statement())
-        em.statement_proc.process_statement(*s);
+    em.global_pump_.pump();
+    em.statement_pump_.pump();
 
     auto dp = em.training.get_next_data_point();
     ASSERT_TRUE(dp.has_value());
