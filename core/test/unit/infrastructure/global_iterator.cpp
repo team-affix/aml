@@ -29,7 +29,7 @@ TEST_F(GlobalIteratorTest, EmptyFilesYieldsNullopt) {
 }
 
 TEST_F(GlobalIteratorTest, SingleFileMultipleItems) {
-    const aml_expr* body = aml.make_token("x");
+    const aml_expr* body = aml.make_symbol("x");
     module_file file;
     file.items.push_back(global{make_group({{"a", 0u}})});
     file.items.push_back(global{definition{"f", body}});
@@ -51,10 +51,10 @@ TEST_F(GlobalIteratorTest, SingleFileMultipleItems) {
 
 TEST_F(GlobalIteratorTest, SkipsEmptyFileBetweenItems) {
     module_file first;
-    first.items.push_back(global{definition{"a", aml.make_token("x")}});
+    first.items.push_back(global{definition{"a", aml.make_symbol("x")}});
     module_file empty;
     module_file third;
-    third.items.push_back(global{definition{"b", aml.make_token("y")}});
+    third.items.push_back(global{definition{"b", aml.make_symbol("y")}});
 
     std::vector<module_file> files{first, empty, third};
     global_iterator it{files};

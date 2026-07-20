@@ -3,7 +3,7 @@
 // tx is initialized first and receives forward references to sub-components.
 // Those references are only used after full construction, so storing them
 // before the referents are initialized is safe.
-// Non-recursive sub-components (token_ … string_) depend only on lc and sc.
+// Non-recursive sub-components (symbol_ … string_) depend only on lc and sc.
 // Recursive sub-components (abs_ … church_list_) depend on tx.
 // Iterators hold const refs to the caller's file vectors. Processors take refs
 // to transpile/push collaborators. Pumps wire iterator → processor.
@@ -15,12 +15,12 @@ elaborator_manifest::elaborator_manifest(
         const std::vector<module_file>& module_files,
         const std::vector<statement_file>& statement_files,
         initial_goal_exprs& initial_goals)
-    : tx(token_, abs_, app_,
+    : tx(symbol_, abs_, app_,
          binary_nat_, church_nat_,
          integer_, character_,
          string_,
          scott_list_, church_list_),
-      token_(lc, sc),
+      symbol_(lc, sc),
       binary_nat_(lc, lc, sc),
       church_nat_(lc, lc, lc),
       integer_(lc, lc, binary_nat_, sc),

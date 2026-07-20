@@ -144,7 +144,7 @@ inline const aml_expr* aml_visitor<M>::arg_from(AMLParser::ArgContext* ctx) {
 
 template<typename M>
 inline const aml_expr* aml_visitor<M>::atom_from(AMLParser::AtomContext* ctx) {
-    if (auto* n  = ctx->NAME())    return make_aml_.make_token(n->getText());
+    if (auto* n  = ctx->NAME())    return make_aml_.make_symbol(n->getText());
     if (auto* na = ctx->nat())     return nat_from(na);
     if (auto* i  = ctx->int_())    return int_from(i);
     if (auto* cl = ctx->CHARLIT()) return make_aml_.make_character(parse_charlit(cl->getText()));

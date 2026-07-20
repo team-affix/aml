@@ -58,8 +58,8 @@ const expr* expect_normalize(elaborator_manifest& em,
 // Y = λf. (λx. f (x x)) (λx. f (x x))
 const aml_expr* make_y_aml(aml_expr_pool& aml) {
     const aml_expr* omega = aml.make_abs("x",
-        aml.make_app(aml.make_token("f"),
-            aml.make_app(aml.make_token("x"), aml.make_token("x"))));
+        aml.make_app(aml.make_symbol("f"),
+            aml.make_app(aml.make_symbol("x"), aml.make_symbol("x"))));
     return aml.make_abs("f", aml.make_app(omega, omega));
 }
 
@@ -80,9 +80,9 @@ struct ElaboratorIntegrationTest : public ::testing::Test {
 TEST_F(ElaboratorIntegrationTest, ElaboratePushesEqThenNormalizeGoals) {
     module_file mod;
     mod.items.push_back(global{
-        definition{"f", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"f", aml.make_abs("x", aml.make_symbol("x"))}});
     statement_file sf;
-    sf.statements.push_back({aml.make_token("f"), aml.make_token("f")});
+    sf.statements.push_back({aml.make_symbol("f"), aml.make_symbol("f")});
 
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
@@ -113,7 +113,7 @@ TEST_F(ElaboratorIntegrationTest, EmptyModulesEmptyStatementsEqHoleOnly) {
 TEST_F(ElaboratorIntegrationTest, ModulesOnlyEqAndDrainsStackAndTraining) {
     module_file mod;
     mod.items.push_back(global{
-        definition{"f", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"f", aml.make_abs("x", aml.make_symbol("x"))}});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
     elaborator_manifest em{mods, stmts, goals};
@@ -128,7 +128,7 @@ TEST_F(ElaboratorIntegrationTest, ModulesOnlyEqAndDrainsStackAndTraining) {
 
 TEST_F(ElaboratorIntegrationTest, UnboundStatementThrowsBeforeAnyGoal) {
     statement_file sf;
-    sf.statements.push_back({aml.make_token("x"), aml.make_token("x")});
+    sf.statements.push_back({aml.make_symbol("x"), aml.make_symbol("x")});
     std::vector<module_file> mods;
     std::vector<statement_file> stmts{sf};
     elaborator_manifest em{mods, stmts, goals};
@@ -141,9 +141,9 @@ TEST_F(ElaboratorIntegrationTest, SelfAppDefinitionAndStatement) {
     module_file mod;
     mod.items.push_back(global{definition{"f",
         aml.make_abs("x",
-            aml.make_app(aml.make_token("x"), aml.make_token("x")))}});
+            aml.make_app(aml.make_symbol("x"), aml.make_symbol("x")))}});
     statement_file sf;
-    sf.statements.push_back({aml.make_token("f"), aml.make_token("f")});
+    sf.statements.push_back({aml.make_symbol("f"), aml.make_symbol("f")});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
     elaborator_manifest em{mods, stmts, goals};
@@ -161,9 +161,9 @@ TEST_F(ElaboratorIntegrationTest, KCombinatorDefinition) {
     // f = λx. λy. x
     module_file mod;
     mod.items.push_back(global{definition{"f",
-        aml.make_abs("x", aml.make_abs("y", aml.make_token("x")))}});
+        aml.make_abs("x", aml.make_abs("y", aml.make_symbol("x")))}});
     statement_file sf;
-    sf.statements.push_back({aml.make_token("f"), aml.make_token("f")});
+    sf.statements.push_back({aml.make_symbol("f"), aml.make_symbol("f")});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
     elaborator_manifest em{mods, stmts, goals};
@@ -179,9 +179,9 @@ TEST_F(ElaboratorIntegrationTest, KCombinatorDefinition) {
 TEST_F(ElaboratorIntegrationTest, TwoDefsIdThenConstAssembleOrder) {
     module_file mod;
     mod.items.push_back(global{
-        definition{"id", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"id", aml.make_abs("x", aml.make_symbol("x"))}});
     mod.items.push_back(global{definition{"const",
-        aml.make_abs("x", aml.make_abs("y", aml.make_token("x")))}});
+        aml.make_abs("x", aml.make_abs("y", aml.make_symbol("x")))}});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
     elaborator_manifest em{mods, stmts, goals};
@@ -197,12 +197,12 @@ TEST_F(ElaboratorIntegrationTest, TwoDefsFThenGReferencingF) {
     // f = λx.x ; g = λx. f x ; g ≈ f
     module_file mod;
     mod.items.push_back(global{
-        definition{"f", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"f", aml.make_abs("x", aml.make_symbol("x"))}});
     mod.items.push_back(global{definition{"g",
         aml.make_abs("x",
-            aml.make_app(aml.make_token("f"), aml.make_token("x")))}});
+            aml.make_app(aml.make_symbol("f"), aml.make_symbol("x")))}});
     statement_file sf;
-    sf.statements.push_back({aml.make_token("g"), aml.make_token("f")});
+    sf.statements.push_back({aml.make_symbol("g"), aml.make_symbol("f")});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
     elaborator_manifest em{mods, stmts, goals};
@@ -221,12 +221,12 @@ TEST_F(ElaboratorIntegrationTest, TwoDefsFThenGReferencingF) {
 TEST_F(ElaboratorIntegrationTest, ThreeStatementsPreserveOrder) {
     module_file mod;
     mod.items.push_back(global{
-        definition{"f", aml.make_abs("x", aml.make_token("x"))}});
-    const aml_expr* id = aml.make_abs("x", aml.make_token("x"));
+        definition{"f", aml.make_abs("x", aml.make_symbol("x"))}});
+    const aml_expr* id = aml.make_abs("x", aml.make_symbol("x"));
     statement_file sf;
-    sf.statements.push_back({aml.make_token("f"), aml.make_token("f")});
-    sf.statements.push_back({aml.make_token("f"), id});
-    sf.statements.push_back({id, aml.make_token("f")});
+    sf.statements.push_back({aml.make_symbol("f"), aml.make_symbol("f")});
+    sf.statements.push_back({aml.make_symbol("f"), id});
+    sf.statements.push_back({id, aml.make_symbol("f")});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
     elaborator_manifest em{mods, stmts, goals};
@@ -251,12 +251,12 @@ TEST_F(ElaboratorIntegrationTest, NotTrueFalseEndToEnd) {
     mod.items.push_back(global{definition{"not",
         aml.make_abs("b",
             aml.make_app(
-                aml.make_app(aml.make_token("b"), aml.make_token("false")),
-                aml.make_token("true")))}});
+                aml.make_app(aml.make_symbol("b"), aml.make_symbol("false")),
+                aml.make_symbol("true")))}});
     statement_file sf;
     sf.statements.push_back({
-        aml.make_app(aml.make_token("not"), aml.make_token("true")),
-        aml.make_token("false")});
+        aml.make_app(aml.make_symbol("not"), aml.make_symbol("true")),
+        aml.make_symbol("false")});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
     elaborator_manifest em{mods, stmts, goals};
@@ -290,10 +290,10 @@ TEST_F(ElaboratorIntegrationTest, FiveDefsOldestNewestStatementIndices) {
     for (int i = 0; i < 5; ++i) {
         mod.items.push_back(global{definition{
             std::string(1, static_cast<char>('a' + i)),
-            aml.make_abs("x", aml.make_token("x"))}});
+            aml.make_abs("x", aml.make_symbol("x"))}});
     }
     statement_file sf;
-    sf.statements.push_back({aml.make_token("a"), aml.make_token("e")});
+    sf.statements.push_back({aml.make_symbol("a"), aml.make_symbol("e")});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
     elaborator_manifest em{mods, stmts, goals};
@@ -316,12 +316,12 @@ TEST_F(ElaboratorIntegrationTest, TwoModuleFilesDeclsThenDefs) {
     mod1.items.push_back(global{definition{"not",
         aml.make_abs("b",
             aml.make_app(
-                aml.make_app(aml.make_token("b"), aml.make_token("false")),
-                aml.make_token("true")))}});
+                aml.make_app(aml.make_symbol("b"), aml.make_symbol("false")),
+                aml.make_symbol("true")))}});
     statement_file sf;
     sf.statements.push_back({
-        aml.make_app(aml.make_token("not"), aml.make_token("false")),
-        aml.make_token("true")});
+        aml.make_app(aml.make_symbol("not"), aml.make_symbol("false")),
+        aml.make_symbol("true")});
     std::vector<module_file> mods{mod0, mod1};
     std::vector<statement_file> stmts{sf};
     elaborator_manifest em{mods, stmts, goals};
@@ -365,7 +365,7 @@ TEST_F(ElaboratorIntegrationTest, ZeroGlobalsChurchNatDataPoint) {
 TEST_F(ElaboratorIntegrationTest, SharedGoalsAppendAcrossManifests) {
     module_file mod;
     mod.items.push_back(global{
-        definition{"f", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"f", aml.make_abs("x", aml.make_symbol("x"))}});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
 
@@ -381,7 +381,7 @@ TEST_F(ElaboratorIntegrationTest, SharedGoalsAppendAcrossManifests) {
 TEST_F(ElaboratorIntegrationTest, SeparateGoalsAreIndependent) {
     module_file mod;
     mod.items.push_back(global{
-        definition{"f", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"f", aml.make_abs("x", aml.make_symbol("x"))}});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
 
@@ -401,19 +401,19 @@ TEST_F(ElaboratorIntegrationTest, ManyGlobalsDeclsDefsAndFourDataPoints) {
     mod.items.push_back(global{make_group({
         {"true", 0u}, {"false", 0u}, {"cons", 2u}, {"nil", 0u}})});
     mod.items.push_back(global{
-        definition{"id", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"id", aml.make_abs("x", aml.make_symbol("x"))}});
     mod.items.push_back(global{definition{"not",
         aml.make_abs("b",
             aml.make_app(
-                aml.make_app(aml.make_token("b"), aml.make_token("false")),
-                aml.make_token("true")))}});
+                aml.make_app(aml.make_symbol("b"), aml.make_symbol("false")),
+                aml.make_symbol("true")))}});
     statement_file sf;
-    sf.statements.push_back({aml.make_token("true"), aml.make_token("true")});
-    sf.statements.push_back({aml.make_token("false"), aml.make_token("false")});
-    sf.statements.push_back({aml.make_token("id"), aml.make_token("id")});
+    sf.statements.push_back({aml.make_symbol("true"), aml.make_symbol("true")});
+    sf.statements.push_back({aml.make_symbol("false"), aml.make_symbol("false")});
+    sf.statements.push_back({aml.make_symbol("id"), aml.make_symbol("id")});
     sf.statements.push_back({
-        aml.make_app(aml.make_token("not"), aml.make_token("true")),
-        aml.make_token("false")});
+        aml.make_app(aml.make_symbol("not"), aml.make_symbol("true")),
+        aml.make_symbol("false")});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
     elaborator_manifest em{mods, stmts, goals};
@@ -455,7 +455,7 @@ TEST_F(ElaboratorIntegrationTest, YCombinatorDefinitionAndSelfStatement) {
     module_file mod;
     mod.items.push_back(global{definition{"Y", make_y_aml(aml)}});
     statement_file sf;
-    sf.statements.push_back({aml.make_token("Y"), aml.make_token("Y")});
+    sf.statements.push_back({aml.make_symbol("Y"), aml.make_symbol("Y")});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
     elaborator_manifest em{mods, stmts, goals};
@@ -472,13 +472,13 @@ TEST_F(ElaboratorIntegrationTest, YCombinatorAppliedToIdInTrainingData) {
     // id = λx.x ; Y = … ; training: Y id ≈ id  and  Y ≈ Y
     module_file mod;
     mod.items.push_back(global{
-        definition{"id", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"id", aml.make_abs("x", aml.make_symbol("x"))}});
     mod.items.push_back(global{definition{"Y", make_y_aml(aml)}});
     statement_file sf;
     sf.statements.push_back({
-        aml.make_app(aml.make_token("Y"), aml.make_token("id")),
-        aml.make_token("id")});
-    sf.statements.push_back({aml.make_token("Y"), aml.make_token("Y")});
+        aml.make_app(aml.make_symbol("Y"), aml.make_symbol("id")),
+        aml.make_symbol("id")});
+    sf.statements.push_back({aml.make_symbol("Y"), aml.make_symbol("Y")});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
     elaborator_manifest em{mods, stmts, goals};
@@ -502,18 +502,18 @@ TEST_F(ElaboratorIntegrationTest, YCombinatorWithConstAndChurchData) {
     // const = λx.λy.x ; Y ; training uses Y const and church nats as labels
     module_file mod;
     mod.items.push_back(global{definition{"const",
-        aml.make_abs("x", aml.make_abs("y", aml.make_token("x")))}});
+        aml.make_abs("x", aml.make_abs("y", aml.make_symbol("x")))}});
     mod.items.push_back(global{definition{"Y", make_y_aml(aml)}});
     statement_file sf;
     // Y const ≈ const  (fixed point of K is K, syntactically as a training pair)
     sf.statements.push_back({
-        aml.make_app(aml.make_token("Y"), aml.make_token("const")),
-        aml.make_token("const")});
+        aml.make_app(aml.make_symbol("Y"), aml.make_symbol("const")),
+        aml.make_symbol("const")});
     // Y (λf. <church> 0) ≈ <church> 0
     const aml_expr* ignore_f =
         aml.make_abs("f", aml.make_nat(0u, nat_format::church));
     sf.statements.push_back({
-        aml.make_app(aml.make_token("Y"), ignore_f),
+        aml.make_app(aml.make_symbol("Y"), ignore_f),
         aml.make_nat(0u, nat_format::church)});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};

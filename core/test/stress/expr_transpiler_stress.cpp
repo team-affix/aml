@@ -38,16 +38,16 @@ struct TranspilerStressTest : public ::testing::Test {
 };
 
 const aml_expr* build_deep_abs(aml_expr_pool& pool, uint32_t depth) {
-    const aml_expr* body = pool.make_token("x");
+    const aml_expr* body = pool.make_symbol("x");
     for (uint32_t i = 1; i < depth; ++i)
         body = pool.make_abs("x", body);
     return body;
 }
 
 const aml_expr* build_deep_app(aml_expr_pool& pool, uint32_t depth) {
-    const aml_expr* body = pool.make_token("x");
+    const aml_expr* body = pool.make_symbol("x");
     for (uint32_t i = 0; i < depth; ++i)
-        body = pool.make_app(pool.make_token("f"), body);
+        body = pool.make_app(pool.make_symbol("f"), body);
     return pool.make_abs("f", pool.make_abs("x", body));
 }
 
@@ -98,7 +98,7 @@ TEST_F(TranspilerStressTest, ManyFunctionFragments) {
         names.push_back("f" + std::to_string(i));
     const lc_expr* id = bundle.lc.make_abs(bundle.lc.make_var(0));
     for (int i = 0; i < 100; ++i) {
-        const aml_expr* body = aml_pool.make_abs("x", aml_pool.make_token("x"));
+        const aml_expr* body = aml_pool.make_abs("x", aml_pool.make_symbol("x"));
         EXPECT_EQ(transpile_with(bundle, body, names), id);
     }
 }
@@ -107,7 +107,7 @@ TEST_F(TranspilerStressTest, ManyGlobalRefFragments) {
     elaborator_manifest bundle{empty_mods, empty_stmts, goals};
     for (int i = 0; i < 50; ++i) {
         const aml_expr* e = aml_pool.make_app(
-            aml_pool.make_token("true"), aml_pool.make_token("false"));
+            aml_pool.make_symbol("true"), aml_pool.make_symbol("false"));
         ASSERT_NE(transpile_with_builtins(bundle, e), nullptr);
     }
 }

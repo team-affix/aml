@@ -15,7 +15,7 @@ namespace {
 struct MockMakeAml {
     MOCK_METHOD(const aml_expr*, make_app, (const aml_expr* func, const aml_expr* arg));
     MOCK_METHOD(const aml_expr*, make_abs, (std::string param, const aml_expr* body));
-    MOCK_METHOD(const aml_expr*, make_token, (std::string name));
+    MOCK_METHOD(const aml_expr*, make_symbol, (std::string name));
     MOCK_METHOD(const aml_expr*, make_nat, (uint64_t value, nat_format format));
     MOCK_METHOD(const aml_expr*, make_integer, (int64_t value, nat_format format));
     MOCK_METHOD(const aml_expr*, make_character, (char value));
@@ -31,8 +31,8 @@ void wire_mock_to_pool(MockMakeAml& mock, aml_expr_pool& pool) {
     ON_CALL(mock, make_abs(_, _)).WillByDefault([&](std::string p, const aml_expr* b) {
         return pool.make_abs(std::move(p), b);
     });
-    ON_CALL(mock, make_token(_)).WillByDefault([&](std::string n) {
-        return pool.make_token(std::move(n));
+    ON_CALL(mock, make_symbol(_)).WillByDefault([&](std::string n) {
+        return pool.make_symbol(std::move(n));
     });
     ON_CALL(mock, make_nat(_, _)).WillByDefault([&](uint64_t v, nat_format f) {
         return pool.make_nat(v, f);
@@ -159,8 +159,8 @@ static parsed_expr parse_expr(const std::string& expr_src) {
 // aml_expr inspection helpers
 // ---------------------------------------------------------------------------
 
-static const aml_expr::token* as_token(const aml_expr* e) {
-    return e ? std::get_if<aml_expr::token>(&e->content) : nullptr;
+static const aml_expr::symbol* as_symbol(const aml_expr* e) {
+    return e ? std::get_if<aml_expr::symbol>(&e->content) : nullptr;
 }
 
 static const aml_expr::abs* as_abs(const aml_expr* e) {
@@ -191,8 +191,8 @@ static const aml_expr::list* as_list(const aml_expr* e) {
     return e ? std::get_if<aml_expr::list>(&e->content) : nullptr;
 }
 
-static bool is_token(const aml_expr* e, const std::string& name) {
-    if (const auto* t = as_token(e))
+static bool is_symbol(const aml_expr* e, const std::string& name) {
+    if (const auto* t = as_symbol(e))
         return t->name == name;
     return false;
 }
@@ -220,9 +220,9 @@ TEST_F(AmlVisitorTest, ParseStatementFileStatements) {
         parse_statement_file("not false : true.\nmultiply 3 4 12 : true.");
     ASSERT_EQ(pt.file.statements.size(), 2u);
     EXPECT_NE(as_app(pt.file.statements.at(0).lhs), nullptr);
-    EXPECT_NE(as_token(pt.file.statements.at(0).rhs), nullptr);
+    EXPECT_NE(as_symbol(pt.file.statements.at(0).rhs), nullptr);
     EXPECT_NE(as_app(pt.file.statements.at(1).lhs), nullptr);
-    EXPECT_NE(as_token(pt.file.statements.at(1).rhs), nullptr);
+    EXPECT_NE(as_symbol(pt.file.statements.at(1).rhs), nullptr);
 }
 
 // ---------------------------------------------------------------------------
@@ -295,7 +295,7 @@ TEST_F(AmlVisitorTest, VisitFunctionDefIdentityBody) {
     const auto* abs = as_abs(body);
     ASSERT_NE(abs, nullptr);
     EXPECT_EQ(abs->param, "x");
-    EXPECT_TRUE(is_token(abs->body, "x"));
+    EXPECT_TRUE(is_symbol(abs->body, "x"));
 }
 
 TEST_F(AmlVisitorTest, VisitFunctionDefCurried) {
@@ -306,7 +306,7 @@ TEST_F(AmlVisitorTest, VisitFunctionDefCurried) {
     const auto* inner = as_abs(outer->body);
     ASSERT_NE(inner, nullptr);
     EXPECT_EQ(inner->param, "y");
-    EXPECT_TRUE(is_token(inner->body, "x"));
+    EXPECT_TRUE(is_symbol(inner->body, "x"));
 }
 
 TEST_F(AmlVisitorTest, VisitFunctionDefSelfReferenceAllowed) {
@@ -315,8 +315,8 @@ TEST_F(AmlVisitorTest, VisitFunctionDefSelfReferenceAllowed) {
     ASSERT_NE(abs, nullptr);
     const auto* app = as_app(abs->body);
     ASSERT_NE(app, nullptr);
-    EXPECT_TRUE(is_token(app->func, "pred"));
-    EXPECT_TRUE(is_token(app->arg, "n"));
+    EXPECT_TRUE(is_symbol(app->func, "pred"));
+    EXPECT_TRUE(is_symbol(app->arg, "n"));
 }
 
 // ---------------------------------------------------------------------------
@@ -324,11 +324,11 @@ TEST_F(AmlVisitorTest, VisitFunctionDefSelfReferenceAllowed) {
 // ---------------------------------------------------------------------------
 
 TEST_F(AmlVisitorTest, VisitVarSimple) {
-    auto pe = parse_expr("foo"); EXPECT_TRUE(is_token(pe.body(), "foo"));
+    auto pe = parse_expr("foo"); EXPECT_TRUE(is_symbol(pe.body(), "foo"));
 }
 
 TEST_F(AmlVisitorTest, VisitVarWithUnderscore) {
-    auto pe = parse_expr("_x"); EXPECT_TRUE(is_token(pe.body(), "_x"));
+    auto pe = parse_expr("_x"); EXPECT_TRUE(is_symbol(pe.body(), "_x"));
 }
 
 // ---------------------------------------------------------------------------
@@ -339,7 +339,7 @@ TEST_F(AmlVisitorTest, VisitAbsSingle) {
     auto pe = parse_expr("f => f"); const auto* abs = as_abs(pe.body());
     ASSERT_NE(abs, nullptr);
     EXPECT_EQ(abs->param, "f");
-    EXPECT_TRUE(is_token(abs->body, "f"));
+    EXPECT_TRUE(is_symbol(abs->body, "f"));
 }
 
 TEST_F(AmlVisitorTest, VisitAbsTripleCurried) {
@@ -351,7 +351,7 @@ TEST_F(AmlVisitorTest, VisitAbsTripleCurried) {
     EXPECT_EQ(a->param, "a");
     EXPECT_EQ(b->param, "b");
     EXPECT_EQ(c->param, "c");
-    EXPECT_TRUE(is_token(c->body, "a"));
+    EXPECT_TRUE(is_symbol(c->body, "a"));
 }
 
 TEST_F(AmlVisitorTest, VisitIfThenElseShape) {
@@ -363,9 +363,9 @@ TEST_F(AmlVisitorTest, VisitIfThenElseShape) {
     ASSERT_NE(app, nullptr);
     const auto* inner_app = as_app(app->func);
     ASSERT_NE(inner_app, nullptr);
-    EXPECT_TRUE(is_token(inner_app->func, "cond"));
-    EXPECT_TRUE(is_token(inner_app->arg, "a"));
-    EXPECT_TRUE(is_token(app->arg, "b"));
+    EXPECT_TRUE(is_symbol(inner_app->func, "cond"));
+    EXPECT_TRUE(is_symbol(inner_app->arg, "a"));
+    EXPECT_TRUE(is_symbol(app->arg, "b"));
 }
 
 // ---------------------------------------------------------------------------
@@ -375,19 +375,19 @@ TEST_F(AmlVisitorTest, VisitIfThenElseShape) {
 TEST_F(AmlVisitorTest, VisitAppUnary) {
     auto pe = parse_expr("f x"); const auto* app = as_app(pe.body());
     ASSERT_NE(app, nullptr);
-    EXPECT_TRUE(is_token(app->func, "f"));
-    EXPECT_TRUE(is_token(app->arg, "x"));
+    EXPECT_TRUE(is_symbol(app->func, "f"));
+    EXPECT_TRUE(is_symbol(app->arg, "x"));
 }
 
 TEST_F(AmlVisitorTest, VisitAppBinaryLeftAssoc) {
     auto pe = parse_expr("f x y"); const aml_expr* e = pe.body();
     const auto* outer = as_app(e);
     ASSERT_NE(outer, nullptr);
-    EXPECT_TRUE(is_token(outer->arg, "y"));
+    EXPECT_TRUE(is_symbol(outer->arg, "y"));
     const auto* inner = as_app(outer->func);
     ASSERT_NE(inner, nullptr);
-    EXPECT_TRUE(is_token(inner->func, "f"));
-    EXPECT_TRUE(is_token(inner->arg, "x"));
+    EXPECT_TRUE(is_symbol(inner->func, "f"));
+    EXPECT_TRUE(is_symbol(inner->arg, "x"));
 }
 
 TEST_F(AmlVisitorTest, VisitAppTernaryLeftAssoc) {
@@ -396,10 +396,10 @@ TEST_F(AmlVisitorTest, VisitAppTernaryLeftAssoc) {
     const auto* middle = as_app(outer->func);
     const auto* inner = as_app(middle->func);
     ASSERT_NE(inner, nullptr);
-    EXPECT_TRUE(is_token(inner->func, "f"));
-    EXPECT_TRUE(is_token(inner->arg, "x"));
-    EXPECT_TRUE(is_token(middle->arg, "y"));
-    EXPECT_TRUE(is_token(outer->arg, "z"));
+    EXPECT_TRUE(is_symbol(inner->func, "f"));
+    EXPECT_TRUE(is_symbol(inner->arg, "x"));
+    EXPECT_TRUE(is_symbol(middle->arg, "y"));
+    EXPECT_TRUE(is_symbol(outer->arg, "z"));
 }
 
 TEST_F(AmlVisitorTest, VisitAppGroupedFunction) {
@@ -407,11 +407,11 @@ TEST_F(AmlVisitorTest, VisitAppGroupedFunction) {
     const aml_expr* e = pe.body();
     const auto* outer = as_app(e);
     ASSERT_NE(outer, nullptr);
-    EXPECT_TRUE(is_token(outer->arg, "y"));
+    EXPECT_TRUE(is_symbol(outer->arg, "y"));
     const auto* inner = as_app(outer->func);
     ASSERT_NE(inner, nullptr);
-    EXPECT_TRUE(is_token(inner->func, "f"));
-    EXPECT_TRUE(is_token(inner->arg, "x"));
+    EXPECT_TRUE(is_symbol(inner->func, "f"));
+    EXPECT_TRUE(is_symbol(inner->arg, "x"));
 }
 
 TEST_F(AmlVisitorTest, VisitAppGroupedAbstractionFunction) {
@@ -422,7 +422,7 @@ TEST_F(AmlVisitorTest, VisitAppGroupedAbstractionFunction) {
     const auto* abs = as_abs(app->func);
     ASSERT_NE(abs, nullptr);
     EXPECT_EQ(abs->param, "x");
-    EXPECT_TRUE(is_token(app->arg, "y"));
+    EXPECT_TRUE(is_symbol(app->arg, "y"));
 }
 
 TEST_F(AmlVisitorTest, VisitAppAbstractionArg) {
@@ -430,11 +430,11 @@ TEST_F(AmlVisitorTest, VisitAppAbstractionArg) {
     const aml_expr* e = pe.body();
     const auto* app = as_app(e);
     ASSERT_NE(app, nullptr);
-    EXPECT_TRUE(is_token(app->func, "f"));
+    EXPECT_TRUE(is_symbol(app->func, "f"));
     const auto* arg_abs = as_abs(app->arg);
     ASSERT_NE(arg_abs, nullptr);
     EXPECT_EQ(arg_abs->param, "x");
-    EXPECT_TRUE(is_token(arg_abs->body, "y"));
+    EXPECT_TRUE(is_symbol(arg_abs->body, "y"));
 }
 
 TEST_F(AmlVisitorTest, VisitAppGroupedArg) {
@@ -442,11 +442,11 @@ TEST_F(AmlVisitorTest, VisitAppGroupedArg) {
     const aml_expr* e = pe.body();
     const auto* app = as_app(e);
     ASSERT_NE(app, nullptr);
-    EXPECT_TRUE(is_token(app->func, "f"));
+    EXPECT_TRUE(is_symbol(app->func, "f"));
     const auto* inner = as_app(app->arg);
     ASSERT_NE(inner, nullptr);
-    EXPECT_TRUE(is_token(inner->func, "g"));
-    EXPECT_TRUE(is_token(inner->arg, "x"));
+    EXPECT_TRUE(is_symbol(inner->func, "g"));
+    EXPECT_TRUE(is_symbol(inner->arg, "x"));
 }
 
 TEST_F(AmlVisitorTest, VisitAppDeeplyNestedArg) {
@@ -456,8 +456,8 @@ TEST_F(AmlVisitorTest, VisitAppDeeplyNestedArg) {
     const auto* g_app = as_app(app->arg);
     const auto* h_app = as_app(g_app->arg);
     ASSERT_NE(h_app, nullptr);
-    EXPECT_TRUE(is_token(h_app->func, "h"));
-    EXPECT_TRUE(is_token(h_app->arg, "x"));
+    EXPECT_TRUE(is_symbol(h_app->func, "h"));
+    EXPECT_TRUE(is_symbol(h_app->arg, "x"));
 }
 
 TEST_F(AmlVisitorTest, VisitAppTwoGroupedFunctions) {
@@ -468,13 +468,13 @@ TEST_F(AmlVisitorTest, VisitAppTwoGroupedFunctions) {
     const auto* g_app = as_app(outer->arg);
     ASSERT_NE(f_app, nullptr);
     ASSERT_NE(g_app, nullptr);
-    EXPECT_TRUE(is_token(f_app->func, "f"));
-    EXPECT_TRUE(is_token(g_app->func, "g"));
+    EXPECT_TRUE(is_symbol(f_app->func, "f"));
+    EXPECT_TRUE(is_symbol(g_app->func, "g"));
 }
 
 TEST_F(AmlVisitorTest, VisitGroupedExprPassthrough) {
     auto pe = parse_expr("(x)");
-    EXPECT_TRUE(is_token(pe.body(), "x"));
+    EXPECT_TRUE(is_symbol(pe.body(), "x"));
 }
 
 // ---------------------------------------------------------------------------
@@ -640,16 +640,16 @@ TEST_F(AmlVisitorTest, VisitListOneElement) {
     auto pe = parse_expr("[a]"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     ASSERT_EQ(lst->elems.size(), 1u);
-    EXPECT_TRUE(is_token(lst->elems.at(0), "a"));
+    EXPECT_TRUE(is_symbol(lst->elems.at(0), "a"));
 }
 
 TEST_F(AmlVisitorTest, VisitListThreeElements) {
     auto pe = parse_expr("[a, b, c]"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     ASSERT_EQ(lst->elems.size(), 3u);
-    EXPECT_TRUE(is_token(lst->elems.at(0), "a"));
-    EXPECT_TRUE(is_token(lst->elems.at(1), "b"));
-    EXPECT_TRUE(is_token(lst->elems.at(2), "c"));
+    EXPECT_TRUE(is_symbol(lst->elems.at(0), "a"));
+    EXPECT_TRUE(is_symbol(lst->elems.at(1), "b"));
+    EXPECT_TRUE(is_symbol(lst->elems.at(2), "c"));
 }
 
 TEST_F(AmlVisitorTest, VisitListNested) {
@@ -658,8 +658,8 @@ TEST_F(AmlVisitorTest, VisitListNested) {
     ASSERT_EQ(lst->elems.size(), 2u);
     const auto* inner = as_list(lst->elems.at(0));
     ASSERT_NE(inner, nullptr);
-    EXPECT_TRUE(is_token(inner->elems.at(0), "a"));
-    EXPECT_TRUE(is_token(lst->elems.at(1), "c"));
+    EXPECT_TRUE(is_symbol(inner->elems.at(0), "a"));
+    EXPECT_TRUE(is_symbol(lst->elems.at(1), "c"));
 }
 
 TEST_F(AmlVisitorTest, VisitListWithApplications) {
@@ -687,7 +687,7 @@ TEST_F(AmlVisitorTest, VisitListMixedElements) {
     auto pe = parse_expr("[x, 42, \"hi\", 'a']"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     ASSERT_EQ(lst->elems.size(), 4u);
-    EXPECT_NE(as_token(lst->elems.at(0)), nullptr);
+    EXPECT_NE(as_symbol(lst->elems.at(0)), nullptr);
     EXPECT_NE(as_nat(lst->elems.at(1)), nullptr);
     EXPECT_NE(as_string(lst->elems.at(2)), nullptr);
     EXPECT_NE(as_character(lst->elems.at(3)), nullptr);

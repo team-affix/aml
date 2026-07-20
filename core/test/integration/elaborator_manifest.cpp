@@ -57,7 +57,7 @@ struct ElaboratorManifestIntegrationTest : public ::testing::Test {
 
 TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionSingleIdentity) {
     module_file mod;
-    mod.items.push_back(global{definition{"f", aml.make_abs("x", aml.make_token("x"))}});
+    mod.items.push_back(global{definition{"f", aml.make_abs("x", aml.make_symbol("x"))}});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
     elaborator_manifest em{mods, stmts, goals};
@@ -71,7 +71,7 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionSingleIdentity) {
 
 TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionBodyCannotSeeOwnName) {
     module_file mod;
-    mod.items.push_back(global{definition{"f", aml.make_abs("x", aml.make_token("f"))}});
+    mod.items.push_back(global{definition{"f", aml.make_abs("x", aml.make_symbol("f"))}});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
     elaborator_manifest em{mods, stmts, goals};
@@ -80,8 +80,8 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionBodyCannotSeeOwnName)
 
 TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionSecondSeesFirst) {
     module_file mod;
-    mod.items.push_back(global{definition{"f", aml.make_abs("x", aml.make_token("x"))}});
-    mod.items.push_back(global{definition{"g", aml.make_abs("y", aml.make_token("f"))}});
+    mod.items.push_back(global{definition{"f", aml.make_abs("x", aml.make_symbol("x"))}});
+    mod.items.push_back(global{definition{"g", aml.make_abs("y", aml.make_symbol("f"))}});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
     elaborator_manifest em{mods, stmts, goals};
@@ -112,8 +112,8 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessDeclarationGroupBooleans) {
 }
 
 TEST_F(ElaboratorManifestIntegrationTest, ProcessStatementsFillTrainingData) {
-    const aml_expr* lhs = aml.make_token("true");
-    const aml_expr* rhs = aml.make_token("false");
+    const aml_expr* lhs = aml.make_symbol("true");
+    const aml_expr* rhs = aml.make_symbol("false");
     statement_file sf;
     sf.statements.push_back({lhs, rhs});
 

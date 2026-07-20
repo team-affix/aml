@@ -11,7 +11,7 @@
 struct aml_expr_pool {
     const aml_expr* make_app(const aml_expr* func, const aml_expr* arg);
     const aml_expr* make_abs(std::string param, const aml_expr* body);
-    const aml_expr* make_token(std::string name);
+    const aml_expr* make_symbol(std::string name);
     const aml_expr* make_nat(uint64_t value, nat_format format);
     const aml_expr* make_integer(int64_t value, nat_format format);
     const aml_expr* make_character(char value);

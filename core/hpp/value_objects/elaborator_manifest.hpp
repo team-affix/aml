@@ -26,7 +26,7 @@
 struct elaborator_manifest {
     using transpiler_t   = transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool,
                                       scope, scope, scope>;
-    using token_transpiler_t       = typename transpiler_t::token_transpiler_t;
+    using symbol_transpiler_t       = typename transpiler_t::symbol_transpiler_t;
     using abs_transpiler_t         = typename transpiler_t::abs_transpiler_t;
     using app_transpiler_t         = typename transpiler_t::app_transpiler_t;
     using binary_nat_transpiler_t  = typename transpiler_t::binary_nat_transpiler_t;
@@ -65,7 +65,7 @@ struct elaborator_manifest {
     expr_pool             chc;
 
     transpiler_t              tx;
-    token_transpiler_t        token_;
+    symbol_transpiler_t        symbol_;
     binary_nat_transpiler_t   binary_nat_;
     church_nat_transpiler_t   church_nat_;
     integer_transpiler_t      integer_;

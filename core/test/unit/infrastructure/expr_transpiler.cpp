@@ -35,7 +35,7 @@ struct TranspilerTest : public ::testing::Test {
                                                testing::NiceMock<MockMakeLcAbs>,
                                                testing::NiceMock<MockMakeLcApp>,
                                                scope, scope, scope>;
-    using token_transpiler_t       = typename transpiler_t::token_transpiler_t;
+    using symbol_transpiler_t       = typename transpiler_t::symbol_transpiler_t;
     using abs_transpiler_t         = typename transpiler_t::abs_transpiler_t;
     using app_transpiler_t         = typename transpiler_t::app_transpiler_t;
     using binary_nat_transpiler_t  = typename transpiler_t::binary_nat_transpiler_t;
@@ -55,7 +55,7 @@ struct TranspilerTest : public ::testing::Test {
 
     // tx declared first: receives forward references to sub-components below.
     transpiler_t             tx;
-    token_transpiler_t       token_;
+    symbol_transpiler_t       symbol_;
     abs_transpiler_t         abs_;
     app_transpiler_t         app_;
     binary_nat_transpiler_t  binary_nat_;
@@ -67,12 +67,12 @@ struct TranspilerTest : public ::testing::Test {
     church_list_transpiler_t church_list_;
 
     TranspilerTest()
-        : tx(token_, abs_, app_,
+        : tx(symbol_, abs_, app_,
              binary_nat_, church_nat_,
              integer_, character_,
              string_,
              scott_list_, church_list_),
-          token_(mock_var, sc),
+          symbol_(mock_var, sc),
           abs_(tx, mock_abs, sc, sc),
           app_(tx, mock_app),
           binary_nat_(mock_var, mock_app, sc),
@@ -130,20 +130,20 @@ TEST_F(TranspilerTest, BuiltinIndicesAlignWithScope) {
 // ---------------------------------------------------------------------------
 
 TEST_F(TranspilerTest, TranspileIdentity) {
-    const aml_expr* e = aml_pool.make_abs("x", aml_pool.make_token("x"));
+    const aml_expr* e = aml_pool.make_abs("x", aml_pool.make_symbol("x"));
     EXPECT_EQ(tx_expr(e, kBuiltinNames), lc_abs(lc_var(0)));
 }
 
 TEST_F(TranspilerTest, TranspileCurriedAbstraction) {
     const aml_expr* e = aml_pool.make_abs("x",
-        aml_pool.make_abs("y", aml_pool.make_token("x")));
+        aml_pool.make_abs("y", aml_pool.make_symbol("x")));
     EXPECT_EQ(tx_expr(e, kBuiltinNames), lc_abs(lc_abs(lc_var(1))));
 }
 
 TEST_F(TranspilerTest, TranspileApplication) {
     const aml_expr* e = aml_pool.make_abs("f",
         aml_pool.make_abs("x",
-            aml_pool.make_app(aml_pool.make_token("f"), aml_pool.make_token("x"))));
+            aml_pool.make_app(aml_pool.make_symbol("f"), aml_pool.make_symbol("x"))));
     const lc_expr* expected = lc_abs(lc_abs(lc_app(lc_var(1), lc_var(0))));
     EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
@@ -153,8 +153,8 @@ TEST_F(TranspilerTest, TranspileLeftFoldedApplication) {
         aml_pool.make_abs("x",
             aml_pool.make_abs("y",
                 aml_pool.make_app(
-                    aml_pool.make_app(aml_pool.make_token("f"), aml_pool.make_token("x")),
-                    aml_pool.make_token("y")))));
+                    aml_pool.make_app(aml_pool.make_symbol("f"), aml_pool.make_symbol("x")),
+                    aml_pool.make_symbol("y")))));
     const lc_expr* expected = lc_abs(lc_abs(lc_abs(
         lc_app(lc_app(lc_var(2), lc_var(1)), lc_var(0)))));
     EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
@@ -162,20 +162,20 @@ TEST_F(TranspilerTest, TranspileLeftFoldedApplication) {
 
 TEST_F(TranspilerTest, TranspileLocalShadowing) {
     const aml_expr* e = aml_pool.make_abs("x",
-        aml_pool.make_app(aml_pool.make_token("x"),
-            aml_pool.make_abs("x", aml_pool.make_token("x"))));
+        aml_pool.make_app(aml_pool.make_symbol("x"),
+            aml_pool.make_abs("x", aml_pool.make_symbol("x"))));
     const lc_expr* expected = lc_abs(lc_app(lc_var(0), lc_abs(lc_var(0))));
     EXPECT_EQ(tx_expr(e, kBuiltinNames), expected);
 }
 
 TEST_F(TranspilerTest, GlobalRefUnderNestedLambda) {
-    const aml_expr* e = aml_pool.make_abs("x", aml_pool.make_token("a"));
+    const aml_expr* e = aml_pool.make_abs("x", aml_pool.make_symbol("a"));
     const lc_expr* got = tx_expr(e, {"a", "b"});
     EXPECT_EQ(got, lc_abs(lc_var(2)));
 }
 
 TEST_F(TranspilerTest, UnboundNameThrows) {
-    const aml_expr* e = aml_pool.make_token("missing");
+    const aml_expr* e = aml_pool.make_symbol("missing");
     EXPECT_THROW(tx_expr(e, kBuiltinNames), std::out_of_range);
 }
 
@@ -281,8 +281,8 @@ TEST_F(TranspilerTest, MissingScopeEntryThrowsOnScottList) {
 TEST_F(TranspilerTest, NotFunctionUsesGlobalIndices) {
     const aml_expr* body = aml_pool.make_abs("b",
         aml_pool.make_app(
-            aml_pool.make_app(aml_pool.make_token("b"), aml_pool.make_token("false")),
-            aml_pool.make_token("true")));
+            aml_pool.make_app(aml_pool.make_symbol("b"), aml_pool.make_symbol("false")),
+            aml_pool.make_symbol("true")));
     const lc_expr* got = tx_expr(body, kBuiltinNames);
     const lc_expr* expected = lc_abs(lc_app(
         lc_app(lc_var(0), lc_var(5)), lc_var(6)));
@@ -294,8 +294,8 @@ TEST_F(TranspilerTest, IfThenElseFunction) {
         aml_pool.make_abs("a",
             aml_pool.make_abs("b",
                 aml_pool.make_app(
-                    aml_pool.make_app(aml_pool.make_token("cond"), aml_pool.make_token("a")),
-                    aml_pool.make_token("b")))));
+                    aml_pool.make_app(aml_pool.make_symbol("cond"), aml_pool.make_symbol("a")),
+                    aml_pool.make_symbol("b")))));
     const lc_expr* expected = lc_abs(lc_abs(lc_abs(
         lc_app(lc_app(lc_var(2), lc_var(1)), lc_var(0)))));
     EXPECT_EQ(tx_expr(body, kBuiltinNames), expected);
@@ -304,9 +304,9 @@ TEST_F(TranspilerTest, IfThenElseFunction) {
 TEST_F(TranspilerTest, MutualDefsSameScope) {
     const std::vector<std::string> names = {"f", "g"};
     const aml_expr* f_body = aml_pool.make_abs("x",
-        aml_pool.make_app(aml_pool.make_token("g"), aml_pool.make_token("x")));
+        aml_pool.make_app(aml_pool.make_symbol("g"), aml_pool.make_symbol("x")));
     const aml_expr* g_body = aml_pool.make_abs("x",
-        aml_pool.make_app(aml_pool.make_token("f"), aml_pool.make_token("x")));
+        aml_pool.make_app(aml_pool.make_symbol("f"), aml_pool.make_symbol("x")));
     const lc_expr* f_got = tx_expr(f_body, names);
     const lc_expr* g_got = tx_expr(g_body, names);
     EXPECT_EQ(f_got, lc_abs(lc_app(lc_var(1), lc_var(0))));
@@ -321,8 +321,8 @@ TEST_F(TranspilerTest, ComposeIdIdNoDoubleInlining) {
         return v;
     }();
     const aml_expr* main = aml_pool.make_app(
-        aml_pool.make_app(aml_pool.make_token("compose"), aml_pool.make_token("id")),
-        aml_pool.make_token("id"));
+        aml_pool.make_app(aml_pool.make_symbol("compose"), aml_pool.make_symbol("id")),
+        aml_pool.make_symbol("id"));
     const lc_expr* got = tx_expr(main, names);
     const lc_expr* expected = lc_app(
         lc_app(lc_var(1), lc_var(0)), lc_var(0));
@@ -330,7 +330,7 @@ TEST_F(TranspilerTest, ComposeIdIdNoDoubleInlining) {
 }
 
 TEST_F(TranspilerTest, TranspileIdentityFunctionFragment) {
-    const aml_expr* id = aml_pool.make_abs("x", aml_pool.make_token("x"));
+    const aml_expr* id = aml_pool.make_abs("x", aml_pool.make_symbol("x"));
     EXPECT_EQ(tx_expr(id, {"id"}), lc_abs(lc_var(0)));
 }
 
@@ -342,7 +342,7 @@ TEST_F(TranspilerTest, TranspileTriplyCurriedOutermostVar) {
     // λx.λy.λz.x — x is under 3 binders, index = 2
     const aml_expr* e = aml_pool.make_abs("x",
         aml_pool.make_abs("y",
-            aml_pool.make_abs("z", aml_pool.make_token("x"))));
+            aml_pool.make_abs("z", aml_pool.make_symbol("x"))));
     EXPECT_EQ(tx_expr(e, {}), lc_abs(lc_abs(lc_abs(lc_var(2)))));
 }
 
@@ -350,7 +350,7 @@ TEST_F(TranspilerTest, TranspileTriplyCurriedMiddleVar) {
     // λx.λy.λz.y — y is under 2 binders below it, index = 1
     const aml_expr* e = aml_pool.make_abs("x",
         aml_pool.make_abs("y",
-            aml_pool.make_abs("z", aml_pool.make_token("y"))));
+            aml_pool.make_abs("z", aml_pool.make_symbol("y"))));
     EXPECT_EQ(tx_expr(e, {}), lc_abs(lc_abs(lc_abs(lc_var(1)))));
 }
 
@@ -358,6 +358,6 @@ TEST_F(TranspilerTest, TranspileTriplyCurriedInnermostVar) {
     // λx.λy.λz.z — z is the most recently bound, index = 0
     const aml_expr* e = aml_pool.make_abs("x",
         aml_pool.make_abs("y",
-            aml_pool.make_abs("z", aml_pool.make_token("z"))));
+            aml_pool.make_abs("z", aml_pool.make_symbol("z"))));
     EXPECT_EQ(tx_expr(e, {}), lc_abs(lc_abs(lc_abs(lc_var(0)))));
 }

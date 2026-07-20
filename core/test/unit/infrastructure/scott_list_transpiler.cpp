@@ -57,7 +57,7 @@ TEST_F(ScottListTranspilerTest, EmptyListReturnsNil) {
 
 TEST_F(ScottListTranspilerTest, SingleElementIsConsElemNil) {
     using testing::Return;
-    const aml_expr* elem    = aml.make_token("a");
+    const aml_expr* elem    = aml.make_symbol("a");
     const lc_expr*  elem_lc = lc.make_var(10);
     ON_CALL(mock_tx, transpile(elem)).WillByDefault(Return(elem_lc));
 
@@ -67,8 +67,8 @@ TEST_F(ScottListTranspilerTest, SingleElementIsConsElemNil) {
 
 TEST_F(ScottListTranspilerTest, TwoElementsInOrder) {
     using testing::Return;
-    const aml_expr* e0    = aml.make_token("a");
-    const aml_expr* e1    = aml.make_token("b");
+    const aml_expr* e0    = aml.make_symbol("a");
+    const aml_expr* e1    = aml.make_symbol("b");
     const lc_expr*  lc0   = lc.make_var(10);
     const lc_expr*  lc1   = lc.make_var(11);
     ON_CALL(mock_tx, transpile(e0)).WillByDefault(Return(lc0));
@@ -80,9 +80,9 @@ TEST_F(ScottListTranspilerTest, TwoElementsInOrder) {
 }
 
 TEST_F(ScottListTranspilerTest, EachElementTranspiledThroughTranspileExpr) {
-    const aml_expr* e0 = aml.make_token("x");
-    const aml_expr* e1 = aml.make_token("y");
-    const aml_expr* e2 = aml.make_token("z");
+    const aml_expr* e0 = aml.make_symbol("x");
+    const aml_expr* e1 = aml.make_symbol("y");
+    const aml_expr* e2 = aml.make_symbol("z");
 
     EXPECT_CALL(mock_tx, transpile(e0)).Times(1);
     EXPECT_CALL(mock_tx, transpile(e1)).Times(1);
@@ -92,9 +92,9 @@ TEST_F(ScottListTranspilerTest, EachElementTranspiledThroughTranspileExpr) {
 
 TEST_F(ScottListTranspilerTest, ThreeElementsInOrder) {
     using testing::Return;
-    const aml_expr* e0  = aml.make_token("a");
-    const aml_expr* e1  = aml.make_token("b");
-    const aml_expr* e2  = aml.make_token("c");
+    const aml_expr* e0  = aml.make_symbol("a");
+    const aml_expr* e1  = aml.make_symbol("b");
+    const aml_expr* e2  = aml.make_symbol("c");
     const lc_expr*  lc0 = lc.make_var(10);
     const lc_expr*  lc1 = lc.make_var(11);
     const lc_expr*  lc2 = lc.make_var(12);

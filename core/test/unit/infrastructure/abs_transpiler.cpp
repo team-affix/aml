@@ -50,7 +50,7 @@ TEST_F(AbsTranspilerTest, PushesParamBeforeTranspile) {
     using testing::InSequence;
     using testing::_;
 
-    const aml_expr* body_ptr = aml.make_token("x");
+    const aml_expr* body_ptr = aml.make_symbol("x");
     const lc_expr*  body_lc  = lc.make_var(0);
 
     ON_CALL(mock_tx,  transpile(_)).WillByDefault(testing::Return(body_lc));
@@ -73,7 +73,7 @@ TEST_F(AbsTranspilerTest, ReturnsResultOfMakeAbs) {
     using testing::Return;
     using testing::_;
 
-    const aml_expr* body_ptr = aml.make_token("y");
+    const aml_expr* body_ptr = aml.make_symbol("y");
     const lc_expr*  body_lc  = lc.make_var(0);
     const lc_expr*  abs_lc   = lc.make_abs(body_lc);
 
@@ -88,7 +88,7 @@ TEST_F(AbsTranspilerTest, ReturnsResultOfMakeAbs) {
 TEST_F(AbsTranspilerTest, PopCalledEvenWhenBodyIsSimple) {
     using testing::_;
     EXPECT_CALL(mock_pop, pop()).Times(1);
-    at.transpile_abs(aml_expr::abs{"z", aml.make_token("z")});
+    at.transpile_abs(aml_expr::abs{"z", aml.make_symbol("z")});
 }
 
 // ---------------------------------------------------------------------------
@@ -103,7 +103,7 @@ TEST_F(AbsTranspilerTest, NestedAbsHasProperlySequencedPushPop) {
     using testing::InSequence;
     using testing::_;
 
-    const aml_expr* inner_leaf = aml.make_token("inner_leaf");
+    const aml_expr* inner_leaf = aml.make_symbol("inner_leaf");
     const aml_expr* outer_body = aml.make_abs("y", inner_leaf);
 
     // Simulate the real dispatcher: when transpile sees an abs node, it
@@ -133,7 +133,7 @@ TEST_F(AbsTranspilerTest, NestedAbsHasProperlySequencedPushPop) {
 TEST_F(AbsTranspilerTest, NestedAbsReturnsCorrectStructure) {
     using testing::_;
 
-    const aml_expr* inner_leaf = aml.make_token("inner_leaf");
+    const aml_expr* inner_leaf = aml.make_symbol("inner_leaf");
     const aml_expr* outer_body = aml.make_abs("y", inner_leaf);
 
     ON_CALL(mock_tx, transpile(outer_body))

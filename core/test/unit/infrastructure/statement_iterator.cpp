@@ -21,8 +21,8 @@ TEST_F(StatementIteratorTest, EmptyFilesYieldsNullopt) {
 
 TEST_F(StatementIteratorTest, SingleFileMultipleStatements) {
     statement_file file;
-    file.statements.push_back({aml.make_token("a"), aml.make_token("b")});
-    file.statements.push_back({aml.make_token("c"), aml.make_token("d")});
+    file.statements.push_back({aml.make_symbol("a"), aml.make_symbol("b")});
+    file.statements.push_back({aml.make_symbol("c"), aml.make_symbol("d")});
 
     std::vector<statement_file> files{file};
     statement_iterator it{files};
@@ -40,10 +40,10 @@ TEST_F(StatementIteratorTest, SingleFileMultipleStatements) {
 
 TEST_F(StatementIteratorTest, SkipsEmptyFileBetweenStatements) {
     statement_file first;
-    first.statements.push_back({aml.make_token("a"), aml.make_token("b")});
+    first.statements.push_back({aml.make_symbol("a"), aml.make_symbol("b")});
     statement_file empty;
     statement_file third;
-    third.statements.push_back({aml.make_token("c"), aml.make_token("d")});
+    third.statements.push_back({aml.make_symbol("c"), aml.make_symbol("d")});
 
     std::vector<statement_file> files{first, empty, third};
     statement_iterator it{files};

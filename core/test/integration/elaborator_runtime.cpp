@@ -90,9 +90,9 @@ TEST_F(ElaboratorRuntimeIntegrationTest, SmokeEqThenNormalizeFunctorIds) {
     initial_goal_exprs goals;
     module_file mod;
     mod.items.push_back(global{
-        definition{"f", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"f", aml.make_abs("x", aml.make_symbol("x"))}});
     statement_file sf;
-    sf.statements.push_back({aml.make_token("f"), aml.make_token("f")});
+    sf.statements.push_back({aml.make_symbol("f"), aml.make_symbol("f")});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
 
@@ -126,7 +126,7 @@ TEST_F(ElaboratorRuntimeIntegrationTest, ModulesOnlyYieldsEqOnly) {
     initial_goal_exprs goals;
     module_file mod;
     mod.items.push_back(global{
-        definition{"f", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"f", aml.make_abs("x", aml.make_symbol("x"))}});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
     elaborator_runtime rt{mods, stmts, goals};
@@ -142,7 +142,7 @@ TEST_F(ElaboratorRuntimeIntegrationTest, ModulesOnlyYieldsEqOnly) {
 TEST_F(ElaboratorRuntimeIntegrationTest, UnboundStatementThrowsGoalsEmpty) {
     initial_goal_exprs goals;
     statement_file sf;
-    sf.statements.push_back({aml.make_token("missing"), aml.make_token("missing")});
+    sf.statements.push_back({aml.make_symbol("missing"), aml.make_symbol("missing")});
     std::vector<module_file> mods;
     std::vector<statement_file> stmts{sf};
     elaborator_runtime rt{mods, stmts, goals};
@@ -154,7 +154,7 @@ TEST_F(ElaboratorRuntimeIntegrationTest, SelfReferentialDefinitionThrowsGoalsEmp
     initial_goal_exprs goals;
     module_file mod;
     mod.items.push_back(global{
-        definition{"f", aml.make_abs("x", aml.make_token("f"))}});
+        definition{"f", aml.make_abs("x", aml.make_symbol("f"))}});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
     elaborator_runtime rt{mods, stmts, goals};
@@ -166,12 +166,12 @@ TEST_F(ElaboratorRuntimeIntegrationTest, MultiStatementNormalizeOrder) {
     initial_goal_exprs goals;
     module_file mod;
     mod.items.push_back(global{
-        definition{"f", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"f", aml.make_abs("x", aml.make_symbol("x"))}});
     statement_file sf;
-    const aml_expr* id = aml.make_abs("x", aml.make_token("x"));
-    sf.statements.push_back({aml.make_token("f"), aml.make_token("f")});
-    sf.statements.push_back({aml.make_token("f"), id});
-    sf.statements.push_back({id, aml.make_token("f")});
+    const aml_expr* id = aml.make_abs("x", aml.make_symbol("x"));
+    sf.statements.push_back({aml.make_symbol("f"), aml.make_symbol("f")});
+    sf.statements.push_back({aml.make_symbol("f"), id});
+    sf.statements.push_back({id, aml.make_symbol("f")});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
 
@@ -193,12 +193,12 @@ TEST_F(ElaboratorRuntimeIntegrationTest, TwoStatementFilesConcatenatedInOrder) {
     initial_goal_exprs goals;
     module_file mod;
     mod.items.push_back(global{
-        definition{"f", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"f", aml.make_abs("x", aml.make_symbol("x"))}});
     statement_file sf0;
-    sf0.statements.push_back({aml.make_token("f"), aml.make_token("f")});
+    sf0.statements.push_back({aml.make_symbol("f"), aml.make_symbol("f")});
     statement_file sf1;
-    const aml_expr* id = aml.make_abs("x", aml.make_token("x"));
-    sf1.statements.push_back({aml.make_token("f"), id});
+    const aml_expr* id = aml.make_abs("x", aml.make_symbol("x"));
+    sf1.statements.push_back({aml.make_symbol("f"), id});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf0, sf1};
 
@@ -215,9 +215,9 @@ TEST_F(ElaboratorRuntimeIntegrationTest, IdentityProgramStructuralShape) {
     initial_goal_exprs goals;
     module_file mod;
     mod.items.push_back(global{
-        definition{"f", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"f", aml.make_abs("x", aml.make_symbol("x"))}});
     statement_file sf;
-    sf.statements.push_back({aml.make_token("f"), aml.make_token("f")});
+    sf.statements.push_back({aml.make_symbol("f"), aml.make_symbol("f")});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
 
@@ -244,11 +244,11 @@ TEST_F(ElaboratorRuntimeIntegrationTest, ThreeGlobalsLetChainDepth) {
     initial_goal_exprs goals;
     module_file mod;
     mod.items.push_back(global{
-        definition{"a", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"a", aml.make_abs("x", aml.make_symbol("x"))}});
     mod.items.push_back(global{
-        definition{"b", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"b", aml.make_abs("x", aml.make_symbol("x"))}});
     mod.items.push_back(global{
-        definition{"c", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"c", aml.make_abs("x", aml.make_symbol("x"))}});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
 
@@ -266,7 +266,7 @@ TEST_F(ElaboratorRuntimeIntegrationTest, BooleanNormalizeSidesDiffer) {
     module_file mod;
     mod.items.push_back(global{make_group({{"true", 0u}, {"false", 0u}})});
     statement_file sf;
-    sf.statements.push_back({aml.make_token("true"), aml.make_token("false")});
+    sf.statements.push_back({aml.make_symbol("true"), aml.make_symbol("false")});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
 
@@ -281,9 +281,9 @@ TEST_F(ElaboratorRuntimeIntegrationTest, BooleanNormalizeSidesDiffer) {
 TEST_F(ElaboratorRuntimeIntegrationTest, TwoRuntimesIndependentStructurallyEqual) {
     module_file mod;
     mod.items.push_back(global{
-        definition{"f", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"f", aml.make_abs("x", aml.make_symbol("x"))}});
     statement_file sf;
-    sf.statements.push_back({aml.make_token("f"), aml.make_token("f")});
+    sf.statements.push_back({aml.make_symbol("f"), aml.make_symbol("f")});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
 
@@ -304,7 +304,7 @@ TEST_F(ElaboratorRuntimeIntegrationTest, TwoRuntimesIndependentStructurallyEqual
 TEST_F(ElaboratorRuntimeIntegrationTest, SharedGoalsAppendAcrossRuntimes) {
     module_file mod;
     mod.items.push_back(global{
-        definition{"f", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"f", aml.make_abs("x", aml.make_symbol("x"))}});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts;
 
@@ -341,19 +341,19 @@ TEST_F(ElaboratorRuntimeIntegrationTest, ZeroGlobalsChurchNatStatement) {
 TEST_F(ElaboratorRuntimeIntegrationTest, YCombinatorWithTrainingData) {
     // id ; Y = λf. (λx. f (x x)) (λx. f (x x)) ; Y id ≈ id ; Y ≈ Y
     const aml_expr* omega = aml.make_abs("x",
-        aml.make_app(aml.make_token("f"),
-            aml.make_app(aml.make_token("x"), aml.make_token("x"))));
+        aml.make_app(aml.make_symbol("f"),
+            aml.make_app(aml.make_symbol("x"), aml.make_symbol("x"))));
     const aml_expr* Y = aml.make_abs("f", aml.make_app(omega, omega));
 
     module_file mod;
     mod.items.push_back(global{
-        definition{"id", aml.make_abs("x", aml.make_token("x"))}});
+        definition{"id", aml.make_abs("x", aml.make_symbol("x"))}});
     mod.items.push_back(global{definition{"Y", Y}});
     statement_file sf;
     sf.statements.push_back({
-        aml.make_app(aml.make_token("Y"), aml.make_token("id")),
-        aml.make_token("id")});
-    sf.statements.push_back({aml.make_token("Y"), aml.make_token("Y")});
+        aml.make_app(aml.make_symbol("Y"), aml.make_symbol("id")),
+        aml.make_symbol("id")});
+    sf.statements.push_back({aml.make_symbol("Y"), aml.make_symbol("Y")});
     std::vector<module_file> mods{mod};
     std::vector<statement_file> stmts{sf};
 

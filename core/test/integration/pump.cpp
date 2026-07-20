@@ -45,7 +45,7 @@ struct PumpIntegrationTest : public ::testing::Test {
 TEST_F(PumpIntegrationTest, GlobalPumpDrainsIteratorAcrossFiles) {
     using testing::InSequence;
 
-    const aml_expr* x = aml.make_token("x");
+    const aml_expr* x = aml.make_symbol("x");
     global def_item{definition{"a", x}};
     global decl_item{make_group({{"true", 0u}})};
 
@@ -72,10 +72,10 @@ TEST_F(PumpIntegrationTest, GlobalPumpDrainsIteratorAcrossFiles) {
 TEST_F(PumpIntegrationTest, StatementPumpDrainsIteratorAcrossFiles) {
     using testing::InSequence;
 
-    const aml_expr* a = aml.make_token("a");
-    const aml_expr* b = aml.make_token("b");
-    const aml_expr* c = aml.make_token("c");
-    const aml_expr* d = aml.make_token("d");
+    const aml_expr* a = aml.make_symbol("a");
+    const aml_expr* b = aml.make_symbol("b");
+    const aml_expr* c = aml.make_symbol("c");
+    const aml_expr* d = aml.make_symbol("d");
 
     statement_file first;
     first.statements.push_back({a, b});

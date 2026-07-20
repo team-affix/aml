@@ -8,8 +8,8 @@ const aml_expr* aml_expr_pool::make_abs(std::string param, const aml_expr* body)
     return intern(aml_expr{aml_expr::abs{std::move(param), body}});
 }
 
-const aml_expr* aml_expr_pool::make_token(std::string name) {
-    return intern(aml_expr{aml_expr::token{std::move(name)}});
+const aml_expr* aml_expr_pool::make_symbol(std::string name) {
+    return intern(aml_expr{aml_expr::symbol{std::move(name)}});
 }
 
 const aml_expr* aml_expr_pool::make_nat(uint64_t value, nat_format format) {

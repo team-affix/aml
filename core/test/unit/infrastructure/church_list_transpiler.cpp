@@ -55,7 +55,7 @@ TEST_F(ChurchListTranspilerTest, EmptyListIsLambdaFLambdaXX) {
 
 TEST_F(ChurchListTranspilerTest, SingleElementList) {
     using testing::Return;
-    const aml_expr* elem    = aml.make_token("a");
+    const aml_expr* elem    = aml.make_symbol("a");
     const lc_expr*  elem_lc = lc.make_var(5);
     ON_CALL(mock_tx, transpile(elem)).WillByDefault(Return(elem_lc));
 
@@ -66,8 +66,8 @@ TEST_F(ChurchListTranspilerTest, SingleElementList) {
 
 TEST_F(ChurchListTranspilerTest, TwoElementsProduceNestedFold) {
     using testing::Return;
-    const aml_expr* e0    = aml.make_token("a");
-    const aml_expr* e1    = aml.make_token("b");
+    const aml_expr* e0    = aml.make_symbol("a");
+    const aml_expr* e1    = aml.make_symbol("b");
     const lc_expr*  lc0   = lc.make_var(5);
     const lc_expr*  lc1   = lc.make_var(6);
     ON_CALL(mock_tx, transpile(e0)).WillByDefault(Return(lc0));
@@ -88,8 +88,8 @@ TEST_F(ChurchListTranspilerTest, AlwaysWrapsWithTwoAbstractions) {
 }
 
 TEST_F(ChurchListTranspilerTest, EachElementTranspiledExactlyOnce) {
-    const aml_expr* e0 = aml.make_token("x");
-    const aml_expr* e1 = aml.make_token("y");
+    const aml_expr* e0 = aml.make_symbol("x");
+    const aml_expr* e1 = aml.make_symbol("y");
 
     EXPECT_CALL(mock_tx, transpile(e0)).Times(1);
     EXPECT_CALL(mock_tx, transpile(e1)).Times(1);
@@ -98,9 +98,9 @@ TEST_F(ChurchListTranspilerTest, EachElementTranspiledExactlyOnce) {
 
 TEST_F(ChurchListTranspilerTest, ThreeElementsProduceCorrectFold) {
     using testing::Return;
-    const aml_expr* e0  = aml.make_token("a");
-    const aml_expr* e1  = aml.make_token("b");
-    const aml_expr* e2  = aml.make_token("c");
+    const aml_expr* e0  = aml.make_symbol("a");
+    const aml_expr* e1  = aml.make_symbol("b");
+    const aml_expr* e2  = aml.make_symbol("c");
     const lc_expr*  lc0 = lc.make_var(5);
     const lc_expr*  lc1 = lc.make_var(6);
     const lc_expr*  lc2 = lc.make_var(7);

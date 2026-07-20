@@ -8,19 +8,19 @@ struct AmlExprPoolTest : public ::testing::Test {
 };
 
 // ---------------------------------------------------------------------------
-// make_token
+// make_symbol
 // ---------------------------------------------------------------------------
 
 TEST_F(AmlExprPoolTest, TokenInternedTwiceReturnsSamePointer) {
-    EXPECT_EQ(pool.make_token("foo"), pool.make_token("foo"));
+    EXPECT_EQ(pool.make_symbol("foo"), pool.make_symbol("foo"));
 }
 
 TEST_F(AmlExprPoolTest, DifferentTokenNamesReturnDifferentPointers) {
-    EXPECT_NE(pool.make_token("foo"), pool.make_token("bar"));
+    EXPECT_NE(pool.make_symbol("foo"), pool.make_symbol("bar"));
 }
 
 TEST_F(AmlExprPoolTest, EmptyTokenName) {
-    EXPECT_EQ(pool.make_token(""), pool.make_token(""));
+    EXPECT_EQ(pool.make_symbol(""), pool.make_symbol(""));
 }
 
 // ---------------------------------------------------------------------------
@@ -104,18 +104,18 @@ TEST_F(AmlExprPoolTest, EmptyStringDiffersFromNonempty) {
 // ---------------------------------------------------------------------------
 
 TEST_F(AmlExprPoolTest, AbsInternedTwiceReturnsSamePointer) {
-    const aml_expr* body = pool.make_token("x");
+    const aml_expr* body = pool.make_symbol("x");
     EXPECT_EQ(pool.make_abs("x", body), pool.make_abs("x", body));
 }
 
 TEST_F(AmlExprPoolTest, AbsDifferentParamReturnsDifferentPointers) {
-    const aml_expr* body = pool.make_token("x");
+    const aml_expr* body = pool.make_symbol("x");
     EXPECT_NE(pool.make_abs("x", body), pool.make_abs("y", body));
 }
 
 TEST_F(AmlExprPoolTest, AbsDifferentBodyReturnsDifferentPointers) {
-    const aml_expr* bx = pool.make_token("x");
-    const aml_expr* by = pool.make_token("y");
+    const aml_expr* bx = pool.make_symbol("x");
+    const aml_expr* by = pool.make_symbol("y");
     EXPECT_NE(pool.make_abs("p", bx), pool.make_abs("p", by));
 }
 
@@ -124,28 +124,28 @@ TEST_F(AmlExprPoolTest, AbsDifferentBodyReturnsDifferentPointers) {
 // ---------------------------------------------------------------------------
 
 TEST_F(AmlExprPoolTest, AppInternedTwiceReturnsSamePointer) {
-    const aml_expr* f = pool.make_token("f");
-    const aml_expr* x = pool.make_token("x");
+    const aml_expr* f = pool.make_symbol("f");
+    const aml_expr* x = pool.make_symbol("x");
     EXPECT_EQ(pool.make_app(f, x), pool.make_app(f, x));
 }
 
 TEST_F(AmlExprPoolTest, AppDifferentFuncReturnsDifferentPointers) {
-    const aml_expr* f = pool.make_token("f");
-    const aml_expr* g = pool.make_token("g");
-    const aml_expr* x = pool.make_token("x");
+    const aml_expr* f = pool.make_symbol("f");
+    const aml_expr* g = pool.make_symbol("g");
+    const aml_expr* x = pool.make_symbol("x");
     EXPECT_NE(pool.make_app(f, x), pool.make_app(g, x));
 }
 
 TEST_F(AmlExprPoolTest, AppDifferentArgReturnsDifferentPointers) {
-    const aml_expr* f = pool.make_token("f");
-    const aml_expr* x = pool.make_token("x");
-    const aml_expr* y = pool.make_token("y");
+    const aml_expr* f = pool.make_symbol("f");
+    const aml_expr* x = pool.make_symbol("x");
+    const aml_expr* y = pool.make_symbol("y");
     EXPECT_NE(pool.make_app(f, x), pool.make_app(f, y));
 }
 
 TEST_F(AmlExprPoolTest, AppSwappedFuncArgReturnsDifferentPointers) {
-    const aml_expr* a = pool.make_token("a");
-    const aml_expr* b = pool.make_token("b");
+    const aml_expr* a = pool.make_symbol("a");
+    const aml_expr* b = pool.make_symbol("b");
     EXPECT_NE(pool.make_app(a, b), pool.make_app(b, a));
 }
 
@@ -154,19 +154,19 @@ TEST_F(AmlExprPoolTest, AppSwappedFuncArgReturnsDifferentPointers) {
 // ---------------------------------------------------------------------------
 
 TEST_F(AmlExprPoolTest, ListInternedTwiceReturnsSamePointer) {
-    const aml_expr* a = pool.make_token("a");
+    const aml_expr* a = pool.make_symbol("a");
     EXPECT_EQ(pool.make_list({a}, list_format::scott),
               pool.make_list({a}, list_format::scott));
 }
 
 TEST_F(AmlExprPoolTest, SameListElementsDifferentFormatReturnsDifferentPointers) {
-    const aml_expr* a = pool.make_token("a");
+    const aml_expr* a = pool.make_symbol("a");
     EXPECT_NE(pool.make_list({a}, list_format::scott),
               pool.make_list({a}, list_format::church));
 }
 
 TEST_F(AmlExprPoolTest, ListDifferentLengthsReturnDifferentPointers) {
-    const aml_expr* a = pool.make_token("a");
+    const aml_expr* a = pool.make_symbol("a");
     EXPECT_NE(pool.make_list({a}, list_format::scott),
               pool.make_list({a, a}, list_format::scott));
 }
@@ -177,8 +177,8 @@ TEST_F(AmlExprPoolTest, EmptyListInterned) {
 }
 
 TEST_F(AmlExprPoolTest, ListDifferentElementOrderReturnsDifferentPointers) {
-    const aml_expr* a = pool.make_token("a");
-    const aml_expr* b = pool.make_token("b");
+    const aml_expr* a = pool.make_symbol("a");
+    const aml_expr* b = pool.make_symbol("b");
     EXPECT_NE(pool.make_list({a, b}, list_format::scott),
               pool.make_list({b, a}, list_format::scott));
 }

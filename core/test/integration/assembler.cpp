@@ -70,8 +70,8 @@ TEST_F(AssemblerIntegrationTest, BooleanDeclarationsAndNotDefinition) {
     mod.items.push_back(global{make_group({{"true", 0u}, {"false", 0u}})});
     const aml_expr* not_body = aml.make_abs("a",
         aml.make_app(
-            aml.make_app(aml.make_token("a"), aml.make_token("false")),
-            aml.make_token("true")));
+            aml.make_app(aml.make_symbol("a"), aml.make_symbol("false")),
+            aml.make_symbol("true")));
     mod.items.push_back(global{definition{"not", not_body}});
 
     std::vector<module_file> mods{mod};

@@ -19,9 +19,9 @@ struct aml_expr {
         const aml_expr* body;
         auto operator<=>(const abs&) const = default;
     };
-    struct token {
+    struct symbol {
         std::string name;
-        auto operator<=>(const token&) const = default;
+        auto operator<=>(const symbol&) const = default;
     };
     struct nat {
         uint64_t  value;
@@ -46,7 +46,7 @@ struct aml_expr {
         list_format                  format;
         auto operator<=>(const list&) const = default;
     };
-    std::variant<app, abs, token, nat, integer, character, string, list> content;
+    std::variant<app, abs, symbol, nat, integer, character, string, list> content;
     auto operator<=>(const aml_expr&) const = default;
 };
 

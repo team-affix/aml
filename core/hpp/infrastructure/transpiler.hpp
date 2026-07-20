@@ -12,7 +12,7 @@
 #include "infrastructure/scott_list_transpiler.hpp"
 #include "infrastructure/binary_nat_transpiler.hpp"
 #include "infrastructure/string_transpiler.hpp"
-#include "infrastructure/token_transpiler.hpp"
+#include "infrastructure/symbol_transpiler.hpp"
 #include "value_objects/aml_expr.hpp"
 #include "value_objects/list_format.hpp"
 #include "value_objects/lc_expr.hpp"
@@ -23,7 +23,7 @@ template<typename IMakeLcVar, typename IMakeLcAbs, typename IMakeLcApp,
 struct transpiler {
     using self = transpiler<IMakeLcVar, IMakeLcAbs, IMakeLcApp, IGetVarIndex, IPushVar, IPopVar>;
 
-    using token_transpiler_t       = token_transpiler<IMakeLcVar, IGetVarIndex>;
+    using symbol_transpiler_t       = symbol_transpiler<IMakeLcVar, IGetVarIndex>;
     using abs_transpiler_t         = abs_transpiler<self, IMakeLcAbs, IPushVar, IPopVar>;
     using app_transpiler_t         = app_transpiler<self, IMakeLcApp>;
     using binary_nat_transpiler_t  = binary_nat_transpiler<IMakeLcVar, IMakeLcApp, IGetVarIndex>;
@@ -34,7 +34,7 @@ struct transpiler {
     using scott_list_transpiler_t  = scott_list_transpiler<self, IMakeLcVar, IMakeLcApp, IGetVarIndex>;
     using church_list_transpiler_t = church_list_transpiler<self, IMakeLcVar, IMakeLcAbs, IMakeLcApp>;
 
-    transpiler(token_transpiler_t&,
+    transpiler(symbol_transpiler_t&,
                abs_transpiler_t&, app_transpiler_t&,
                binary_nat_transpiler_t&, church_nat_transpiler_t&,
                integer_transpiler_t&, character_transpiler_t&,
@@ -44,7 +44,7 @@ struct transpiler {
     const lc_expr* transpile(const aml_expr* e);
 
 private:
-    token_transpiler_t&       token_;
+    symbol_transpiler_t&       symbol_;
     abs_transpiler_t&         abs_;
     app_transpiler_t&         app_;
     binary_nat_transpiler_t&  binary_nat_;
@@ -57,13 +57,13 @@ private:
 };
 
 template<typename IV, typename IL, typename IA, typename IG, typename IP, typename IO>
-transpiler<IV, IL, IA, IG, IP, IO>::transpiler(token_transpiler_t& token,
+transpiler<IV, IL, IA, IG, IP, IO>::transpiler(symbol_transpiler_t& symbol,
                                                abs_transpiler_t& abs, app_transpiler_t& app,
                                                binary_nat_transpiler_t& binary_nat, church_nat_transpiler_t& church_nat,
                                                integer_transpiler_t& integer, character_transpiler_t& character,
                                                string_transpiler_t& string,
                                                scott_list_transpiler_t& scott_list, church_list_transpiler_t& church_list)
-    : token_(token),
+    : symbol_(symbol),
       abs_(abs),
       app_(app),
       binary_nat_(binary_nat),
@@ -76,8 +76,8 @@ transpiler<IV, IL, IA, IG, IP, IO>::transpiler(token_transpiler_t& token,
 
 template<typename IV, typename IL, typename IA, typename IG, typename IP, typename IO>
 const lc_expr* transpiler<IV, IL, IA, IG, IP, IO>::transpile(const aml_expr* e) {
-    if (const auto* t = std::get_if<aml_expr::token>(&e->content))
-        return token_.transpile_token(*t);
+    if (const auto* t = std::get_if<aml_expr::symbol>(&e->content))
+        return symbol_.transpile_symbol(*t);
     if (const auto* a = std::get_if<aml_expr::abs>(&e->content))
         return abs_.transpile_abs(*a);
     if (const auto* ap = std::get_if<aml_expr::app>(&e->content))

@@ -38,8 +38,8 @@ TEST_F(AppTranspilerTest, TranspilesBothSubexpressionsAndCombines) {
     using testing::Return;
     using testing::_;
 
-    const aml_expr* aml_f = aml.make_token("f");
-    const aml_expr* aml_x = aml.make_token("x");
+    const aml_expr* aml_f = aml.make_symbol("f");
+    const aml_expr* aml_x = aml.make_symbol("x");
     const lc_expr*  lc_f  = lc.make_var(1);
     const lc_expr*  lc_x  = lc.make_var(0);
 
@@ -54,8 +54,8 @@ TEST_F(AppTranspilerTest, ReturnsResultOfMakeApp) {
     using testing::Return;
     using testing::_;
 
-    const aml_expr* aml_f = aml.make_token("f");
-    const aml_expr* aml_x = aml.make_token("x");
+    const aml_expr* aml_f = aml.make_symbol("f");
+    const aml_expr* aml_x = aml.make_symbol("x");
     const lc_expr*  lc_f  = lc.make_var(1);
     const lc_expr*  lc_x  = lc.make_var(0);
     const lc_expr*  lc_fx = lc.make_app(lc_f, lc_x);
@@ -74,8 +74,8 @@ TEST_F(AppTranspilerTest, FuncAndArgPassedInCorrectOrder) {
     using testing::Return;
     using testing::_;
 
-    const aml_expr* aml_f = aml.make_token("f");
-    const aml_expr* aml_a = aml.make_token("a");
+    const aml_expr* aml_f = aml.make_symbol("f");
+    const aml_expr* aml_a = aml.make_symbol("a");
     const lc_expr*  lc_f  = lc.make_var(2);
     const lc_expr*  lc_a  = lc.make_var(3);
 
