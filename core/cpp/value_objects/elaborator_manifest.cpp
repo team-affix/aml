@@ -9,6 +9,7 @@
 // to transpile/push collaborators. Pumps wire iterator → processor.
 // Assembler is constructed against lc + globals but not orchestrated yet.
 // lc_tx / lc_*_ convert lc_expr* → Atlas expr*; constructed, not orchestrated yet.
+// data_point_tx builds normalize(app(M, x), y) goals; not orchestrated yet.
 elaborator_manifest::elaborator_manifest(
         const std::vector<module_file>& module_files,
         const std::vector<statement_file>& statement_files)
@@ -39,4 +40,5 @@ elaborator_manifest::elaborator_manifest(
       lc_var_(chc),
       lc_abs_(lc_tx, chc),
       lc_app_(lc_tx, chc),
-      lc_nullptr_(chc) {}
+      lc_nullptr_(chc),
+      data_point_tx(lc_tx, chc, chc) {}

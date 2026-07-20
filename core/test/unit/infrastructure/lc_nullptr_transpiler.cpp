@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "infrastructure/lc_nullptr_transpiler.hpp"
+#include "value_objects/chc_var_ids.hpp"
 #include "value_objects/expr.hpp"
 
 namespace {
@@ -19,9 +20,9 @@ struct LcNullptrTranspilerTest : public ::testing::Test {
 
 } // namespace
 
-TEST_F(LcNullptrTranspilerTest, MakesVarZero) {
+TEST_F(LcNullptrTranspilerTest, MakesMainFunctionVar) {
     using testing::Return;
 
-    EXPECT_CALL(mock_var, make_var(0u)).WillOnce(Return(&hole));
+    EXPECT_CALL(mock_var, make_var(k_main_function_var_id)).WillOnce(Return(&hole));
     EXPECT_EQ(tx.transpile_nullptr(), &hole);
 }

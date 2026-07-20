@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "infrastructure/assembler.hpp"
+#include "infrastructure/data_point_transpiler.hpp"
 #include "infrastructure/declaration_transpiler.hpp"
 #include "infrastructure/expr_pool.hpp"
 #include "infrastructure/global_iterator.hpp"
@@ -46,6 +47,7 @@ struct elaborator_manifest {
     using lc_var_transpiler_t      = typename lc_tx_t::lc_var_transpiler_t;
     using lc_abs_transpiler_t      = typename lc_tx_t::lc_abs_transpiler_t;
     using lc_app_transpiler_t      = typename lc_tx_t::lc_app_transpiler_t;
+    using data_point_transpiler_t  = data_point_transpiler<lc_tx_t, expr_pool, expr_pool>;
 
     elaborator_manifest(const std::vector<module_file>& module_files,
                         const std::vector<statement_file>& statement_files);
@@ -82,6 +84,7 @@ struct elaborator_manifest {
     lc_abs_transpiler_t       lc_abs_;
     lc_app_transpiler_t       lc_app_;
     lc_nullptr_transpiler_t   lc_nullptr_;
+    data_point_transpiler_t   data_point_tx;
 };
 
 #endif
