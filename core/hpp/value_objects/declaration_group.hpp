@@ -2,10 +2,10 @@
 #define DECLARATION_GROUP_HPP
 
 #include <vector>
-#include "declaration_decl.hpp"
+#include "value_objects/declaration.hpp"
 
 struct declaration_group {
-    std::vector<declaration_decl> declarations;
+    std::vector<declaration> declarations;
     auto operator<=>(const declaration_group&) const = default;
 };
 

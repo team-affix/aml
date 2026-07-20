@@ -7,5 +7,5 @@ void assembler_runtime::push(const lc_expr* term) {
 }
 
 const lc_expr* assembler_runtime::assemble() {
-    return manifest_.asm_.assemble();
+    return manifest_.asm_.assemble(nullptr);
 }

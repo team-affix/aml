@@ -118,7 +118,7 @@ static parsed_statement_file parse_statement_file(const std::string& src) {
 static std::vector<declaration_group> groups_from(const module_file& mf) {
     std::vector<declaration_group> result;
     for (const auto& item : mf.items)
-        if (const auto* g = std::get_if<declaration_group>(&item.content))
+        if (const auto* g = std::get_if<declaration_group>(&item))
             result.push_back(*g);
     return result;
 }
@@ -126,7 +126,7 @@ static std::vector<declaration_group> groups_from(const module_file& mf) {
 static std::vector<definition> definitions_from(const module_file& mf) {
     std::vector<definition> result;
     for (const auto& item : mf.items)
-        if (const auto* d = std::get_if<definition>(&item.content))
+        if (const auto* d = std::get_if<definition>(&item))
             result.push_back(*d);
     return result;
 }
@@ -137,11 +137,11 @@ static const aml_expr* probe_body(const module_file& mf) {
         ADD_FAILURE() << "expected one definition, got " << defs.size();
         return nullptr;
     }
-    if (defs[0].name != "_aml_probe") {
-        ADD_FAILURE() << "unexpected probe name: " << defs[0].name;
+    if (defs.at(0).name != "_aml_probe") {
+        ADD_FAILURE() << "unexpected probe name: " << defs.at(0).name;
         return nullptr;
     }
-    return defs[0].body;
+    return defs.at(0).body;
 }
 
 struct parsed_expr {
@@ -219,10 +219,10 @@ TEST_F(AmlVisitorTest, ParseStatementFileStatements) {
     parsed_statement_file pt =
         parse_statement_file("not false : true.\nmultiply 3 4 12 : true.");
     ASSERT_EQ(pt.file.statements.size(), 2u);
-    EXPECT_NE(as_app(pt.file.statements[0].lhs), nullptr);
-    EXPECT_NE(as_token(pt.file.statements[0].rhs), nullptr);
-    EXPECT_NE(as_app(pt.file.statements[1].lhs), nullptr);
-    EXPECT_NE(as_token(pt.file.statements[1].rhs), nullptr);
+    EXPECT_NE(as_app(pt.file.statements.at(0).lhs), nullptr);
+    EXPECT_NE(as_token(pt.file.statements.at(0).rhs), nullptr);
+    EXPECT_NE(as_app(pt.file.statements.at(1).lhs), nullptr);
+    EXPECT_NE(as_token(pt.file.statements.at(1).rhs), nullptr);
 }
 
 // ---------------------------------------------------------------------------
@@ -233,50 +233,50 @@ TEST_F(AmlVisitorTest, VisitDeclarationSingle) {
     parsed_module_file pm = parse_module_file("nil/0.");
     auto gs = groups_from(pm.file);
     ASSERT_EQ(gs.size(), 1u);
-    ASSERT_EQ(gs[0].declarations.size(), 1u);
-    EXPECT_EQ(gs[0].declarations[0].name, "nil");
-    EXPECT_EQ(gs[0].declarations[0].arity, 0u);
+    ASSERT_EQ(gs.at(0).declarations.size(), 1u);
+    EXPECT_EQ(gs.at(0).declarations.at(0).name, "nil");
+    EXPECT_EQ(gs.at(0).declarations.at(0).arity, 0u);
 }
 
 TEST_F(AmlVisitorTest, VisitDeclarationGroupPair) {
     parsed_module_file pm = parse_module_file("true/0 | false/0.");
     auto gs = groups_from(pm.file);
     ASSERT_EQ(gs.size(), 1u);
-    ASSERT_EQ(gs[0].declarations.size(), 2u);
-    EXPECT_EQ(gs[0].declarations[0].name, "true");
-    EXPECT_EQ(gs[0].declarations[0].arity, 0u);
-    EXPECT_EQ(gs[0].declarations[1].name, "false");
-    EXPECT_EQ(gs[0].declarations[1].arity, 0u);
+    ASSERT_EQ(gs.at(0).declarations.size(), 2u);
+    EXPECT_EQ(gs.at(0).declarations.at(0).name, "true");
+    EXPECT_EQ(gs.at(0).declarations.at(0).arity, 0u);
+    EXPECT_EQ(gs.at(0).declarations.at(1).name, "false");
+    EXPECT_EQ(gs.at(0).declarations.at(1).arity, 0u);
 }
 
 TEST_F(AmlVisitorTest, VisitDeclarationGroupThree) {
     parsed_module_file pm = parse_module_file("a/0 | b/1 | c/2.");
     auto gs = groups_from(pm.file);
-    ASSERT_EQ(gs[0].declarations.size(), 3u);
-    EXPECT_EQ(gs[0].declarations[0].name, "a");
-    EXPECT_EQ(gs[0].declarations[1].arity, 1u);
-    EXPECT_EQ(gs[0].declarations[2].name, "c");
-    EXPECT_EQ(gs[0].declarations[2].arity, 2u);
+    ASSERT_EQ(gs.at(0).declarations.size(), 3u);
+    EXPECT_EQ(gs.at(0).declarations.at(0).name, "a");
+    EXPECT_EQ(gs.at(0).declarations.at(1).arity, 1u);
+    EXPECT_EQ(gs.at(0).declarations.at(2).name, "c");
+    EXPECT_EQ(gs.at(0).declarations.at(2).arity, 2u);
 }
 
 TEST_F(AmlVisitorTest, VisitDeclarationGroupPreservesOrder) {
     parsed_module_file pm = parse_module_file("decided/1 | undecided/0.");
     auto gs = groups_from(pm.file);
-    EXPECT_EQ(gs[0].declarations[0].name, "decided");
-    EXPECT_EQ(gs[0].declarations[1].name, "undecided");
+    EXPECT_EQ(gs.at(0).declarations.at(0).name, "decided");
+    EXPECT_EQ(gs.at(0).declarations.at(1).name, "undecided");
 }
 
 TEST_F(AmlVisitorTest, VisitDeclarationHighArity) {
     parsed_module_file pm = parse_module_file("cons/2 | nil/0.");
     auto gs = groups_from(pm.file);
-    EXPECT_EQ(gs[0].declarations[0].arity, 2u);
-    EXPECT_EQ(gs[0].declarations[1].arity, 0u);
+    EXPECT_EQ(gs.at(0).declarations.at(0).arity, 2u);
+    EXPECT_EQ(gs.at(0).declarations.at(1).arity, 0u);
 }
 
 TEST_F(AmlVisitorTest, VisitDeclarationUnderscoreName) {
     parsed_module_file pm = parse_module_file("_internal/0.");
     auto gs = groups_from(pm.file);
-    EXPECT_EQ(gs[0].declarations[0].name, "_internal");
+    EXPECT_EQ(gs.at(0).declarations.at(0).name, "_internal");
 }
 
 // ---------------------------------------------------------------------------
@@ -287,7 +287,7 @@ TEST_F(AmlVisitorTest, VisitFunctionDefName) {
     parsed_module_file pm = parse_module_file("foo = x => x.");
     auto ds = definitions_from(pm.file);
     ASSERT_EQ(ds.size(), 1u);
-    EXPECT_EQ(ds[0].name, "foo");
+    EXPECT_EQ(ds.at(0).name, "foo");
 }
 
 TEST_F(AmlVisitorTest, VisitFunctionDefIdentityBody) {
@@ -640,34 +640,34 @@ TEST_F(AmlVisitorTest, VisitListOneElement) {
     auto pe = parse_expr("[a]"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     ASSERT_EQ(lst->elems.size(), 1u);
-    EXPECT_TRUE(is_token(lst->elems[0], "a"));
+    EXPECT_TRUE(is_token(lst->elems.at(0), "a"));
 }
 
 TEST_F(AmlVisitorTest, VisitListThreeElements) {
     auto pe = parse_expr("[a, b, c]"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     ASSERT_EQ(lst->elems.size(), 3u);
-    EXPECT_TRUE(is_token(lst->elems[0], "a"));
-    EXPECT_TRUE(is_token(lst->elems[1], "b"));
-    EXPECT_TRUE(is_token(lst->elems[2], "c"));
+    EXPECT_TRUE(is_token(lst->elems.at(0), "a"));
+    EXPECT_TRUE(is_token(lst->elems.at(1), "b"));
+    EXPECT_TRUE(is_token(lst->elems.at(2), "c"));
 }
 
 TEST_F(AmlVisitorTest, VisitListNested) {
     auto pe = parse_expr("[[a, b], c]"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     ASSERT_EQ(lst->elems.size(), 2u);
-    const auto* inner = as_list(lst->elems[0]);
+    const auto* inner = as_list(lst->elems.at(0));
     ASSERT_NE(inner, nullptr);
-    EXPECT_TRUE(is_token(inner->elems[0], "a"));
-    EXPECT_TRUE(is_token(lst->elems[1], "c"));
+    EXPECT_TRUE(is_token(inner->elems.at(0), "a"));
+    EXPECT_TRUE(is_token(lst->elems.at(1), "c"));
 }
 
 TEST_F(AmlVisitorTest, VisitListWithApplications) {
     auto pe = parse_expr("[f x, g y]"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     ASSERT_EQ(lst->elems.size(), 2u);
-    EXPECT_NE(as_app(lst->elems[0]), nullptr);
-    EXPECT_NE(as_app(lst->elems[1]), nullptr);
+    EXPECT_NE(as_app(lst->elems.at(0)), nullptr);
+    EXPECT_NE(as_app(lst->elems.at(1)), nullptr);
 }
 
 TEST_F(AmlVisitorTest, VisitListChurch) {
@@ -687,10 +687,10 @@ TEST_F(AmlVisitorTest, VisitListMixedElements) {
     auto pe = parse_expr("[x, 42, \"hi\", 'a']"); const auto* lst = as_list(pe.body());
     ASSERT_NE(lst, nullptr);
     ASSERT_EQ(lst->elems.size(), 4u);
-    EXPECT_NE(as_token(lst->elems[0]), nullptr);
-    EXPECT_NE(as_nat(lst->elems[1]), nullptr);
-    EXPECT_NE(as_string(lst->elems[2]), nullptr);
-    EXPECT_NE(as_character(lst->elems[3]), nullptr);
+    EXPECT_NE(as_token(lst->elems.at(0)), nullptr);
+    EXPECT_NE(as_nat(lst->elems.at(1)), nullptr);
+    EXPECT_NE(as_string(lst->elems.at(2)), nullptr);
+    EXPECT_NE(as_character(lst->elems.at(3)), nullptr);
 }
 
 // ---------------------------------------------------------------------------
@@ -706,11 +706,11 @@ TEST_F(AmlVisitorTest, VisitBooleanModule) {
     auto gs = groups_from(pm.file);
     auto ds = definitions_from(pm.file);
     ASSERT_EQ(gs.size(), 1u);
-    EXPECT_EQ(gs[0].declarations.size(), 2u);
+    EXPECT_EQ(gs.at(0).declarations.size(), 2u);
     ASSERT_EQ(ds.size(), 3u);
-    EXPECT_EQ(ds[0].name, "or");
-    EXPECT_EQ(ds[1].name, "and");
-    EXPECT_EQ(ds[2].name, "not");
+    EXPECT_EQ(ds.at(0).name, "or");
+    EXPECT_EQ(ds.at(1).name, "and");
+    EXPECT_EQ(ds.at(2).name, "not");
 }
 
 TEST_F(AmlVisitorTest, VisitListModule) {
@@ -722,18 +722,18 @@ TEST_F(AmlVisitorTest, VisitListModule) {
     auto ds = definitions_from(pm.file);
     ASSERT_EQ(gs.size(), 1u);
     ASSERT_EQ(ds.size(), 2u);
-    EXPECT_EQ(ds[0].name, "Y");
-    EXPECT_EQ(ds[1].name, "append");
-    EXPECT_NE(as_app(ds[1].body), nullptr);
+    EXPECT_EQ(ds.at(0).name, "Y");
+    EXPECT_EQ(ds.at(1).name, "append");
+    EXPECT_NE(as_app(ds.at(1).body), nullptr);
 }
 
 TEST_F(AmlVisitorTest, VisitMultipleDefinitionsInOrder) {
     parsed_module_file pm = parse_module_file("f = x => x.\ng = y => y.\nh = z => z.");
     auto ds = definitions_from(pm.file);
     ASSERT_EQ(ds.size(), 3u);
-    EXPECT_EQ(ds[0].name, "f");
-    EXPECT_EQ(ds[1].name, "g");
-    EXPECT_EQ(ds[2].name, "h");
+    EXPECT_EQ(ds.at(0).name, "f");
+    EXPECT_EQ(ds.at(1).name, "g");
+    EXPECT_EQ(ds.at(2).name, "h");
 }
 
 TEST_F(AmlVisitorTest, ModuleItemOrderPreserved) {
@@ -743,10 +743,10 @@ TEST_F(AmlVisitorTest, ModuleItemOrderPreserved) {
         "nil/0 | cons/2.\n"
         "id = x => x.\n");
     ASSERT_EQ(pm.file.items.size(), 4u);
-    EXPECT_TRUE(std::get_if<declaration_group>(&pm.file.items[0].content) != nullptr);
-    EXPECT_TRUE(std::get_if<definition>(&pm.file.items[1].content) != nullptr);
-    EXPECT_TRUE(std::get_if<declaration_group>(&pm.file.items[2].content) != nullptr);
-    EXPECT_TRUE(std::get_if<definition>(&pm.file.items[3].content) != nullptr);
+    EXPECT_TRUE(std::get_if<declaration_group>(&pm.file.items.at(0)) != nullptr);
+    EXPECT_TRUE(std::get_if<definition>(&pm.file.items.at(1)) != nullptr);
+    EXPECT_TRUE(std::get_if<declaration_group>(&pm.file.items.at(2)) != nullptr);
+    EXPECT_TRUE(std::get_if<definition>(&pm.file.items.at(3)) != nullptr);
 }
 
 // ---------------------------------------------------------------------------

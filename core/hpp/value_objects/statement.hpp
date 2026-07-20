@@ -6,6 +6,7 @@
 struct statement {
     const aml_expr* lhs;
     const aml_expr* rhs;
+    auto operator<=>(const statement&) const = default;
 };
 
 #endif

@@ -4,11 +4,16 @@
 #include <string>
 #include <vector>
 #include "infrastructure/aml_expr_pool.hpp"
-#include "value_objects/aml_manifest.hpp"
+#include "value_objects/elaborator_manifest.hpp"
+#include "value_objects/module_file.hpp"
+#include "value_objects/statement_file.hpp"
 #include "value_objects/nat_format.hpp"
 #include "value_objects/list_format.hpp"
 
 namespace {
+
+std::vector<module_file> empty_mods;
+std::vector<statement_file> empty_stmts;
 
 static const std::vector<std::string> kBuiltinNames = {
     "true", "false", "cons", "nil", "pos", "negsuc"
@@ -17,7 +22,7 @@ static const std::vector<std::string> kBuiltinNames = {
 struct TranspilerStressTest : public ::testing::Test {
     aml_expr_pool aml_pool;
 
-    const lc_expr* transpile_with(aml_manifest& bundle, const aml_expr* e,
+    const lc_expr* transpile_with(elaborator_manifest& bundle, const aml_expr* e,
                                   const std::vector<std::string>& names) {
         for (const auto& n : names) bundle.sc.push(n);
         const lc_expr* result = bundle.tx.transpile(e);
@@ -25,7 +30,7 @@ struct TranspilerStressTest : public ::testing::Test {
         return result;
     }
 
-    const lc_expr* transpile_with_builtins(aml_manifest& bundle, const aml_expr* e) {
+    const lc_expr* transpile_with_builtins(elaborator_manifest& bundle, const aml_expr* e) {
         return transpile_with(bundle, e, kBuiltinNames);
     }
 };
@@ -47,7 +52,7 @@ const aml_expr* build_deep_app(aml_expr_pool& pool, uint32_t depth) {
 } // namespace
 
 TEST_F(TranspilerStressTest, ManyNatLiterals) {
-    aml_manifest bundle;
+    elaborator_manifest bundle{empty_mods, empty_stmts};
     for (uint64_t n = 0; n < 512; ++n) {
         const aml_expr* e = aml_pool.make_nat(n, nat_format::binary);
         ASSERT_NE(transpile_with_builtins(bundle, e), nullptr);
@@ -55,7 +60,7 @@ TEST_F(TranspilerStressTest, ManyNatLiterals) {
 }
 
 TEST_F(TranspilerStressTest, ManyChurchNats) {
-    aml_manifest bundle;
+    elaborator_manifest bundle{empty_mods, empty_stmts};
     for (uint64_t n = 0; n < 64; ++n) {
         const aml_expr* e = aml_pool.make_nat(n, nat_format::church);
         ASSERT_NE(transpile_with_builtins(bundle, e), nullptr);
@@ -63,19 +68,19 @@ TEST_F(TranspilerStressTest, ManyChurchNats) {
 }
 
 TEST_F(TranspilerStressTest, DeepAbstractionChain) {
-    aml_manifest bundle;
+    elaborator_manifest bundle{empty_mods, empty_stmts};
     const aml_expr* e = build_deep_abs(aml_pool, 200);
     EXPECT_NE(transpile_with(bundle, e, {"deep"}), nullptr);
 }
 
 TEST_F(TranspilerStressTest, DeepApplicationChain) {
-    aml_manifest bundle;
+    elaborator_manifest bundle{empty_mods, empty_stmts};
     const aml_expr* e = build_deep_app(aml_pool, 100);
     EXPECT_NE(transpile_with_builtins(bundle, e), nullptr);
 }
 
 TEST_F(TranspilerStressTest, LargeScottList) {
-    aml_manifest bundle;
+    elaborator_manifest bundle{empty_mods, empty_stmts};
     std::vector<const aml_expr*> elems;
     elems.reserve(256);
     for (int i = 0; i < 256; ++i)
@@ -85,7 +90,7 @@ TEST_F(TranspilerStressTest, LargeScottList) {
 }
 
 TEST_F(TranspilerStressTest, ManyFunctionFragments) {
-    aml_manifest bundle;
+    elaborator_manifest bundle{empty_mods, empty_stmts};
     std::vector<std::string> names;
     for (int i = 0; i < 100; ++i)
         names.push_back("f" + std::to_string(i));
@@ -97,7 +102,7 @@ TEST_F(TranspilerStressTest, ManyFunctionFragments) {
 }
 
 TEST_F(TranspilerStressTest, ManyGlobalRefFragments) {
-    aml_manifest bundle;
+    elaborator_manifest bundle{empty_mods, empty_stmts};
     for (int i = 0; i < 50; ++i) {
         const aml_expr* e = aml_pool.make_app(
             aml_pool.make_token("true"), aml_pool.make_token("false"));

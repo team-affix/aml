@@ -7,6 +7,7 @@
 struct definition {
     std::string     name;
     const aml_expr* body;
+    auto operator<=>(const definition&) const = default;
 };
 
 #endif

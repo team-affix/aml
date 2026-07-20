@@ -33,7 +33,7 @@ private:
     IMakeAml& make_aml_;
 
     declaration_group group_from(AMLParser::DeclarationGroupContext*);
-    declaration_decl  decl_from(AMLParser::DeclarationContext*);
+    declaration       decl_from(AMLParser::DeclarationContext*);
     definition        definition_from(AMLParser::DefinitionContext*);
     statement         statement_from(AMLParser::StatementContext*);
 
@@ -68,9 +68,9 @@ inline module_file aml_visitor<M>::parse_module_file(AMLParser::ModuleFileContex
     module_file file;
     for (auto* item : ctx->moduleItem()) {
         if (auto* dg = item->declarationGroup())
-            file.items.push_back(module_item{group_from(dg)});
+            file.items.push_back(global{group_from(dg)});
         else
-            file.items.push_back(module_item{definition_from(item->definition())});
+            file.items.push_back(global{definition_from(item->definition())});
     }
     return file;
 }
@@ -98,7 +98,7 @@ inline declaration_group aml_visitor<M>::group_from(AMLParser::DeclarationGroupC
 }
 
 template<typename M>
-inline declaration_decl aml_visitor<M>::decl_from(AMLParser::DeclarationContext* ctx) {
+inline declaration aml_visitor<M>::decl_from(AMLParser::DeclarationContext* ctx) {
     return {ctx->NAME()->getText(),
             static_cast<uint32_t>(std::stoul(ctx->NATLIT()->getText()))};
 }
@@ -208,17 +208,17 @@ inline int64_t aml_visitor<M>::parse_negintlit(const std::string& text) {
 template<typename M>
 inline char aml_visitor<M>::parse_charlit(const std::string& text) {
     assert(text.size() >= 3 && text.front() == '\'' && text.back() == '\'');
-    if (text[1] == '\\') {
-        switch (text[2]) {
+    if (text.at(1) == '\\') {
+        switch (text.at(2)) {
             case 'n':  return '\n';
             case 't':  return '\t';
             case 'r':  return '\r';
             case '\\': return '\\';
             case '\'': return '\'';
-            default:   return text[2];
+            default:   return text.at(2);
         }
     }
-    return text[1];
+    return text.at(1);
 }
 
 template<typename M>
@@ -226,18 +226,18 @@ inline std::string aml_visitor<M>::parse_strlit(const std::string& text) {
     assert(text.size() >= 2 && text.front() == '"' && text.back() == '"');
     std::string result;
     for (size_t i = 1; i + 1 < text.size(); ++i) {
-        if (text[i] == '\\' && i + 2 < text.size()) {
+        if (text.at(i) == '\\' && i + 2 < text.size()) {
             ++i;
-            switch (text[i]) {
+            switch (text.at(i)) {
                 case 'n':  result += '\n'; break;
                 case 't':  result += '\t'; break;
                 case 'r':  result += '\r'; break;
                 case '\\': result += '\\'; break;
                 case '"':  result += '"';  break;
-                default:   result += text[i]; break;
+                default:   result += text.at(i); break;
             }
         } else {
-            result += text[i];
+            result += text.at(i);
         }
     }
     return result;

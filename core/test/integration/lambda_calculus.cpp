@@ -247,7 +247,7 @@ struct LambdaCalculusTest : public ::testing::Test {
         std::string s = name + "(";
         for (size_t i = 0; i < f.args.size(); ++i) {
             if (i > 0) s += ", ";
-            s += expr_to_chc(f.args[i]);
+            s += expr_to_chc(f.args.at(i));
         }
         return s + ")";
     }

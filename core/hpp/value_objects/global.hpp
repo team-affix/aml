@@ -1,10 +1,10 @@
-#ifndef MODULE_ITEM_HPP
-#define MODULE_ITEM_HPP
+#ifndef GLOBAL_HPP
+#define GLOBAL_HPP
 
 #include <variant>
 #include "value_objects/declaration_group.hpp"
 #include "value_objects/definition.hpp"
 
-using module_item = std::variant<declaration_group, definition>;
+using global = std::variant<declaration_group, definition>;
 
 #endif
