@@ -171,8 +171,8 @@ AML_CLI_DEBUG_FAST_GTEST_OBJ = \
     build/obj/cli_debug_fast_test/gtest-all.o \
     build/obj/cli_debug_fast_test/gmock-all.o
 
-AML_CLI_DEBUG_TEST_CXXFLAGS      = $(DEBUG_CXXFLAGS) $(GTEST_CPPFLAGS) -Icli/test
-AML_CLI_DEBUG_FAST_TEST_CXXFLAGS = $(DEBUG_FAST_CXXFLAGS) $(GTEST_CPPFLAGS) -Icli/test
+AML_CLI_DEBUG_TEST_CXXFLAGS      = $(DEBUG_CXXFLAGS) $(GTEST_CPPFLAGS) -Icli/test -Iatlas/parser/hpp -I$(ANTLR4_INC)
+AML_CLI_DEBUG_FAST_TEST_CXXFLAGS = $(DEBUG_FAST_CXXFLAGS) $(GTEST_CPPFLAGS) -Icli/test -Iatlas/parser/hpp -I$(ANTLR4_INC)
 
 # --- header dependency files ---
 
@@ -254,19 +254,20 @@ parser_debug_fast:
 	$(MAKE) $(AML_PARSER_DEBUG_FAST_LIB)
 	$(MAKE) $(AML_PARSER_DEBUG_FAST_BIN)
 
-cli: $(ATLAS_CORE_LIB) $(AML_CORE_LIB) $(AML_CLI_LIB)
+cli: $(ATLAS_CORE_LIB) $(AML_CORE_LIB) $(AML_PARSER_LIB) $(AML_CLI_LIB)
 
-cli_debug: $(ATLAS_CORE_DEBUG_LIB) $(AML_CORE_DEBUG_LIB) $(AML_CLI_DEBUG_LIB) $(AML_CLI_DEBUG_BIN)
+cli_debug: $(ATLAS_CORE_DEBUG_LIB) $(ATLAS_PARSER_DEBUG_LIB) $(AML_CORE_DEBUG_LIB) $(AML_PARSER_DEBUG_LIB) $(AML_CLI_DEBUG_LIB) $(AML_CLI_DEBUG_BIN)
 
-cli_debug_fast: $(ATLAS_CORE_DEBUG_FAST_LIB) $(AML_CORE_DEBUG_FAST_LIB) $(AML_CLI_DEBUG_FAST_LIB) $(AML_CLI_DEBUG_FAST_BIN)
+cli_debug_fast: $(ATLAS_CORE_DEBUG_FAST_LIB) $(ATLAS_PARSER_DEBUG_FAST_LIB) $(AML_CORE_DEBUG_FAST_LIB) $(AML_PARSER_DEBUG_FAST_LIB) $(AML_CLI_DEBUG_FAST_LIB) $(AML_CLI_DEBUG_FAST_BIN)
 
-aml: $(ATLAS_CORE_LIB) $(AML_CORE_LIB) $(AML_CLI_LIB)
+aml: $(ATLAS_CORE_LIB) $(AML_CORE_LIB) $(AML_PARSER_LIB) $(AML_CLI_LIB)
 	$(CXX) $(CXXFLAGS) $(RELEASE_CXXFLAGS) \
-	    -I$(CLI11_INC) \
+	    -I$(CLI11_INC) -I$(ANTLR4_INC) \
 	    -DAML_GIT_TAG=\"$(GIT_TAG)\" \
 	    cli/entry/main.cpp \
-	    -Lbuild -laml_cli -laml_core \
+	    -Lbuild -laml_cli -laml_parser -laml_core \
 	    -Latlas/build -latlas_core \
+	    -L$(ANTLR4_LIB) -lantlr4-runtime \
 	    -o $(AML_BIN)
 
 clean:
@@ -348,20 +349,22 @@ $(AML_PARSER_DEBUG_FAST_BIN): $(AML_PARSER_DEBUG_FAST_LIB) $(AML_CORE_DEBUG_FAST
 	    -L$(ANTLR4_LIB) -lantlr4-runtime \
 	    -lpthread
 
-$(AML_CLI_DEBUG_BIN): $(AML_CLI_DEBUG_LIB) $(AML_CORE_DEBUG_LIB) $(ATLAS_CORE_DEBUG_LIB) \
+$(AML_CLI_DEBUG_BIN): $(AML_CLI_DEBUG_LIB) $(AML_CORE_DEBUG_LIB) $(AML_PARSER_DEBUG_LIB) $(ATLAS_CORE_DEBUG_LIB) $(ATLAS_PARSER_DEBUG_LIB) \
                       $(AML_CLI_DEBUG_TEST_OBJ) $(AML_CLI_DEBUG_GTEST_OBJ) | build
 	$(CXX) $(CXXFLAGS) -o $@ \
 	    $(AML_CLI_DEBUG_TEST_OBJ) $(AML_CLI_DEBUG_GTEST_OBJ) \
-	    -Lbuild -laml_cli_debug -laml_core_debug \
-	    -Latlas/build -latlas_core_debug \
+	    -Lbuild -laml_cli_debug -laml_parser_debug -laml_core_debug \
+	    -Latlas/build -latlas_parser_debug -latlas_core_debug \
+	    -L$(ANTLR4_LIB) -lantlr4-runtime \
 	    -lpthread
 
-$(AML_CLI_DEBUG_FAST_BIN): $(AML_CLI_DEBUG_FAST_LIB) $(AML_CORE_DEBUG_FAST_LIB) $(ATLAS_CORE_DEBUG_FAST_LIB) \
+$(AML_CLI_DEBUG_FAST_BIN): $(AML_CLI_DEBUG_FAST_LIB) $(AML_CORE_DEBUG_FAST_LIB) $(AML_PARSER_DEBUG_FAST_LIB) $(ATLAS_CORE_DEBUG_FAST_LIB) $(ATLAS_PARSER_DEBUG_FAST_LIB) \
                             $(AML_CLI_DEBUG_FAST_TEST_OBJ) $(AML_CLI_DEBUG_FAST_GTEST_OBJ) | build
 	$(CXX) $(CXXFLAGS) -o $@ \
 	    $(AML_CLI_DEBUG_FAST_TEST_OBJ) $(AML_CLI_DEBUG_FAST_GTEST_OBJ) \
-	    -Lbuild -laml_cli_debug_fast -laml_core_debug_fast \
-	    -Latlas/build -latlas_core_debug_fast \
+	    -Lbuild -laml_cli_debug_fast -laml_parser_debug_fast -laml_core_debug_fast \
+	    -Latlas/build -latlas_parser_debug_fast -latlas_core_debug_fast \
+	    -L$(ANTLR4_LIB) -lantlr4-runtime \
 	    -lpthread
 
 # ==============================================================================
@@ -466,15 +469,15 @@ build/obj/parser_debug_fast_test/gmock-all.o: $(GMOCK_ALL_CC) | build/obj/parser
 
 build/obj/cli/%.o: cli/cpp/%.cpp | build/obj/cli
 	mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(RELEASE_CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -I$(ANTLR4_INC) $(RELEASE_CXXFLAGS) -c $< -o $@
 
 build/obj/cli_debug/%.o: cli/cpp/%.cpp | build/obj/cli_debug
 	mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(DEBUG_CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -I$(ANTLR4_INC) $(DEBUG_CXXFLAGS) -c $< -o $@
 
 build/obj/cli_debug_fast/%.o: cli/cpp/%.cpp | build/obj/cli_debug_fast
 	mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(DEBUG_FAST_CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -I$(ANTLR4_INC) $(DEBUG_FAST_CXXFLAGS) -c $< -o $@
 
 # --- aml cli tests (debug | debug_fast) ---
 
