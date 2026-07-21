@@ -16,10 +16,6 @@ namespace {
 std::vector<module_file> empty_mods;
 std::vector<statement_file> empty_stmts;
 
-static const std::vector<std::string> kBuiltinNames = {
-    "true", "false", "cons", "nil", "pos", "negsuc"
-};
-
 struct TranspilerStressTest : public ::testing::Test {
     aml_expr_pool aml_pool;
     initial_goal_exprs goals;
@@ -32,8 +28,9 @@ struct TranspilerStressTest : public ::testing::Test {
         return result;
     }
 
+    // Manifest ctor seeds builtins into scope; no manual push needed.
     const lc_expr* transpile_with_builtins(elaborator_manifest& bundle, const aml_expr* e) {
-        return transpile_with(bundle, e, kBuiltinNames);
+        return bundle.tx.transpile(e);
     }
 };
 

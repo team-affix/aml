@@ -14,21 +14,18 @@
 #include <string>
 #include <vector>
 #include "infrastructure/aml_expr_pool.hpp"
-#include "value_objects/list_format.hpp"
-#include "value_objects/nat_format.hpp"
 #include "infrastructure/initial_goal_exprs.hpp"
 #include "value_objects/elaborator_manifest.hpp"
+#include "value_objects/list_format.hpp"
+#include "value_objects/list_decl_group.hpp"
 #include "value_objects/module_file.hpp"
+#include "value_objects/nat_format.hpp"
 #include "value_objects/statement_file.hpp"
 
 namespace {
 
 std::vector<module_file> empty_mods;
 std::vector<statement_file> empty_stmts;
-
-static const std::vector<std::string> kBuiltinNames = {
-    "true", "false", "cons", "nil", "pos", "negsuc"
-};
 
 struct TranspileIntegrationTest : public ::testing::Test {
     aml_expr_pool aml;
@@ -42,8 +39,9 @@ struct TranspileIntegrationTest : public ::testing::Test {
         return result;
     }
 
+    // Manifest ctor seeds builtins into scope; no manual push needed.
     const lc_expr* transpile_builtins(elaborator_manifest& b, const aml_expr* e) {
-        return transpile(b, e, kBuiltinNames);
+        return b.tx.transpile(e);
     }
 };
 
@@ -150,21 +148,14 @@ TEST_F(TranspileIntegrationTest, IfThenElseFunction) {
 
 TEST_F(TranspileIntegrationTest, ComposeIdIdNoInlining) {
     elaborator_manifest b{empty_mods, empty_stmts, goals};
-    const std::vector<std::string> names = [&]{
-        auto v = kBuiltinNames;
-        v.push_back("compose");
-        v.push_back("id");
-        return v;
-    }();
+    const std::vector<std::string> names = {"compose", "id"};
     const aml_expr* main = aml.make_app(
         aml.make_app(aml.make_symbol("compose"), aml.make_symbol("id")),
         aml.make_symbol("id"));
 
     const lc_expr* got = transpile(b, main, names);
 
-    // names has 8 entries pushed in order; depth=8 after all pushes.
-    // "compose" was pushed 7th (slot=7): index = 8-7 = 1
-    // "id"      was pushed 8th (slot=8): index = 8-8 = 0
+    // Seeded builtins (6) + compose + id → depth 8; compose=1, id=0.
     EXPECT_EQ(got, b.lc.make_app(
         b.lc.make_app(b.lc.make_var(1), b.lc.make_var(0)),
         b.lc.make_var(0)));
@@ -177,7 +168,7 @@ TEST_F(TranspileIntegrationTest, ComposeIdIdNoInlining) {
 TEST_F(TranspileIntegrationTest, NatZeroBinary) {
     elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* e = aml.make_nat(0u, nat_format::binary);
-    // nil is at index 2 in kBuiltinNames order (depth 6, get_var_index("nil")=2)
+    // Seeded order: true,false,cons,nil,pos,negsuc → nil index 2
     EXPECT_EQ(transpile_builtins(b, e), b.lc.make_var(2));
 }
 
@@ -216,7 +207,7 @@ TEST_F(TranspileIntegrationTest, NatTwoChurch) {
 TEST_F(TranspileIntegrationTest, IntegerZeroIsPos) {
     elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* e = aml.make_integer(0, nat_format::binary);
-    // pos=idx1 in kBuiltinNames, nil (zero)=idx2
+    // pos=idx1, nil (zero)=idx2
     EXPECT_EQ(transpile_builtins(b, e),
               b.lc.make_app(b.lc.make_var(1), b.lc.make_var(2)));
 }
@@ -349,7 +340,7 @@ TEST_F(TranspileIntegrationTest, ScottListWithAbsElement) {
     elaborator_manifest b{empty_mods, empty_stmts, goals};
     // [λx.x]_scott — element transpiles to abs(var(0)); scope must be
     // restored before nil/cons are looked up.
-    // With kBuiltinNames: cons=idx3, nil=idx2.
+    // Seeded builtins: cons=idx3, nil=idx2.
     // Result: app(app(var(3), abs(var(0))), var(2))
     const aml_expr* id   = aml.make_abs("x", aml.make_symbol("x"));
     const aml_expr* list = aml.make_list({id}, list_format::scott);
@@ -387,8 +378,15 @@ TEST_F(TranspileIntegrationTest, TwoManifestInstancesAreIndependent) {
     elaborator_manifest m1{empty_mods, empty_stmts, goals};
     elaborator_manifest m2{empty_mods, empty_stmts, goals};
     m1.sc.push("x");
-    // m2 has its own fresh scope — "x" must not be visible in m2.
+    // m2 has its own seeded scope — "x" must not be visible in m2.
     const aml_expr* tok = aml.make_symbol("x");
     EXPECT_THROW(m2.tx.transpile(tok), std::out_of_range);
     m1.sc.pop();
+}
+
+TEST_F(TranspileIntegrationTest, SeededManifestResolvesNilWithoutManualPush) {
+    elaborator_manifest b{empty_mods, empty_stmts, goals};
+    EXPECT_EQ(b.sc.get_var_index(k_nil_name), 2u);
+    EXPECT_EQ(transpile_builtins(b, aml.make_nat(0u, nat_format::binary)),
+              b.lc.make_var(2));
 }

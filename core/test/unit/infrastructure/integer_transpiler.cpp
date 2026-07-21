@@ -3,6 +3,7 @@
 #include "infrastructure/integer_transpiler.hpp"
 #include "infrastructure/lc_expr_pool.hpp"
 #include "value_objects/nat_format.hpp"
+#include "value_objects/int_decl_group.hpp"
 
 namespace {
 
@@ -33,8 +34,8 @@ struct IntegerTranspilerTest : public ::testing::Test {
         ON_CALL(mock_app, make_app(_, _)).WillByDefault([this](const lc_expr* f, const lc_expr* a) {
             return lc.make_app(f, a);
         });
-        ON_CALL(mock_idx, get_var_index("pos"))   .WillByDefault(Return(0u));
-        ON_CALL(mock_idx, get_var_index("negsuc")).WillByDefault(Return(1u));
+        ON_CALL(mock_idx, get_var_index(k_pos_name))   .WillByDefault(Return(0u));
+        ON_CALL(mock_idx, get_var_index(k_negsuc_name)).WillByDefault(Return(1u));
         // default: transpile_nat returns var(99) as a sentinel
         ON_CALL(mock_nat, transpile_nat(_)).WillByDefault([this](const aml_expr::nat&) {
             return lc.make_var(99);

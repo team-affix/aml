@@ -5,6 +5,7 @@
 #include "value_objects/aml_expr.hpp"
 #include "value_objects/lc_expr.hpp"
 #include "value_objects/nat_format.hpp"
+#include "value_objects/int_decl_group.hpp"
 
 template<typename IMakeLcVar, typename IMakeLcApp, typename ITranspileNat, typename IGetVarIndex>
 struct integer_transpiler {
@@ -31,10 +32,10 @@ const lc_expr* integer_transpiler<IV, IA, IN, IG>::transpile_integer(const aml_e
     const int64_t value = i.value;
     if (value >= 0)
         return make_app_.make_app(
-            make_var_.make_var(get_var_index_.get_var_index("pos")),
+            make_var_.make_var(get_var_index_.get_var_index(k_pos_name)),
             transpile_nat_.transpile_nat({static_cast<uint64_t>(value), i.format}));
     return make_app_.make_app(
-        make_var_.make_var(get_var_index_.get_var_index("negsuc")),
+        make_var_.make_var(get_var_index_.get_var_index(k_negsuc_name)),
         transpile_nat_.transpile_nat({static_cast<uint64_t>(-value - 1), i.format}));
 }
 

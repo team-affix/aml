@@ -5,13 +5,15 @@
 #include <vector>
 #include <gtest/gtest.h>
 #include "infrastructure/aml_expr_pool.hpp"
+#include "infrastructure/declaration_transpiler.hpp"
+#include "infrastructure/initial_goal_exprs.hpp"
 #include "infrastructure/lc_expr_pool.hpp"
 #include "value_objects/declaration.hpp"
 #include "value_objects/declaration_group.hpp"
 #include "value_objects/definition.hpp"
-#include "infrastructure/initial_goal_exprs.hpp"
 #include "value_objects/elaborator_manifest.hpp"
 #include "value_objects/global.hpp"
+#include "value_objects/list_decl_group.hpp"
 #include "value_objects/module_file.hpp"
 #include "value_objects/statement.hpp"
 #include "value_objects/statement_file.hpp"
@@ -35,6 +37,26 @@ static declaration_group make_group(std::initializer_list<declaration> decls) {
     declaration_group g;
     g.declarations = std::vector<declaration>(decls);
     return g;
+}
+
+static const lc_expr* assemble_lc(lc_expr_pool& lc,
+                                  const std::vector<const lc_expr*>& terms) {
+    const lc_expr* result = nullptr;
+    for (auto it = terms.rbegin(); it != terms.rend(); ++it)
+        result = lc.make_app(lc.make_abs(result), *it);
+    return result;
+}
+
+static std::vector<const lc_expr*> seeded_builtin_terms(lc_expr_pool& lc) {
+    declaration_transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool> dt{lc, lc, lc};
+    return {
+        dt.transpile_decl(2u, 0u, 0u),
+        dt.transpile_decl(2u, 1u, 0u),
+        dt.transpile_decl(2u, 0u, 2u),
+        dt.transpile_decl(2u, 1u, 0u),
+        dt.transpile_decl(2u, 0u, 1u),
+        dt.transpile_decl(2u, 1u, 1u),
+    };
 }
 
 static const lc_expr* outermost_arg(const lc_expr* assembled) {
@@ -66,7 +88,9 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionSingleIdentity) {
     const lc_expr* result = em.asm_.assemble();
 
     ASSERT_NE(result, nullptr);
-    EXPECT_TRUE(struct_eq(outermost_arg(result), lc.make_abs(lc.make_var(0))));
+    auto terms = seeded_builtin_terms(lc);
+    terms.push_back(lc.make_abs(lc.make_var(0)));
+    EXPECT_TRUE(struct_eq(result, assemble_lc(lc, terms)));
 }
 
 TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionBodyCannotSeeOwnName) {
@@ -90,8 +114,18 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionSecondSeesFirst) {
     const lc_expr* result = em.asm_.assemble();
 
     ASSERT_NE(result, nullptr);
-    EXPECT_TRUE(struct_eq(outermost_arg(result), lc.make_abs(lc.make_var(0))));
-    EXPECT_TRUE(struct_eq(second_arg(result),    lc.make_abs(lc.make_var(1))));
+    auto terms = seeded_builtin_terms(lc);
+    terms.push_back(lc.make_abs(lc.make_var(0)));
+    terms.push_back(lc.make_abs(lc.make_var(1)));
+    EXPECT_TRUE(struct_eq(result, assemble_lc(lc, terms)));
+}
+
+TEST_F(ElaboratorManifestIntegrationTest, SeededBuiltinsPresentAfterConstruct) {
+    std::vector<module_file> mods;
+    std::vector<statement_file> stmts;
+    elaborator_manifest em{mods, stmts, goals};
+    EXPECT_EQ(em.sc.get_var_index(k_nil_name), 2u);
+    EXPECT_FALSE(em.globals.empty());
 }
 
 TEST_F(ElaboratorManifestIntegrationTest, ProcessDeclarationGroupBooleans) {

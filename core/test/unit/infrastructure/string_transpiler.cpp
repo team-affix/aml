@@ -2,6 +2,7 @@
 #include <gmock/gmock.h>
 #include "infrastructure/lc_expr_pool.hpp"
 #include "infrastructure/string_transpiler.hpp"
+#include "value_objects/list_decl_group.hpp"
 #include "value_objects/nat_format.hpp"
 
 namespace {
@@ -36,8 +37,8 @@ struct StringTranspilerTest : public ::testing::Test {
         ON_CALL(mock_app, make_app(_, _)).WillByDefault([this](const lc_expr* f, const lc_expr* a) {
             return lc.make_app(f, a);
         });
-        ON_CALL(mock_idx, get_var_index("nil")) .WillByDefault(Return(0u));
-        ON_CALL(mock_idx, get_var_index("cons")).WillByDefault(Return(1u));
+        ON_CALL(mock_idx, get_var_index(k_nil_name)) .WillByDefault(Return(0u));
+        ON_CALL(mock_idx, get_var_index(k_cons_name)).WillByDefault(Return(1u));
     }
 
     const lc_expr* v(uint32_t i)                           { return lc.make_var(i); }

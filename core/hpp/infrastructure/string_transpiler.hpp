@@ -5,6 +5,7 @@
 #include <string>
 #include "value_objects/aml_expr.hpp"
 #include "value_objects/lc_expr.hpp"
+#include "value_objects/list_decl_group.hpp"
 #include "value_objects/nat_format.hpp"
 
 template<typename ITranspileNat, typename IMakeLcVar, typename IMakeLcApp, typename IGetVarIndex>
@@ -29,12 +30,12 @@ string_transpiler<IN, IV, IA, IG>::string_transpiler(IN& transpile_nat, IV& make
 
 template<typename IN, typename IV, typename IA, typename IG>
 const lc_expr* string_transpiler<IN, IV, IA, IG>::transpile_string(const aml_expr::string& s) {
-    const lc_expr* list = make_var_.make_var(get_var_index_.get_var_index("nil"));
+    const lc_expr* list = make_var_.make_var(get_var_index_.get_var_index(k_nil_name));
     for (auto it = s.value.rbegin(); it != s.value.rend(); ++it) {
         const lc_expr* elem = transpile_nat_.transpile_nat(
             {static_cast<uint64_t>(static_cast<unsigned char>(*it)), nat_format::binary});
         list = make_app_.make_app(
-            make_app_.make_app(make_var_.make_var(get_var_index_.get_var_index("cons")), elem),
+            make_app_.make_app(make_var_.make_var(get_var_index_.get_var_index(k_cons_name)), elem),
             list);
     }
     return list;

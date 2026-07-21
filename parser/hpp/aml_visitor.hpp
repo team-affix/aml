@@ -16,8 +16,10 @@
 // Visitor
 // ---------------------------------------------------------------------------
 //
-// Usage:
-//   aml_expr_pool pool;
+// Prefer the free functions for file IO:
+//   import_module_from_file(path, pool)
+//   import_statement_file_from_file(path, pool)
+// Direct visitor use is for in-memory / already-parsed trees:
 //   aml_visitor v{pool};
 //   module_file    mod  = v.parse_module_file(parser.moduleFile());
 //   statement_file data = v.parse_statement_file(parser.statementFile());

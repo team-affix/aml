@@ -9,13 +9,16 @@
 #include "infrastructure/lc_expr_pool.hpp"
 #include "infrastructure/scope.hpp"
 #include "infrastructure/transpiler.hpp"
-#include "value_objects/nat_format.hpp"
+#include "value_objects/bool_decl_group.hpp"
 #include "value_objects/list_format.hpp"
+#include "value_objects/list_decl_group.hpp"
+#include "value_objects/nat_format.hpp"
+#include "value_objects/int_decl_group.hpp"
 
 namespace {
 
 static const std::vector<std::string> kBuiltinNames = {
-    "true", "false", "cons", "nil", "pos", "negsuc"
+    k_true_name, k_false_name, k_cons_name, k_nil_name, k_pos_name, k_negsuc_name
 };
 
 struct MockMakeLcVar {
@@ -35,16 +38,14 @@ struct TranspilerTest : public ::testing::Test {
                                                testing::NiceMock<MockMakeLcAbs>,
                                                testing::NiceMock<MockMakeLcApp>,
                                                scope, scope, scope>;
-    using symbol_transpiler_t       = typename transpiler_t::symbol_transpiler_t;
-    using abs_transpiler_t         = typename transpiler_t::abs_transpiler_t;
-    using app_transpiler_t         = typename transpiler_t::app_transpiler_t;
-    using binary_nat_transpiler_t  = typename transpiler_t::binary_nat_transpiler_t;
-    using church_nat_transpiler_t  = typename transpiler_t::church_nat_transpiler_t;
-    using integer_transpiler_t     = typename transpiler_t::integer_transpiler_t;
-    using character_transpiler_t   = typename transpiler_t::character_transpiler_t;
-    using string_transpiler_t      = typename transpiler_t::string_transpiler_t;
-    using scott_list_transpiler_t  = typename transpiler_t::scott_list_transpiler_t;
-    using church_list_transpiler_t = typename transpiler_t::church_list_transpiler_t;
+    using symbol_transpiler_t    = typename transpiler_t::symbol_transpiler_t;
+    using abs_transpiler_t       = typename transpiler_t::abs_transpiler_t;
+    using app_transpiler_t       = typename transpiler_t::app_transpiler_t;
+    using nat_transpiler_t       = typename transpiler_t::nat_transpiler_t;
+    using integer_transpiler_t   = typename transpiler_t::integer_transpiler_t;
+    using character_transpiler_t = typename transpiler_t::character_transpiler_t;
+    using string_transpiler_t    = typename transpiler_t::string_transpiler_t;
+    using list_transpiler_t      = typename transpiler_t::list_transpiler_t;
 
     aml_expr_pool aml_pool;
     lc_expr_pool  lc_pool;
@@ -55,33 +56,29 @@ struct TranspilerTest : public ::testing::Test {
 
     // tx declared first: receives forward references to sub-components below.
     transpiler_t             tx;
-    symbol_transpiler_t       symbol_;
+    symbol_transpiler_t      symbol_;
     abs_transpiler_t         abs_;
     app_transpiler_t         app_;
-    binary_nat_transpiler_t  binary_nat_;
-    church_nat_transpiler_t  church_nat_;
+    nat_transpiler_t         nat_;
     integer_transpiler_t     integer_;
     character_transpiler_t   character_;
     string_transpiler_t      string_;
-    scott_list_transpiler_t  scott_list_;
-    church_list_transpiler_t church_list_;
+    list_transpiler_t        list_;
 
     TranspilerTest()
         : tx(symbol_, abs_, app_,
-             binary_nat_, church_nat_,
+             nat_,
              integer_, character_,
              string_,
-             scott_list_, church_list_),
+             list_),
           symbol_(mock_var, sc),
           abs_(tx, mock_abs, sc, sc),
           app_(tx, mock_app),
-          binary_nat_(mock_var, mock_app, sc),
-          church_nat_(mock_var, mock_abs, mock_app),
-          integer_(mock_var, mock_app, binary_nat_, sc),
-          character_(binary_nat_),
-          string_(binary_nat_, mock_var, mock_app, sc),
-          scott_list_(tx, mock_var, mock_app, sc),
-          church_list_(tx, mock_var, mock_abs, mock_app) {}
+          nat_(mock_var, mock_abs, mock_app, sc),
+          integer_(mock_var, mock_app, nat_, sc),
+          character_(nat_),
+          string_(nat_, mock_var, mock_app, sc),
+          list_(tx, mock_var, mock_abs, mock_app, sc) {}
 
     void SetUp() override {
         using testing::_;
@@ -118,10 +115,10 @@ struct TranspilerTest : public ::testing::Test {
 
 TEST_F(TranspilerTest, BuiltinIndicesAlignWithScope) {
     for (const auto& n : kBuiltinNames) sc.push(n);
-    EXPECT_EQ(sc.get_var_index("true"),  5u);
-    EXPECT_EQ(sc.get_var_index("false"), 4u);
-    EXPECT_EQ(sc.get_var_index("cons"),  3u);
-    EXPECT_EQ(sc.get_var_index("nil"),   2u);
+    EXPECT_EQ(sc.get_var_index(k_true_name),  5u);
+    EXPECT_EQ(sc.get_var_index(k_false_name), 4u);
+    EXPECT_EQ(sc.get_var_index(k_cons_name),  3u);
+    EXPECT_EQ(sc.get_var_index(k_nil_name),   2u);
     for (size_t i = 0; i < kBuiltinNames.size(); ++i) sc.pop();
 }
 

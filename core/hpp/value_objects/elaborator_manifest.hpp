@@ -26,16 +26,14 @@
 struct elaborator_manifest {
     using transpiler_t   = transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool,
                                       scope, scope, scope>;
-    using symbol_transpiler_t       = typename transpiler_t::symbol_transpiler_t;
-    using abs_transpiler_t         = typename transpiler_t::abs_transpiler_t;
-    using app_transpiler_t         = typename transpiler_t::app_transpiler_t;
-    using binary_nat_transpiler_t  = typename transpiler_t::binary_nat_transpiler_t;
-    using church_nat_transpiler_t  = typename transpiler_t::church_nat_transpiler_t;
-    using integer_transpiler_t     = typename transpiler_t::integer_transpiler_t;
-    using character_transpiler_t   = typename transpiler_t::character_transpiler_t;
-    using string_transpiler_t      = typename transpiler_t::string_transpiler_t;
-    using scott_list_transpiler_t  = typename transpiler_t::scott_list_transpiler_t;
-    using church_list_transpiler_t = typename transpiler_t::church_list_transpiler_t;
+    using symbol_transpiler_t    = typename transpiler_t::symbol_transpiler_t;
+    using abs_transpiler_t       = typename transpiler_t::abs_transpiler_t;
+    using app_transpiler_t       = typename transpiler_t::app_transpiler_t;
+    using nat_transpiler_t       = typename transpiler_t::nat_transpiler_t;
+    using integer_transpiler_t   = typename transpiler_t::integer_transpiler_t;
+    using character_transpiler_t = typename transpiler_t::character_transpiler_t;
+    using string_transpiler_t    = typename transpiler_t::string_transpiler_t;
+    using list_transpiler_t      = typename transpiler_t::list_transpiler_t;
     using declaration_transpiler_t = declaration_transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool>;
     using global_processor_t       = global_processor<transpiler_t, declaration_transpiler_t,
                                                       global_stack, scope>;
@@ -65,16 +63,14 @@ struct elaborator_manifest {
     expr_pool             chc;
 
     transpiler_t              tx;
-    symbol_transpiler_t        symbol_;
-    binary_nat_transpiler_t   binary_nat_;
-    church_nat_transpiler_t   church_nat_;
+    symbol_transpiler_t       symbol_;
+    nat_transpiler_t          nat_;
     integer_transpiler_t      integer_;
     character_transpiler_t    character_;
     string_transpiler_t       string_;
     abs_transpiler_t          abs_;
     app_transpiler_t          app_;
-    scott_list_transpiler_t   scott_list_;
-    church_list_transpiler_t  church_list_;
+    list_transpiler_t         list_;
     declaration_transpiler_t  decl;
 
     global_iterator       global_it;
