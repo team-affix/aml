@@ -17,22 +17,43 @@
 // ---------------------------------------------------------------------------
 //
 // Prefer the free functions for file IO:
-//   import_module_from_file(path, pool)
-//   import_statement_file_from_file(path, pool)
+//   import_module_file(path, pool, pool, …)
+//   import_statement_file(path, pool, pool, …)
 // Direct visitor use is for in-memory / already-parsed trees:
-//   aml_visitor v{pool};
+//   aml_visitor v{pool, pool, …};
 //   module_file    mod  = v.parse_module_file(parser.moduleFile());
 //   statement_file data = v.parse_statement_file(parser.statementFile());
 
-template<typename IMakeAml>
+template<typename IMakeAmlAbs,
+         typename IMakeAmlApp,
+         typename IMakeAmlSymbol,
+         typename IMakeAmlNat,
+         typename IMakeAmlInteger,
+         typename IMakeAmlCharacter,
+         typename IMakeAmlString,
+         typename IMakeAmlList>
 struct aml_visitor : AMLBaseVisitor {
-    aml_visitor(IMakeAml& make_aml);
+    aml_visitor(IMakeAmlAbs& make_aml_abs,
+                IMakeAmlApp& make_aml_app,
+                IMakeAmlSymbol& make_aml_symbol,
+                IMakeAmlNat& make_aml_nat,
+                IMakeAmlInteger& make_aml_integer,
+                IMakeAmlCharacter& make_aml_character,
+                IMakeAmlString& make_aml_string,
+                IMakeAmlList& make_aml_list);
 
     module_file    parse_module_file(AMLParser::ModuleFileContext*);
     statement_file parse_statement_file(AMLParser::StatementFileContext*);
 
 private:
-    IMakeAml& make_aml_;
+    IMakeAmlAbs&       make_aml_abs_;
+    IMakeAmlApp&       make_aml_app_;
+    IMakeAmlSymbol&    make_aml_symbol_;
+    IMakeAmlNat&       make_aml_nat_;
+    IMakeAmlInteger&   make_aml_integer_;
+    IMakeAmlCharacter& make_aml_character_;
+    IMakeAmlString&    make_aml_string_;
+    IMakeAmlList&      make_aml_list_;
 
     declaration_group group_from(AMLParser::DeclarationGroupContext*);
     declaration       decl_from(AMLParser::DeclarationContext*);
@@ -62,11 +83,31 @@ private:
 // Implementation
 // ---------------------------------------------------------------------------
 
-template<typename M>
-aml_visitor<M>::aml_visitor(M& make_aml) : make_aml_(make_aml) {}
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::aml_visitor(
+        IAbs& make_aml_abs,
+        IApp& make_aml_app,
+        ISym& make_aml_symbol,
+        INat& make_aml_nat,
+        IInt& make_aml_integer,
+        IChar& make_aml_character,
+        IStr& make_aml_string,
+        IList& make_aml_list)
+    : make_aml_abs_(make_aml_abs)
+    , make_aml_app_(make_aml_app)
+    , make_aml_symbol_(make_aml_symbol)
+    , make_aml_nat_(make_aml_nat)
+    , make_aml_integer_(make_aml_integer)
+    , make_aml_character_(make_aml_character)
+    , make_aml_string_(make_aml_string)
+    , make_aml_list_(make_aml_list) {}
 
-template<typename M>
-inline module_file aml_visitor<M>::parse_module_file(AMLParser::ModuleFileContext* ctx) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline module_file
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::parse_module_file(
+        AMLParser::ModuleFileContext* ctx) {
     module_file file;
     for (auto* item : ctx->moduleItem()) {
         if (auto* dg = item->declarationGroup())
@@ -77,138 +118,199 @@ inline module_file aml_visitor<M>::parse_module_file(AMLParser::ModuleFileContex
     return file;
 }
 
-template<typename M>
-inline statement_file aml_visitor<M>::parse_statement_file(
-    AMLParser::StatementFileContext* ctx) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline statement_file
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::parse_statement_file(
+        AMLParser::StatementFileContext* ctx) {
     statement_file file;
     for (auto* stmt : ctx->statement())
         file.statements.push_back(statement_from(stmt));
     return file;
 }
 
-template<typename M>
-inline statement aml_visitor<M>::statement_from(AMLParser::StatementContext* ctx) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline statement
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::statement_from(
+        AMLParser::StatementContext* ctx) {
     return {.lhs = expr_from(ctx->expr(0)), .rhs = expr_from(ctx->expr(1))};
 }
 
-template<typename M>
-inline declaration_group aml_visitor<M>::group_from(AMLParser::DeclarationGroupContext* ctx) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline declaration_group
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::group_from(
+        AMLParser::DeclarationGroupContext* ctx) {
     declaration_group group;
     for (auto* d : ctx->declaration())
         group.declarations.push_back(decl_from(d));
     return group;
 }
 
-template<typename M>
-inline declaration aml_visitor<M>::decl_from(AMLParser::DeclarationContext* ctx) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline declaration
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::decl_from(
+        AMLParser::DeclarationContext* ctx) {
     return {ctx->NAME()->getText(),
             static_cast<uint32_t>(std::stoul(ctx->NATLIT()->getText()))};
 }
 
-template<typename M>
-inline definition aml_visitor<M>::definition_from(AMLParser::DefinitionContext* ctx) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline definition
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::definition_from(
+        AMLParser::DefinitionContext* ctx) {
     return {ctx->NAME()->getText(), expr_from(ctx->expr())};
 }
 
-template<typename M>
-inline const aml_expr* aml_visitor<M>::expr_from(AMLParser::ExprContext* ctx) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline const aml_expr*
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::expr_from(
+        AMLParser::ExprContext* ctx) {
     if (auto* abs = ctx->abstraction()) return abs_from(abs);
     if (auto* app = ctx->application()) return app_from(app);
     if (auto* atm = ctx->atom())        return atom_from(atm);
     return expr_from(ctx->expr());
 }
 
-template<typename M>
-inline const aml_expr* aml_visitor<M>::abs_from(AMLParser::AbstractionContext* ctx) {
-    return make_aml_.make_abs(ctx->NAME()->getText(), expr_from(ctx->expr()));
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline const aml_expr*
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::abs_from(
+        AMLParser::AbstractionContext* ctx) {
+    return make_aml_abs_.make_abs(ctx->NAME()->getText(), expr_from(ctx->expr()));
 }
 
-template<typename M>
-inline const aml_expr* aml_visitor<M>::app_from(AMLParser::ApplicationContext* ctx) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline const aml_expr*
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::app_from(
+        AMLParser::ApplicationContext* ctx) {
     const aml_expr* result = head_from(ctx->head());
     for (auto* a : ctx->arg())
-        result = make_aml_.make_app(result, arg_from(a));
+        result = make_aml_app_.make_app(result, arg_from(a));
     return result;
 }
 
-template<typename M>
-inline const aml_expr* aml_visitor<M>::head_from(AMLParser::HeadContext* ctx) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline const aml_expr*
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::head_from(
+        AMLParser::HeadContext* ctx) {
     if (auto* inner = ctx->expr()) return expr_from(inner);
     return atom_from(ctx->atom());
 }
 
-template<typename M>
-inline const aml_expr* aml_visitor<M>::arg_from(AMLParser::ArgContext* ctx) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline const aml_expr*
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::arg_from(
+        AMLParser::ArgContext* ctx) {
     if (auto* abs = ctx->abstraction()) return abs_from(abs);
     if (auto* atm = ctx->atom())        return atom_from(atm);
     return expr_from(ctx->expr());
 }
 
-template<typename M>
-inline const aml_expr* aml_visitor<M>::atom_from(AMLParser::AtomContext* ctx) {
-    if (auto* n  = ctx->NAME())    return make_aml_.make_symbol(n->getText());
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline const aml_expr*
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::atom_from(
+        AMLParser::AtomContext* ctx) {
+    if (auto* n  = ctx->NAME())    return make_aml_symbol_.make_symbol(n->getText());
     if (auto* na = ctx->nat())     return nat_from(na);
     if (auto* i  = ctx->int_())    return int_from(i);
-    if (auto* cl = ctx->CHARLIT()) return make_aml_.make_character(parse_charlit(cl->getText()));
-    if (auto* sl = ctx->STRLIT())  return make_aml_.make_string(parse_strlit(sl->getText()));
+    if (auto* cl = ctx->CHARLIT())
+        return make_aml_character_.make_character(parse_charlit(cl->getText()));
+    if (auto* sl = ctx->STRLIT())
+        return make_aml_string_.make_string(parse_strlit(sl->getText()));
     assert(ctx->list());
     return list_from(ctx->list());
 }
 
-template<typename M>
-inline const aml_expr* aml_visitor<M>::nat_from(AMLParser::NatContext* ctx) {
-    return make_aml_.make_nat(parse_natlit(ctx->NATLIT()->getText()),
-                              nat_format_from(ctx->ENCODING()));
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline const aml_expr*
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::nat_from(
+        AMLParser::NatContext* ctx) {
+    return make_aml_nat_.make_nat(parse_natlit(ctx->NATLIT()->getText()),
+                                  nat_format_from(ctx->ENCODING()));
 }
 
-template<typename M>
-inline const aml_expr* aml_visitor<M>::int_from(AMLParser::IntContext* ctx) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline const aml_expr*
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::int_from(
+        AMLParser::IntContext* ctx) {
     int64_t value = ctx->POSINTLIT() ? parse_posint(ctx->POSINTLIT()->getText())
                                      : parse_negintlit(ctx->NEGINTLIT()->getText());
-    return make_aml_.make_integer(value, nat_format_from(ctx->ENCODING()));
+    return make_aml_integer_.make_integer(value, nat_format_from(ctx->ENCODING()));
 }
 
-template<typename M>
-inline const aml_expr* aml_visitor<M>::list_from(AMLParser::ListContext* ctx) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline const aml_expr*
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::list_from(
+        AMLParser::ListContext* ctx) {
     std::vector<const aml_expr*> elems;
     for (auto* e : ctx->expr())
         elems.push_back(expr_from(e));
-    return make_aml_.make_list(std::move(elems), list_format_from(ctx->ENCODING()));
+    return make_aml_list_.make_list(std::move(elems), list_format_from(ctx->ENCODING()));
 }
 
-template<typename M>
-inline nat_format aml_visitor<M>::nat_format_from(antlr4::tree::TerminalNode* enc) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline nat_format
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::nat_format_from(
+        antlr4::tree::TerminalNode* enc) {
     if (!enc) return nat_format::binary;
     const std::string name = enc->getText().substr(1, enc->getText().size() - 2);
     if (name == "church") return nat_format::church;
     return nat_format::binary;
 }
 
-template<typename M>
-inline list_format aml_visitor<M>::list_format_from(antlr4::tree::TerminalNode* enc) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline list_format
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::list_format_from(
+        antlr4::tree::TerminalNode* enc) {
     if (!enc) return list_format::scott;
     const std::string name = enc->getText().substr(1, enc->getText().size() - 2);
     if (name == "church") return list_format::church;
     return list_format::scott;
 }
 
-template<typename M>
-inline uint64_t aml_visitor<M>::parse_natlit(const std::string& text) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline uint64_t
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::parse_natlit(
+        const std::string& text) {
     return std::stoull(text);
 }
 
-template<typename M>
-inline int64_t aml_visitor<M>::parse_posint(const std::string& text) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline int64_t
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::parse_posint(
+        const std::string& text) {
     return static_cast<int64_t>(std::stoull(text.substr(1)));
 }
 
-template<typename M>
-inline int64_t aml_visitor<M>::parse_negintlit(const std::string& text) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline int64_t
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::parse_negintlit(
+        const std::string& text) {
     return -static_cast<int64_t>(std::stoull(text.substr(1)));
 }
 
-template<typename M>
-inline char aml_visitor<M>::parse_charlit(const std::string& text) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline char
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::parse_charlit(
+        const std::string& text) {
     assert(text.size() >= 3 && text.front() == '\'' && text.back() == '\'');
     if (text.at(1) == '\\') {
         switch (text.at(2)) {
@@ -223,8 +325,11 @@ inline char aml_visitor<M>::parse_charlit(const std::string& text) {
     return text.at(1);
 }
 
-template<typename M>
-inline std::string aml_visitor<M>::parse_strlit(const std::string& text) {
+template<typename IAbs, typename IApp, typename ISym, typename INat,
+         typename IInt, typename IChar, typename IStr, typename IList>
+inline std::string
+aml_visitor<IAbs, IApp, ISym, INat, IInt, IChar, IStr, IList>::parse_strlit(
+        const std::string& text) {
     assert(text.size() >= 2 && text.front() == '"' && text.back() == '"');
     std::string result;
     for (size_t i = 1; i + 1 < text.size(); ++i) {

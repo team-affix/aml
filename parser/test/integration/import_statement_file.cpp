@@ -1,23 +1,24 @@
-// import_statement_file_from_file: end-to-end path → statement_file.
+// import_statement_file: end-to-end path → statement_file.
 
 #include <stdexcept>
 #include <variant>
 #include <gtest/gtest.h>
 #include "infrastructure/aml_expr_pool.hpp"
-#include "parser/hpp/import_statement_file_from_file.hpp"
+#include "parser/hpp/import_statement_file.hpp"
 #include "value_objects/aml_expr.hpp"
 
 namespace {
 
-struct ImportStatementFileFromFileTest : public ::testing::Test {
+struct ImportStatementFileTest : public ::testing::Test {
     aml_expr_pool pool;
 };
 
 } // namespace
 
-TEST_F(ImportStatementFileFromFileTest, MultiplyStmtsFixture) {
+TEST_F(ImportStatementFileTest, MultiplyStmtsFixture) {
     statement_file sf =
-        import_statement_file_from_file("parser/fixtures/multiply.stmts", pool);
+        import_statement_file("parser/fixtures/multiply.stmts",
+                              pool, pool, pool, pool, pool, pool, pool, pool);
 
     ASSERT_EQ(sf.statements.size(), 4u);
     for (const statement& s : sf.statements) {
@@ -34,9 +35,9 @@ TEST_F(ImportStatementFileFromFileTest, MultiplyStmtsFixture) {
               "false");
 }
 
-TEST_F(ImportStatementFileFromFileTest, BadPathThrows) {
+TEST_F(ImportStatementFileTest, BadPathThrows) {
     EXPECT_THROW(
-        import_statement_file_from_file("parser/fixtures/nonexistent.stmts",
-                                        pool),
+        import_statement_file("parser/fixtures/nonexistent.stmts",
+                              pool, pool, pool, pool, pool, pool, pool, pool),
         std::runtime_error);
 }

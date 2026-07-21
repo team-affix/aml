@@ -64,7 +64,9 @@ static std::optional<module_file> try_parse_module_file(const std::string& src,
         return std::nullopt;
     MockMakeAml mock;
     wire_mock_to_pool(mock, pool);
-    aml_visitor<MockMakeAml> visitor{mock};
+    aml_visitor<MockMakeAml, MockMakeAml, MockMakeAml, MockMakeAml,
+                MockMakeAml, MockMakeAml, MockMakeAml, MockMakeAml>
+        visitor{mock, mock, mock, mock, mock, mock, mock, mock};
     return visitor.parse_module_file(tree);
 }
 
@@ -81,7 +83,9 @@ static std::optional<statement_file> try_parse_statement_file(const std::string&
         return std::nullopt;
     MockMakeAml mock;
     wire_mock_to_pool(mock, pool);
-    aml_visitor<MockMakeAml> visitor{mock};
+    aml_visitor<MockMakeAml, MockMakeAml, MockMakeAml, MockMakeAml,
+                MockMakeAml, MockMakeAml, MockMakeAml, MockMakeAml>
+        visitor{mock, mock, mock, mock, mock, mock, mock, mock};
     return visitor.parse_statement_file(tree);
 }
 

@@ -1,25 +1,26 @@
-// import_module_from_file: end-to-end path → module_file.
+// import_module_file: end-to-end path → module_file.
 
 #include <stdexcept>
 #include <variant>
 #include <gtest/gtest.h>
 #include "infrastructure/aml_expr_pool.hpp"
-#include "parser/hpp/import_module_from_file.hpp"
+#include "parser/hpp/import_module_file.hpp"
 #include "value_objects/declaration_group.hpp"
 #include "value_objects/definition.hpp"
 #include "value_objects/global.hpp"
 
 namespace {
 
-struct ImportModuleFromFileTest : public ::testing::Test {
+struct ImportModuleFileTest : public ::testing::Test {
     aml_expr_pool pool;
 };
 
 } // namespace
 
-TEST_F(ImportModuleFromFileTest, LogicDefFixture) {
+TEST_F(ImportModuleFileTest, LogicDefFixture) {
     module_file mod =
-        import_module_from_file("parser/fixtures/logic.def", pool);
+        import_module_file("parser/fixtures/logic.def",
+                           pool, pool, pool, pool, pool, pool, pool, pool);
 
     ASSERT_EQ(mod.items.size(), 3u);
     ASSERT_TRUE(std::holds_alternative<definition>(mod.items.at(0)));
@@ -31,9 +32,10 @@ TEST_F(ImportModuleFromFileTest, LogicDefFixture) {
     EXPECT_NE(std::get<definition>(mod.items.at(0)).body, nullptr);
 }
 
-TEST_F(ImportModuleFromFileTest, BoolNatDeclFixture) {
+TEST_F(ImportModuleFileTest, BoolNatDeclFixture) {
     module_file mod =
-        import_module_from_file("parser/fixtures/bool_nat.decl", pool);
+        import_module_file("parser/fixtures/bool_nat.decl",
+                           pool, pool, pool, pool, pool, pool, pool, pool);
 
     ASSERT_EQ(mod.items.size(), 4u);
     for (const global& item : mod.items)
@@ -54,8 +56,9 @@ TEST_F(ImportModuleFromFileTest, BoolNatDeclFixture) {
     EXPECT_EQ(cons_nil.declarations.at(1).arity, 0u);
 }
 
-TEST_F(ImportModuleFromFileTest, BadPathThrows) {
+TEST_F(ImportModuleFileTest, BadPathThrows) {
     EXPECT_THROW(
-        import_module_from_file("parser/fixtures/nonexistent.def", pool),
+        import_module_file("parser/fixtures/nonexistent.def",
+                           pool, pool, pool, pool, pool, pool, pool, pool),
         std::runtime_error);
 }
