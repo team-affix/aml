@@ -39,26 +39,6 @@ const lc_expr* assemble_lc(lc_expr_pool& lc,
     return result;
 }
 
-// Manifest seeds true/false, cons/nil, pos/negsuc before module globals.
-std::vector<const lc_expr*> seeded_builtin_terms(elaborator_manifest& em) {
-    return {
-        em.decl.transpile_decl(2u, 0u, 0u), // true
-        em.decl.transpile_decl(2u, 1u, 0u), // false
-        em.decl.transpile_decl(2u, 0u, 2u), // cons
-        em.decl.transpile_decl(2u, 1u, 0u), // nil
-        em.decl.transpile_decl(2u, 0u, 1u), // pos
-        em.decl.transpile_decl(2u, 1u, 1u), // negsuc
-    };
-}
-
-std::vector<const lc_expr*> with_seeded_builtins(
-        elaborator_manifest& em,
-        const std::vector<const lc_expr*>& rest) {
-    auto terms = seeded_builtin_terms(em);
-    terms.insert(terms.end(), rest.begin(), rest.end());
-    return terms;
-}
-
 const expr* expect_eq(elaborator_manifest& em, const lc_expr* program) {
     const expr* P = em.lc_tx.transpile(program);
     const expr* M = em.chc.make_var(k_model_var_id);
@@ -114,7 +94,7 @@ TEST_F(ElaboratorIntegrationTest, ElaboratePushesEqThenNormalizeGoals) {
 
     const lc_expr* f_body = em.lc.make_abs(em.lc.make_var(0));
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, with_seeded_builtins(em, {f_body}))));
+              expect_eq(em, assemble_lc(em.lc, {f_body})));
     EXPECT_EQ(goals.get(1),
               expect_normalize(em, em.lc.make_var(0), em.lc.make_var(0)));
 }
@@ -127,7 +107,7 @@ TEST_F(ElaboratorIntegrationTest, EmptyModulesEmptyStatementsEqHoleOnly) {
 
     ASSERT_EQ(goals.count(), 1u);
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, seeded_builtin_terms(em))));
+              expect_eq(em, assemble_lc(em.lc, {})));
     EXPECT_TRUE(em.globals.empty());
     EXPECT_EQ(em.training.get_next_data_point(), std::nullopt);
 }
@@ -144,7 +124,7 @@ TEST_F(ElaboratorIntegrationTest, ModulesOnlyEqAndDrainsStackAndTraining) {
     ASSERT_EQ(goals.count(), 1u);
     const lc_expr* f = em.lc.make_abs(em.lc.make_var(0));
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, with_seeded_builtins(em, {f}))));
+              expect_eq(em, assemble_lc(em.lc, {f})));
     EXPECT_TRUE(em.globals.empty());
     EXPECT_EQ(em.training.get_next_data_point(), std::nullopt);
 }
@@ -176,7 +156,7 @@ TEST_F(ElaboratorIntegrationTest, SelfAppDefinitionAndStatement) {
     const lc_expr* f = em.lc.make_abs(
         em.lc.make_app(em.lc.make_var(0), em.lc.make_var(0)));
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, with_seeded_builtins(em, {f}))));
+              expect_eq(em, assemble_lc(em.lc, {f})));
     EXPECT_EQ(goals.get(1),
               expect_normalize(em, em.lc.make_var(0), em.lc.make_var(0)));
 }
@@ -196,7 +176,7 @@ TEST_F(ElaboratorIntegrationTest, KCombinatorDefinition) {
     ASSERT_EQ(goals.count(), 2u);
     const lc_expr* f = em.lc.make_abs(em.lc.make_abs(em.lc.make_var(1)));
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, with_seeded_builtins(em, {f}))));
+              expect_eq(em, assemble_lc(em.lc, {f})));
     EXPECT_EQ(goals.get(1),
               expect_normalize(em, em.lc.make_var(0), em.lc.make_var(0)));
 }
@@ -216,7 +196,7 @@ TEST_F(ElaboratorIntegrationTest, TwoDefsIdThenConstAssembleOrder) {
     const lc_expr* id    = em.lc.make_abs(em.lc.make_var(0));
     const lc_expr* konst = em.lc.make_abs(em.lc.make_abs(em.lc.make_var(1)));
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, with_seeded_builtins(em, {id, konst}))));
+              expect_eq(em, assemble_lc(em.lc, {id, konst})));
 }
 
 TEST_F(ElaboratorIntegrationTest, TwoDefsFThenGReferencingF) {
@@ -239,8 +219,8 @@ TEST_F(ElaboratorIntegrationTest, TwoDefsFThenGReferencingF) {
     const lc_expr* g = em.lc.make_abs(
         em.lc.make_app(em.lc.make_var(1), em.lc.make_var(0)));
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, with_seeded_builtins(em, {f, g}))));
-    // statement scope: builtins…, f, g → g=0, f=1
+              expect_eq(em, assemble_lc(em.lc, {f, g})));
+    // statement scope: f, g → g=0, f=1
     EXPECT_EQ(goals.get(1),
               expect_normalize(em, em.lc.make_var(0), em.lc.make_var(1)));
 }
@@ -263,7 +243,7 @@ TEST_F(ElaboratorIntegrationTest, ThreeStatementsPreserveOrder) {
     const lc_expr* f = em.lc.make_abs(em.lc.make_var(0));
     const lc_expr* id_lc = em.lc.make_abs(em.lc.make_var(0));
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, with_seeded_builtins(em, {f}))));
+              expect_eq(em, assemble_lc(em.lc, {f})));
     EXPECT_EQ(goals.get(1),
               expect_normalize(em, em.lc.make_var(0), em.lc.make_var(0)));
     EXPECT_EQ(goals.get(2),
@@ -299,10 +279,10 @@ TEST_F(ElaboratorIntegrationTest, NotTrueFalseEndToEnd) {
             em.lc.make_app(em.lc.make_var(0), em.lc.make_var(1)),
             em.lc.make_var(2)));
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, with_seeded_builtins(em, {
-                  true_t, false_t, not_t}))));
+              expect_eq(em, assemble_lc(em.lc, {
+                  true_t, false_t, not_t})));
 
-    // statement scope: builtins…, true, false, not → not=0, false=1, true=2
+    // statement scope: true, false, not → not=0, false=1, true=2
     const lc_expr* lhs = em.lc.make_app(em.lc.make_var(0), em.lc.make_var(2));
     const lc_expr* rhs = em.lc.make_var(1);
     EXPECT_EQ(goals.get(1), expect_normalize(em, lhs, rhs));
@@ -333,7 +313,7 @@ TEST_F(ElaboratorIntegrationTest, FiveDefsOldestNewestStatementIndices) {
     for (int i = 0; i < 5; ++i)
         terms.push_back(em.lc.make_abs(em.lc.make_var(0)));
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, with_seeded_builtins(em, terms))));
+              expect_eq(em, assemble_lc(em.lc, terms)));
     // a=4 (oldest among a..e), e=0 (newest)
     EXPECT_EQ(goals.get(1),
               expect_normalize(em, em.lc.make_var(4), em.lc.make_var(0)));
@@ -365,8 +345,8 @@ TEST_F(ElaboratorIntegrationTest, TwoModuleFilesDeclsThenDefs) {
             em.lc.make_app(em.lc.make_var(0), em.lc.make_var(1)),
             em.lc.make_var(2)));
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, with_seeded_builtins(em, {
-                  true_t, false_t, not_t}))));
+              expect_eq(em, assemble_lc(em.lc, {
+                  true_t, false_t, not_t})));
     // not false ≈ true → app(var(0), var(1)) ≈ var(2)
     EXPECT_EQ(goals.get(1),
               expect_normalize(em,
@@ -386,7 +366,7 @@ TEST_F(ElaboratorIntegrationTest, ZeroGlobalsChurchNatDataPoint) {
 
     ASSERT_EQ(goals.count(), 2u);
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, seeded_builtin_terms(em))));
+              expect_eq(em, assemble_lc(em.lc, {})));
     const lc_expr* c0 = em.lc.make_abs(em.lc.make_abs(em.lc.make_var(0)));
     const lc_expr* c2 = em.lc.make_abs(em.lc.make_abs(
         em.lc.make_app(em.lc.make_var(1),
@@ -465,10 +445,10 @@ TEST_F(ElaboratorIntegrationTest, ManyGlobalsDeclsDefsAndFourDataPoints) {
             em.lc.make_app(em.lc.make_var(0), em.lc.make_var(4)),
             em.lc.make_var(5)));
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, with_seeded_builtins(em, {
-                  true_t, false_t, cons_t, nil_t, id_t, not_t}))));
+              expect_eq(em, assemble_lc(em.lc, {
+                  true_t, false_t, cons_t, nil_t, id_t, not_t})));
 
-    // statement scope: seeded… + true,false,cons,nil,id,not
+    // statement scope: true,false,cons,nil,id,not
     // module true=5, false=4, id=1, not=0 (same relative indices)
     EXPECT_EQ(goals.get(1),
               expect_normalize(em, em.lc.make_var(5), em.lc.make_var(5)));
@@ -496,7 +476,7 @@ TEST_F(ElaboratorIntegrationTest, YCombinatorDefinitionAndSelfStatement) {
     ASSERT_EQ(goals.count(), 2u);
     const lc_expr* Y = make_y_lc(em.lc);
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, with_seeded_builtins(em, {Y}))));
+              expect_eq(em, assemble_lc(em.lc, {Y})));
     EXPECT_EQ(goals.get(1),
               expect_normalize(em, em.lc.make_var(0), em.lc.make_var(0)));
 }
@@ -521,9 +501,9 @@ TEST_F(ElaboratorIntegrationTest, YCombinatorAppliedToIdInTrainingData) {
     const lc_expr* id = em.lc.make_abs(em.lc.make_var(0));
     const lc_expr* Y  = make_y_lc(em.lc);
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, with_seeded_builtins(em, {id, Y}))));
+              expect_eq(em, assemble_lc(em.lc, {id, Y})));
 
-    // statement scope: builtins…, id, Y → Y=0, id=1
+    // statement scope: id, Y → Y=0, id=1
     EXPECT_EQ(goals.get(1),
               expect_normalize(em,
                   em.lc.make_app(em.lc.make_var(0), em.lc.make_var(1)),
@@ -558,9 +538,9 @@ TEST_F(ElaboratorIntegrationTest, YCombinatorWithConstAndChurchData) {
     const lc_expr* konst = em.lc.make_abs(em.lc.make_abs(em.lc.make_var(1)));
     const lc_expr* Y     = make_y_lc(em.lc);
     EXPECT_EQ(goals.get(0),
-              expect_eq(em, assemble_lc(em.lc, with_seeded_builtins(em, {konst, Y}))));
+              expect_eq(em, assemble_lc(em.lc, {konst, Y})));
 
-    // scope: builtins…, const, Y → Y=0, const=1
+    // scope: const, Y → Y=0, const=1
     EXPECT_EQ(goals.get(1),
               expect_normalize(em,
                   em.lc.make_app(em.lc.make_var(0), em.lc.make_var(1)),

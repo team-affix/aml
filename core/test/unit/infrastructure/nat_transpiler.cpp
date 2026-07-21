@@ -3,31 +3,38 @@
 #include <variant>
 #include "infrastructure/lc_expr_pool.hpp"
 #include "infrastructure/nat_transpiler.hpp"
-#include "value_objects/bool_decl_group.hpp"
-#include "value_objects/list_decl_group.hpp"
 #include "value_objects/nat_format.hpp"
 
 namespace {
 
-struct MockMakeLcVar  { MOCK_METHOD(const lc_expr*, make_var, (uint32_t)); };
-struct MockMakeLcAbs  { MOCK_METHOD(const lc_expr*, make_abs, (const lc_expr*)); };
-struct MockMakeLcApp  { MOCK_METHOD(const lc_expr*, make_app, (const lc_expr*, const lc_expr*)); };
-struct MockGetVarIndex { MOCK_METHOD(uint32_t, get_var_index, (const std::string&)); };
+struct MockMakeLcVar      { MOCK_METHOD(const lc_expr*, make_var, (uint32_t)); };
+struct MockMakeLcAbs      { MOCK_METHOD(const lc_expr*, make_abs, (const lc_expr*)); };
+struct MockMakeLcApp      { MOCK_METHOD(const lc_expr*, make_app, (const lc_expr*, const lc_expr*)); };
+struct MockTranspileNil   { MOCK_METHOD(const lc_expr*, transpile_nil, ()); };
+struct MockTranspileCons  { MOCK_METHOD(const lc_expr*, transpile_cons, ()); };
+struct MockTranspileTrue  { MOCK_METHOD(const lc_expr*, transpile_true, ()); };
+struct MockTranspileFalse { MOCK_METHOD(const lc_expr*, transpile_false, ()); };
 
-using NiceVar = testing::NiceMock<MockMakeLcVar>;
-using NiceAbs = testing::NiceMock<MockMakeLcAbs>;
-using NiceApp = testing::NiceMock<MockMakeLcApp>;
-using NiceIdx = testing::NiceMock<MockGetVarIndex>;
+using NiceVar   = testing::NiceMock<MockMakeLcVar>;
+using NiceAbs   = testing::NiceMock<MockMakeLcAbs>;
+using NiceApp   = testing::NiceMock<MockMakeLcApp>;
+using NiceNil   = testing::NiceMock<MockTranspileNil>;
+using NiceCons  = testing::NiceMock<MockTranspileCons>;
+using NiceTrue  = testing::NiceMock<MockTranspileTrue>;
+using NiceFalse = testing::NiceMock<MockTranspileFalse>;
 
 // Standard test bindings: nil=0, true=1, false=2, cons=3
 struct NatTranspilerTest : public ::testing::Test {
     lc_expr_pool lc;
-    NiceVar mock_var;
-    NiceAbs mock_abs;
-    NiceApp mock_app;
-    NiceIdx mock_idx;
-    nat_transpiler<NiceVar, NiceAbs, NiceApp, NiceIdx>
-        nt{mock_var, mock_abs, mock_app, mock_idx};
+    NiceVar   mock_var;
+    NiceAbs   mock_abs;
+    NiceApp   mock_app;
+    NiceNil   mock_nil;
+    NiceCons  mock_cons;
+    NiceTrue  mock_true;
+    NiceFalse mock_false;
+    nat_transpiler<NiceVar, NiceAbs, NiceApp, NiceNil, NiceCons, NiceTrue, NiceFalse>
+        nt{mock_var, mock_abs, mock_app, mock_nil, mock_cons, mock_true, mock_false};
 
     void SetUp() override {
         using testing::_;
@@ -41,10 +48,10 @@ struct NatTranspilerTest : public ::testing::Test {
         ON_CALL(mock_app, make_app(_, _)).WillByDefault([this](const lc_expr* f, const lc_expr* a) {
             return lc.make_app(f, a);
         });
-        ON_CALL(mock_idx, get_var_index(k_nil_name))  .WillByDefault(Return(0u));
-        ON_CALL(mock_idx, get_var_index(k_true_name)) .WillByDefault(Return(1u));
-        ON_CALL(mock_idx, get_var_index(k_false_name)).WillByDefault(Return(2u));
-        ON_CALL(mock_idx, get_var_index(k_cons_name)) .WillByDefault(Return(3u));
+        ON_CALL(mock_nil, transpile_nil()).WillByDefault(Return(lc.make_var(0)));
+        ON_CALL(mock_true, transpile_true()).WillByDefault(Return(lc.make_var(1)));
+        ON_CALL(mock_false, transpile_false()).WillByDefault(Return(lc.make_var(2)));
+        ON_CALL(mock_cons, transpile_cons()).WillByDefault(Return(lc.make_var(3)));
     }
 
     const lc_expr* v(uint32_t i)                          { return lc.make_var(i); }
@@ -90,8 +97,8 @@ TEST_F(NatTranspilerTest, BinaryFiveIsConsTrueConsFalseConsTrueNil) {
               cons_(v(1), cons_(v(2), cons_(v(1), v(0)))));
 }
 
-TEST_F(NatTranspilerTest, BinaryZeroCallsMakeVarOnce) {
-    EXPECT_CALL(mock_var, make_var(0u)).Times(1);
+TEST_F(NatTranspilerTest, BinaryZeroCallsTranspileNilOnce) {
+    EXPECT_CALL(mock_nil, transpile_nil()).Times(1);
     nt.transpile_nat({0u, nat_format::binary});
 }
 

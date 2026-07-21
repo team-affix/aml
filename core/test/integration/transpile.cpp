@@ -39,7 +39,7 @@ struct TranspileIntegrationTest : public ::testing::Test {
         return result;
     }
 
-    // Manifest ctor seeds builtins into scope; no manual push needed.
+    // Builtins are in-place via builtin_; no scope seed needed.
     const lc_expr* transpile_builtins(elaborator_manifest& b, const aml_expr* e) {
         return b.tx.transpile(e);
     }
@@ -105,11 +105,9 @@ TEST_F(TranspileIntegrationTest, UnboundNameThrows) {
 // not = b => b false true  (checks global indices with builtins in scope)
 // ---------------------------------------------------------------------------
 
-TEST_F(TranspileIntegrationTest, NotFunctionUsesGlobalIndices) {
+TEST_F(TranspileIntegrationTest, NotFunctionUsesInPlaceBuiltins) {
     elaborator_manifest b{empty_mods, empty_stmts, goals};
-    // "not = b => b false true"
-    // builtins pushed: true(idx5), false(idx4), cons(idx3), nil(idx2), pos(idx1), negsuc(idx0)
-    // after push "b" (depth=7): b→0, negsuc→1, pos→2, nil→3, cons→4, false→5, true→6
+    // "not = b => b false true" — false/true are closed Scott terms
     const aml_expr* body = aml.make_abs("b",
         aml.make_app(
             aml.make_app(aml.make_symbol("b"), aml.make_symbol("false")),
@@ -118,8 +116,8 @@ TEST_F(TranspileIntegrationTest, NotFunctionUsesGlobalIndices) {
     const lc_expr* got = transpile_builtins(b, body);
     const lc_expr* expected = b.lc.make_abs(
         b.lc.make_app(
-            b.lc.make_app(b.lc.make_var(0), b.lc.make_var(5)),
-            b.lc.make_var(6)));
+            b.lc.make_app(b.lc.make_var(0), b.builtin_.transpile_false()),
+            b.builtin_.transpile_true()));
     EXPECT_EQ(got, expected);
 }
 
@@ -155,7 +153,7 @@ TEST_F(TranspileIntegrationTest, ComposeIdIdNoInlining) {
 
     const lc_expr* got = transpile(b, main, names);
 
-    // Seeded builtins (6) + compose + id → depth 8; compose=1, id=0.
+    // compose + id → depth 2; compose=1, id=0.
     EXPECT_EQ(got, b.lc.make_app(
         b.lc.make_app(b.lc.make_var(1), b.lc.make_var(0)),
         b.lc.make_var(0)));
@@ -168,17 +166,15 @@ TEST_F(TranspileIntegrationTest, ComposeIdIdNoInlining) {
 TEST_F(TranspileIntegrationTest, NatZeroBinary) {
     elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* e = aml.make_nat(0u, nat_format::binary);
-    // Seeded order: true,false,cons,nil,pos,negsuc → nil index 2
-    EXPECT_EQ(transpile_builtins(b, e), b.lc.make_var(2));
+    EXPECT_EQ(transpile_builtins(b, e), b.builtin_.transpile_nil());
 }
 
 TEST_F(TranspileIntegrationTest, NatOneBinary) {
     elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* e = aml.make_nat(1u, nat_format::binary);
-    // 1 = cons(true, nil); cons=idx3, true=idx5, nil=idx2
     const lc_expr* expected = b.lc.make_app(
-        b.lc.make_app(b.lc.make_var(3), b.lc.make_var(5)),
-        b.lc.make_var(2));
+        b.lc.make_app(b.builtin_.transpile_cons(), b.builtin_.transpile_true()),
+        b.builtin_.transpile_nil());
     EXPECT_EQ(transpile_builtins(b, e), expected);
 }
 
@@ -207,18 +203,16 @@ TEST_F(TranspileIntegrationTest, NatTwoChurch) {
 TEST_F(TranspileIntegrationTest, IntegerZeroIsPos) {
     elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* e = aml.make_integer(0, nat_format::binary);
-    // pos=idx1, nil (zero)=idx2
     EXPECT_EQ(transpile_builtins(b, e),
-              b.lc.make_app(b.lc.make_var(1), b.lc.make_var(2)));
+              b.lc.make_app(b.builtin_.transpile_pos(), b.builtin_.transpile_nil()));
 }
 
 TEST_F(TranspileIntegrationTest, IntegerNegativeOneIsNegsucZero) {
     elaborator_manifest b{empty_mods, empty_stmts, goals};
     const aml_expr* e    = aml.make_integer(-1, nat_format::binary);
     const aml_expr* zero = aml.make_nat(0u, nat_format::binary);
-    // negsuc=idx0, transpile_nat(0)=nil=idx2
     EXPECT_EQ(transpile_builtins(b, e),
-              b.lc.make_app(b.lc.make_var(0), b.lc.make_var(2)));
+              b.lc.make_app(b.builtin_.transpile_negsuc(), b.builtin_.transpile_nil()));
 }
 
 // ---------------------------------------------------------------------------
@@ -238,7 +232,7 @@ TEST_F(TranspileIntegrationTest, CharEqualsNatOfAsciiCode) {
 
 TEST_F(TranspileIntegrationTest, EmptyStringIsNil) {
     elaborator_manifest b{empty_mods, empty_stmts, goals};
-    EXPECT_EQ(transpile_builtins(b, aml.make_string("")), b.lc.make_var(2));
+    EXPECT_EQ(transpile_builtins(b, aml.make_string("")), b.builtin_.transpile_nil());
 }
 
 TEST_F(TranspileIntegrationTest, StringHiHasCorrectOrder) {
@@ -248,10 +242,10 @@ TEST_F(TranspileIntegrationTest, StringHiHasCorrectOrder) {
     const lc_expr*  lc_h = transpile_builtins(b, h);
     const lc_expr*  lc_i = transpile_builtins(b, i);
     const lc_expr* expected = b.lc.make_app(
-        b.lc.make_app(b.lc.make_var(3), lc_h),
+        b.lc.make_app(b.builtin_.transpile_cons(), lc_h),
         b.lc.make_app(
-            b.lc.make_app(b.lc.make_var(3), lc_i),
-            b.lc.make_var(2)));
+            b.lc.make_app(b.builtin_.transpile_cons(), lc_i),
+            b.builtin_.transpile_nil()));
     EXPECT_EQ(transpile_builtins(b, aml.make_string("hi")), expected);
 }
 
@@ -266,10 +260,10 @@ TEST_F(TranspileIntegrationTest, ScottListTwoElements) {
     const lc_expr*  lc_a  = transpile_builtins(b, a);
     const lc_expr*  lc_bb = transpile_builtins(b, bb);
     const lc_expr* expected = b.lc.make_app(
-        b.lc.make_app(b.lc.make_var(3), lc_a),
+        b.lc.make_app(b.builtin_.transpile_cons(), lc_a),
         b.lc.make_app(
-            b.lc.make_app(b.lc.make_var(3), lc_bb),
-            b.lc.make_var(2)));
+            b.lc.make_app(b.builtin_.transpile_cons(), lc_bb),
+            b.builtin_.transpile_nil()));
     EXPECT_EQ(transpile_builtins(b, aml.make_list({a, bb}, list_format::scott)), expected);
 }
 
@@ -338,17 +332,14 @@ TEST_F(TranspileIntegrationTest, TriplyCurriedAbstractionMiddleVar) {
 
 TEST_F(TranspileIntegrationTest, ScottListWithAbsElement) {
     elaborator_manifest b{empty_mods, empty_stmts, goals};
-    // [λx.x]_scott — element transpiles to abs(var(0)); scope must be
-    // restored before nil/cons are looked up.
-    // Seeded builtins: cons=idx3, nil=idx2.
-    // Result: app(app(var(3), abs(var(0))), var(2))
+    // [λx.x]_scott — element transpiles to abs(var(0)); cons/nil are in-place.
     const aml_expr* id   = aml.make_abs("x", aml.make_symbol("x"));
     const aml_expr* list = aml.make_list({id}, list_format::scott);
 
     const lc_expr* id_lc     = b.lc.make_abs(b.lc.make_var(0));
     const lc_expr* expected  = b.lc.make_app(
-        b.lc.make_app(b.lc.make_var(3), id_lc),
-        b.lc.make_var(2));
+        b.lc.make_app(b.builtin_.transpile_cons(), id_lc),
+        b.builtin_.transpile_nil());
     EXPECT_EQ(transpile_builtins(b, list), expected);
 }
 
@@ -378,15 +369,15 @@ TEST_F(TranspileIntegrationTest, TwoManifestInstancesAreIndependent) {
     elaborator_manifest m1{empty_mods, empty_stmts, goals};
     elaborator_manifest m2{empty_mods, empty_stmts, goals};
     m1.sc.push("x");
-    // m2 has its own seeded scope — "x" must not be visible in m2.
+    // m2 has its own empty scope — "x" must not be visible in m2.
     const aml_expr* tok = aml.make_symbol("x");
     EXPECT_THROW(m2.tx.transpile(tok), std::out_of_range);
     m1.sc.pop();
 }
 
-TEST_F(TranspileIntegrationTest, SeededManifestResolvesNilWithoutManualPush) {
+TEST_F(TranspileIntegrationTest, BuiltinNilResolvedInPlaceWithoutScope) {
     elaborator_manifest b{empty_mods, empty_stmts, goals};
-    EXPECT_EQ(b.sc.get_var_index(k_nil_name), 2u);
+    EXPECT_FALSE(b.sc.contains(k_nil_name));
     EXPECT_EQ(transpile_builtins(b, aml.make_nat(0u, nat_format::binary)),
-              b.lc.make_var(2));
+              b.builtin_.transpile_nil());
 }

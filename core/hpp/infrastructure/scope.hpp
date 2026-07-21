@@ -9,6 +9,7 @@
 struct scope {
     void     push(std::string name);
     void     pop();
+    bool     contains(const std::string& name) const;
     uint32_t get_var_index(const std::string& name) const;
 
 private:

@@ -119,8 +119,8 @@ TEST_F(ElaboratorRuntimeIntegrationTest, EmptyProgramIsEqOfModelAndHole) {
     ASSERT_EQ(goals.count(), 1u);
     EXPECT_EQ(root_functor_id(goals.get(0)), k_eq_functor_id);
     EXPECT_EQ(as_var(arg(goals.get(0), 0)).index, k_model_var_id);
-    // Seeded builtins (6) wrap the hole.
-    EXPECT_EQ(let_chain_depth(arg(goals.get(0), 1)), 6u);
+    // No seeded builtins; Model is Main hole.
+    EXPECT_EQ(let_chain_depth(arg(goals.get(0), 1)), 0u);
     EXPECT_EQ(as_var(let_chain_hole(arg(goals.get(0), 1))).index,
               k_main_function_var_id);
 }
@@ -137,7 +137,7 @@ TEST_F(ElaboratorRuntimeIntegrationTest, ModulesOnlyYieldsEqOnly) {
 
     ASSERT_EQ(goals.count(), 1u);
     EXPECT_EQ(root_functor_id(goals.get(0)), k_eq_functor_id);
-    EXPECT_EQ(let_chain_depth(arg(goals.get(0), 1)), 7u); // 6 builtins + f
+    EXPECT_EQ(let_chain_depth(arg(goals.get(0), 1)), 1u); // f only
     EXPECT_EQ(as_var(let_chain_hole(arg(goals.get(0), 1))).index,
               k_main_function_var_id);
 }
@@ -228,7 +228,7 @@ TEST_F(ElaboratorRuntimeIntegrationTest, IdentityProgramStructuralShape) {
     rt.elaborate();
 
     const expr* P = arg(goals.get(0), 1);
-    EXPECT_EQ(let_chain_depth(P), 7u); // 6 builtins + f
+    EXPECT_EQ(let_chain_depth(P), 1u); // f only
     EXPECT_EQ(as_var(let_chain_hole(P)).index, k_main_function_var_id);
 
     const expr* norm = goals.get(1);
@@ -260,7 +260,7 @@ TEST_F(ElaboratorRuntimeIntegrationTest, ThreeGlobalsLetChainDepth) {
 
     ASSERT_EQ(goals.count(), 1u);
     const expr* P = arg(goals.get(0), 1);
-    EXPECT_EQ(let_chain_depth(P), 9u); // 6 builtins + a,b,c
+    EXPECT_EQ(let_chain_depth(P), 3u); // a,b,c
     EXPECT_EQ(as_var(let_chain_hole(P)).index, k_main_function_var_id);
 }
 
@@ -336,7 +336,7 @@ TEST_F(ElaboratorRuntimeIntegrationTest, ZeroGlobalsChurchNatStatement) {
     rt.elaborate();
 
     ASSERT_EQ(goals.count(), 2u);
-    EXPECT_EQ(let_chain_depth(arg(goals.get(0), 1)), 6u);
+    EXPECT_EQ(let_chain_depth(arg(goals.get(0), 1)), 0u);
     EXPECT_EQ(as_var(let_chain_hole(arg(goals.get(0), 1))).index,
               k_main_function_var_id);
     EXPECT_EQ(root_functor_id(goals.get(1)), k_normalize_functor_id);
@@ -368,7 +368,7 @@ TEST_F(ElaboratorRuntimeIntegrationTest, YCombinatorWithTrainingData) {
 
     ASSERT_EQ(goals.count(), 3u);
     EXPECT_EQ(root_functor_id(goals.get(0)), k_eq_functor_id);
-    EXPECT_EQ(let_chain_depth(arg(goals.get(0), 1)), 8u); // 6 builtins + id, Y
+    EXPECT_EQ(let_chain_depth(arg(goals.get(0), 1)), 2u); // id, Y
     EXPECT_EQ(as_var(let_chain_hole(arg(goals.get(0), 1))).index,
               k_main_function_var_id);
     EXPECT_EQ(root_functor_id(goals.get(1)), k_normalize_functor_id);

@@ -16,6 +16,10 @@ void scope::pop() {
     --depth_;
 }
 
+bool scope::contains(const std::string& name) const {
+    return slot_.find(name) != slot_.end();
+}
+
 uint32_t scope::get_var_index(const std::string& name) const {
     return depth_ - slot_.at(name).back();
 }

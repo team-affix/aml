@@ -28,7 +28,7 @@ struct TranspilerStressTest : public ::testing::Test {
         return result;
     }
 
-    // Manifest ctor seeds builtins into scope; no manual push needed.
+    // Builtins resolve in-place; empty scope is fine for closed Scott terms.
     const lc_expr* transpile_with_builtins(elaborator_manifest& bundle, const aml_expr* e) {
         return bundle.tx.transpile(e);
     }

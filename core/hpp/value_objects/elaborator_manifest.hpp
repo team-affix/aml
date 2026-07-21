@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "infrastructure/assembler.hpp"
+#include "infrastructure/builtin_transpiler.hpp"
 #include "infrastructure/data_point_transpiler.hpp"
 #include "infrastructure/declaration_transpiler.hpp"
 #include "infrastructure/elaborator.hpp"
@@ -24,8 +25,11 @@
 #include "value_objects/statement_file.hpp"
 
 struct elaborator_manifest {
-    using transpiler_t   = transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool,
-                                      scope, scope, scope>;
+    using declaration_transpiler_t = declaration_transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool>;
+    using builtin_transpiler_t     = builtin_transpiler<declaration_transpiler_t>;
+
+    using transpiler_t = transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool,
+                                    scope, scope, scope, builtin_transpiler_t>;
     using symbol_transpiler_t    = typename transpiler_t::symbol_transpiler_t;
     using abs_transpiler_t       = typename transpiler_t::abs_transpiler_t;
     using app_transpiler_t       = typename transpiler_t::app_transpiler_t;
@@ -34,7 +38,6 @@ struct elaborator_manifest {
     using character_transpiler_t = typename transpiler_t::character_transpiler_t;
     using string_transpiler_t    = typename transpiler_t::string_transpiler_t;
     using list_transpiler_t      = typename transpiler_t::list_transpiler_t;
-    using declaration_transpiler_t = declaration_transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool>;
     using global_processor_t       = global_processor<transpiler_t, declaration_transpiler_t,
                                                       global_stack, scope>;
     using statement_processor_t    = statement_processor<transpiler_t, training_data>;
@@ -62,6 +65,9 @@ struct elaborator_manifest {
     training_data         training;
     expr_pool             chc;
 
+    declaration_transpiler_t  decl;
+    builtin_transpiler_t      builtin_;
+
     transpiler_t              tx;
     symbol_transpiler_t       symbol_;
     nat_transpiler_t          nat_;
@@ -71,7 +77,6 @@ struct elaborator_manifest {
     abs_transpiler_t          abs_;
     app_transpiler_t          app_;
     list_transpiler_t         list_;
-    declaration_transpiler_t  decl;
 
     global_iterator       global_it;
     statement_iterator    statement_it;

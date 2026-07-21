@@ -15,18 +15,22 @@
 #include "value_objects/lc_expr.hpp"
 
 template<typename IMakeLcVar, typename IMakeLcAbs, typename IMakeLcApp,
-         typename IGetVarIndex, typename IPushVar, typename IPopVar>
+         typename IGetVarIndex, typename IPushVar, typename IPopVar,
+         typename IBuiltin>
 struct transpiler {
-    using self = transpiler<IMakeLcVar, IMakeLcAbs, IMakeLcApp, IGetVarIndex, IPushVar, IPopVar>;
+    using self = transpiler<IMakeLcVar, IMakeLcAbs, IMakeLcApp, IGetVarIndex, IPushVar, IPopVar,
+                            IBuiltin>;
 
-    using symbol_transpiler_t    = symbol_transpiler<IMakeLcVar, IGetVarIndex>;
-    using abs_transpiler_t       = abs_transpiler<self, IMakeLcAbs, IPushVar, IPopVar>;
-    using app_transpiler_t       = app_transpiler<self, IMakeLcApp>;
-    using nat_transpiler_t       = nat_transpiler<IMakeLcVar, IMakeLcAbs, IMakeLcApp, IGetVarIndex>;
-    using integer_transpiler_t   = integer_transpiler<IMakeLcVar, IMakeLcApp, nat_transpiler_t, IGetVarIndex>;
+    using symbol_transpiler_t = symbol_transpiler<IMakeLcVar, IGetVarIndex, IGetVarIndex, IBuiltin>;
+    using abs_transpiler_t    = abs_transpiler<self, IMakeLcAbs, IPushVar, IPopVar>;
+    using app_transpiler_t    = app_transpiler<self, IMakeLcApp>;
+    using nat_transpiler_t    = nat_transpiler<IMakeLcVar, IMakeLcAbs, IMakeLcApp,
+                                               IBuiltin, IBuiltin, IBuiltin, IBuiltin>;
+    using integer_transpiler_t = integer_transpiler<IMakeLcApp, nat_transpiler_t, IBuiltin, IBuiltin>;
     using character_transpiler_t = character_transpiler<nat_transpiler_t>;
-    using string_transpiler_t    = string_transpiler<nat_transpiler_t, IMakeLcVar, IMakeLcApp, IGetVarIndex>;
-    using list_transpiler_t      = list_transpiler<self, IMakeLcVar, IMakeLcAbs, IMakeLcApp, IGetVarIndex>;
+    using string_transpiler_t = string_transpiler<nat_transpiler_t, IMakeLcApp, IBuiltin, IBuiltin>;
+    using list_transpiler_t   = list_transpiler<self, IMakeLcVar, IMakeLcAbs, IMakeLcApp,
+                                                IBuiltin, IBuiltin>;
 
     transpiler(symbol_transpiler_t&,
                abs_transpiler_t&, app_transpiler_t&,
@@ -48,14 +52,14 @@ private:
     list_transpiler_t&      list_;
 };
 
-template<typename IV, typename IL, typename IA, typename IG, typename IP, typename IO>
-transpiler<IV, IL, IA, IG, IP, IO>::transpiler(symbol_transpiler_t& symbol,
-                                               abs_transpiler_t& abs, app_transpiler_t& app,
-                                               nat_transpiler_t& nat,
-                                               integer_transpiler_t& integer,
-                                               character_transpiler_t& character,
-                                               string_transpiler_t& string,
-                                               list_transpiler_t& list)
+template<typename IV, typename IL, typename IA, typename IG, typename IP, typename IO, typename IB>
+transpiler<IV, IL, IA, IG, IP, IO, IB>::transpiler(symbol_transpiler_t& symbol,
+                                                   abs_transpiler_t& abs, app_transpiler_t& app,
+                                                   nat_transpiler_t& nat,
+                                                   integer_transpiler_t& integer,
+                                                   character_transpiler_t& character,
+                                                   string_transpiler_t& string,
+                                                   list_transpiler_t& list)
     : symbol_(symbol)
     , abs_(abs)
     , app_(app)
@@ -65,8 +69,8 @@ transpiler<IV, IL, IA, IG, IP, IO>::transpiler(symbol_transpiler_t& symbol,
     , string_(string)
     , list_(list) {}
 
-template<typename IV, typename IL, typename IA, typename IG, typename IP, typename IO>
-const lc_expr* transpiler<IV, IL, IA, IG, IP, IO>::transpile(const aml_expr* e) {
+template<typename IV, typename IL, typename IA, typename IG, typename IP, typename IO, typename IB>
+const lc_expr* transpiler<IV, IL, IA, IG, IP, IO, IB>::transpile(const aml_expr* e) {
     if (const auto* t = std::get_if<aml_expr::symbol>(&e->content))
         return symbol_.transpile_symbol(*t);
     if (const auto* a = std::get_if<aml_expr::abs>(&e->content))

@@ -6,14 +6,13 @@
 #include "value_objects/aml_expr.hpp"
 #include "value_objects/lc_expr.hpp"
 #include "value_objects/list_format.hpp"
-#include "value_objects/list_decl_group.hpp"
 
 template<typename ITranspileExpr, typename IMakeLcVar, typename IMakeLcAbs,
-         typename IMakeLcApp, typename IGetVarIndex>
+         typename IMakeLcApp, typename ITranspileNil, typename ITranspileCons>
 struct list_transpiler {
     list_transpiler(ITranspileExpr& transpile_expr, IMakeLcVar& make_var,
                     IMakeLcAbs& make_abs, IMakeLcApp& make_app,
-                    IGetVarIndex& get_var_index);
+                    ITranspileNil& transpile_nil, ITranspileCons& transpile_cons);
 
     const lc_expr* transpile_list(const aml_expr::list& l);
 
@@ -25,21 +24,23 @@ private:
     IMakeLcVar&     make_var_;
     IMakeLcAbs&     make_abs_;
     IMakeLcApp&     make_app_;
-    IGetVarIndex&   get_var_index_;
+    ITranspileNil&  transpile_nil_;
+    ITranspileCons& transpile_cons_;
 };
 
-template<typename IT, typename IV, typename IL, typename IA, typename IG>
-list_transpiler<IT, IV, IL, IA, IG>::list_transpiler(IT& transpile_expr, IV& make_var,
-                                                     IL& make_abs, IA& make_app,
-                                                     IG& get_var_index)
+template<typename IT, typename IV, typename IL, typename IA, typename IN, typename IC>
+list_transpiler<IT, IV, IL, IA, IN, IC>::list_transpiler(
+        IT& transpile_expr, IV& make_var, IL& make_abs, IA& make_app,
+        IN& transpile_nil, IC& transpile_cons)
     : transpile_expr_(transpile_expr)
     , make_var_(make_var)
     , make_abs_(make_abs)
     , make_app_(make_app)
-    , get_var_index_(get_var_index) {}
+    , transpile_nil_(transpile_nil)
+    , transpile_cons_(transpile_cons) {}
 
-template<typename IT, typename IV, typename IL, typename IA, typename IG>
-const lc_expr* list_transpiler<IT, IV, IL, IA, IG>::transpile_list(
+template<typename IT, typename IV, typename IL, typename IA, typename IN, typename IC>
+const lc_expr* list_transpiler<IT, IV, IL, IA, IN, IC>::transpile_list(
         const aml_expr::list& l) {
     switch (l.format) {
         case list_format::scott:  return transpile_scott(l.elems);
@@ -48,21 +49,21 @@ const lc_expr* list_transpiler<IT, IV, IL, IA, IG>::transpile_list(
     throw std::runtime_error("unsupported list_format");
 }
 
-template<typename IT, typename IV, typename IL, typename IA, typename IG>
-const lc_expr* list_transpiler<IT, IV, IL, IA, IG>::transpile_scott(
+template<typename IT, typename IV, typename IL, typename IA, typename IN, typename IC>
+const lc_expr* list_transpiler<IT, IV, IL, IA, IN, IC>::transpile_scott(
         const std::vector<const aml_expr*>& elems) {
-    const lc_expr* list = make_var_.make_var(get_var_index_.get_var_index(k_nil_name));
+    const lc_expr* list = transpile_nil_.transpile_nil();
     for (auto it = elems.rbegin(); it != elems.rend(); ++it) {
         const lc_expr* elem = transpile_expr_.transpile(*it);
         list = make_app_.make_app(
-            make_app_.make_app(make_var_.make_var(get_var_index_.get_var_index(k_cons_name)), elem),
+            make_app_.make_app(transpile_cons_.transpile_cons(), elem),
             list);
     }
     return list;
 }
 
-template<typename IT, typename IV, typename IL, typename IA, typename IG>
-const lc_expr* list_transpiler<IT, IV, IL, IA, IG>::transpile_church(
+template<typename IT, typename IV, typename IL, typename IA, typename IN, typename IC>
+const lc_expr* list_transpiler<IT, IV, IL, IA, IN, IC>::transpile_church(
         const std::vector<const aml_expr*>& elems) {
     const lc_expr* body = make_var_.make_var(0);
     for (auto it = elems.rbegin(); it != elems.rend(); ++it) {

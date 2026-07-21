@@ -47,18 +47,6 @@ static const lc_expr* assemble_lc(lc_expr_pool& lc,
     return result;
 }
 
-static std::vector<const lc_expr*> seeded_builtin_terms(lc_expr_pool& lc) {
-    declaration_transpiler<lc_expr_pool, lc_expr_pool, lc_expr_pool> dt{lc, lc, lc};
-    return {
-        dt.transpile_decl(2u, 0u, 0u),
-        dt.transpile_decl(2u, 1u, 0u),
-        dt.transpile_decl(2u, 0u, 2u),
-        dt.transpile_decl(2u, 1u, 0u),
-        dt.transpile_decl(2u, 0u, 1u),
-        dt.transpile_decl(2u, 1u, 1u),
-    };
-}
-
 static const lc_expr* outermost_arg(const lc_expr* assembled) {
     return std::get<lc_expr::app>(assembled->content).arg;
 }
@@ -88,9 +76,7 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionSingleIdentity) {
     const lc_expr* result = em.asm_.assemble();
 
     ASSERT_NE(result, nullptr);
-    auto terms = seeded_builtin_terms(lc);
-    terms.push_back(lc.make_abs(lc.make_var(0)));
-    EXPECT_TRUE(struct_eq(result, assemble_lc(lc, terms)));
+    EXPECT_TRUE(struct_eq(result, assemble_lc(lc, {lc.make_abs(lc.make_var(0))})));
 }
 
 TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionBodyCannotSeeOwnName) {
@@ -114,18 +100,17 @@ TEST_F(ElaboratorManifestIntegrationTest, ProcessDefinitionSecondSeesFirst) {
     const lc_expr* result = em.asm_.assemble();
 
     ASSERT_NE(result, nullptr);
-    auto terms = seeded_builtin_terms(lc);
-    terms.push_back(lc.make_abs(lc.make_var(0)));
-    terms.push_back(lc.make_abs(lc.make_var(1)));
-    EXPECT_TRUE(struct_eq(result, assemble_lc(lc, terms)));
+    EXPECT_TRUE(struct_eq(result, assemble_lc(lc, {
+        lc.make_abs(lc.make_var(0)),
+        lc.make_abs(lc.make_var(1))})));
 }
 
-TEST_F(ElaboratorManifestIntegrationTest, SeededBuiltinsPresentAfterConstruct) {
+TEST_F(ElaboratorManifestIntegrationTest, NoBuiltinGlobalsAfterConstruct) {
     std::vector<module_file> mods;
     std::vector<statement_file> stmts;
     elaborator_manifest em{mods, stmts, goals};
-    EXPECT_EQ(em.sc.get_var_index(k_nil_name), 2u);
-    EXPECT_FALSE(em.globals.empty());
+    EXPECT_TRUE(em.globals.empty());
+    EXPECT_FALSE(em.sc.contains(k_nil_name));
 }
 
 TEST_F(ElaboratorManifestIntegrationTest, ProcessDeclarationGroupBooleans) {
