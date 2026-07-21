@@ -121,6 +121,13 @@ TEST_F(ElaborateCommandHandlerTest, EmptyProgramPrintsMainHole) {
     EXPECT_EQ(got.find("?0"), std::string::npos);
 }
 
+TEST_F(ElaborateCommandHandlerTest, EmptyOutputPathPrintsToStdout) {
+    const std::string got = run_elaborate_stdout({}, {});
+    EXPECT_EQ(round_trip_goal_count(got), 1u);
+    EXPECT_NE(got.find("eq(Model,"), std::string::npos);
+    EXPECT_NE(got.find("Main"), std::string::npos);
+}
+
 // ---------------------------------------------------------------------------
 // Failure paths
 // ---------------------------------------------------------------------------

@@ -196,27 +196,6 @@ CLI_DEBUG_DEP      = $(CLI_DEBUG_OBJ:.o=.d)
 CLI_DEBUG_FAST_DEP = $(CLI_DEBUG_FAST_OBJ:.o=.d)
 
 # ==============================================================================
-# Atlas library build rules  (delegate to atlas/makefile)
-# ==============================================================================
-
-$(ATLAS_CORE_LIB):
-	$(MAKE) -C atlas build/libatlas_core.a
-
-$(ATLAS_CORE_DEBUG_LIB):
-	$(MAKE) -C atlas build/libatlas_core_debug.a
-
-$(ATLAS_CORE_DEBUG_FAST_LIB):
-	$(MAKE) -C atlas build/libatlas_core_debug_fast.a
-
-$(ATLAS_PARSER_DEBUG_LIB): $(ATLAS_CORE_DEBUG_LIB)
-	$(MAKE) -C atlas parser/generated
-	$(MAKE) -C atlas build/libatlas_parser_debug.a
-
-$(ATLAS_PARSER_DEBUG_FAST_LIB): $(ATLAS_CORE_DEBUG_FAST_LIB)
-	$(MAKE) -C atlas parser/generated
-	$(MAKE) -C atlas build/libatlas_parser_debug_fast.a
-
-# ==============================================================================
 # User-facing targets
 # ==============================================================================
 
@@ -284,6 +263,27 @@ aml: $(ATLAS_CORE_LIB) $(CORE_LIB)
 clean:
 	rm -rf build
 	rm -rf parser/generated
+
+# ==============================================================================
+# Atlas library build rules  (delegate to atlas/makefile)
+# ==============================================================================
+
+$(ATLAS_CORE_LIB):
+	$(MAKE) -C atlas build/libatlas_core.a
+
+$(ATLAS_CORE_DEBUG_LIB):
+	$(MAKE) -C atlas build/libatlas_core_debug.a
+
+$(ATLAS_CORE_DEBUG_FAST_LIB):
+	$(MAKE) -C atlas build/libatlas_core_debug_fast.a
+
+$(ATLAS_PARSER_DEBUG_LIB): $(ATLAS_CORE_DEBUG_LIB)
+	$(MAKE) -C atlas parser/generated
+	$(MAKE) -C atlas build/libatlas_parser_debug.a
+
+$(ATLAS_PARSER_DEBUG_FAST_LIB): $(ATLAS_CORE_DEBUG_FAST_LIB)
+	$(MAKE) -C atlas parser/generated
+	$(MAKE) -C atlas build/libatlas_parser_debug_fast.a
 
 # ==============================================================================
 # Library archive rules

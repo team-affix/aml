@@ -26,8 +26,8 @@ int main(int argc, char** argv) {
                               "AML statement file(s)")
         ->expected(0, -1);
     elaborate_sub->add_option("-o,--output", elaborate_opts.output,
-                              "Output file for comma-separated goals")
-        ->required();
+                              "Output file for comma-separated goals "
+                              "(default: print to stdout)");
     elaborate_sub->callback([&]() {
         elaborate_command_handler h(elaborate_opts.modules,
                                     elaborate_opts.statements,

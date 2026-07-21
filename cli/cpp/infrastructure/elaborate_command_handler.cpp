@@ -1,6 +1,7 @@
 #include "infrastructure/elaborate_command_handler.hpp"
 
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include "infrastructure/aml_expr_pool.hpp"
@@ -63,10 +64,16 @@ void elaborate_command_handler::operator()() {
         printer.print(goals.get(i));
     }
 
+    const std::string text = out.str();
+    if (output_path_.empty()) {
+        std::cout << text << '\n';
+        return;
+    }
+
     std::ofstream file(output_path_);
     if (!file)
         throw std::runtime_error("cannot open output file: " + output_path_);
-    file << out.str();
+    file << text;
     if (!file)
         throw std::runtime_error("failed writing output file: " + output_path_);
 }

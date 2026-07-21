@@ -3,7 +3,9 @@
 
 #include <cstdint>
 #include <fstream>
+#include <iostream>
 #include <map>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -28,6 +30,20 @@ inline std::string run_elaborate(const std::vector<std::string>& modules,
     elaborate_command_handler h(modules, statements, out_path);
     h();
     return read_file(out_path);
+}
+
+inline std::string run_elaborate_stdout(
+        const std::vector<std::string>& modules,
+        const std::vector<std::string>& statements) {
+    std::ostringstream captured;
+    std::streambuf* old = std::cout.rdbuf(captured.rdbuf());
+    elaborate_command_handler h(modules, statements, "");
+    h();
+    std::cout.rdbuf(old);
+    std::string got = captured.str();
+    if (!got.empty() && got.back() == '\n')
+        got.pop_back();
+    return got;
 }
 
 inline size_t round_trip_goal_count(const std::string& goals_str) {
