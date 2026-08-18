@@ -41,6 +41,12 @@
 %     Slower to the first answer, but every answer is a distinct
 %     meaningful program: no beta-redexes, no dead subterms.
 %   prog(M)   -- closed beta-normal M
+%   prog_depth(M, Max)
+%     prog/1 with a nesting-depth ceiling you pass in. Needed to
+%     synthesize anything that is not already a primitive:
+%       prog_depth(M, suc(suc(suc(suc(zero))))), fits_data(M, ...)
+%     Bounds candidate program shape only -- evaluation is still
+%     unbounded, so a shallow program may compute for a long time.
 %
 % No bounds. Nothing here limits evaluation. Normalization depth
 % is unrestricted: output may nest arbitrarily deep, application
@@ -220,6 +226,39 @@ lt(suc(I), suc(D)) :- lt(I, D).
 prog(M) :- nf(M, zero).
 
 fits_nf(M, Ins, Labs) :- prog(M), fits(M, Ins, Labs).
+
+% ============================================================
+% Depth-bounded programs
+%
+% The same relation with a ceiling supplied by the caller, so the
+% limit lives in the goal rather than in this file.
+%
+% Max bounds nesting depth -- the longest root-to-leaf path --
+% not the node count: siblings each get the full remaining Max
+% rather than splitting it. It restricts only which candidate
+% programs are considered, never how much evaluation a program
+% may do, so beta reduction and delta recursion stay unbounded.
+% A depth-3 program still computes plus 10 10.
+%
+% Needed for compositional synthesis. An unbounded generator
+% wanders into ever-deeper terms instead of covering the shallow
+% ones, so a target that is not already a primitive stays out of
+% reach: lambda x. if (not x) false, which is and/2, is found in
+% seconds at Max = 4 and not at all unbounded.
+%
+% A refutation under Max means "no program this shallow", not
+% "no program".
+% ============================================================
+
+nf_depth(abs(B), D, suc(Max)) :- nf_depth(B, suc(D), Max).
+nf_depth(data(C), _, _) :- con(C).
+nf_depth(X, D, Max) :- ne_depth(X, D, Max).
+
+ne_depth(var(I), D, _) :- lt(I, D).
+ne_depth(global(N), _, _) :- arity(N, _).
+ne_depth(app(F, A), D, suc(Max)) :- ne_depth(F, D, Max), nf_depth(A, D, Max).
+
+prog_depth(M, Max) :- nf_depth(M, zero, Max).
 
 % ============================================================
 % Domain
