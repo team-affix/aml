@@ -6,19 +6,36 @@
 %   abs(B)        -- abstraction
 %   app(F, A)     -- application
 %   global(Name)  -- declared name (not, suc, or, plus, if)
-%   constructors  -- true, false, zero, suc(N)
+%   data(C)       -- constructor data (true, false, zero, suc(N))
+%
+% data(C) wraps a whole constructor term once, never per layer:
+% data(suc(suc(zero))), not data(suc(data(zero))). The wrapper is
+% there so that every term former is a distinct functor and eval
+% never has to guess which clause applies. It is worth roughly 3x
+% on evaluation against an unwrapped, variable-headed data clause,
+% at the cost of a few percent on synthesis and one extra node per
+% data leaf. Values stay unwrapped, so con/1 and delta/3 keep
+% seeing raw constructors and the domain section is unaffected.
 %
 % A name with arity >= 1 is applied as global(Name). Constructors
 % are names too: suc : nat -> nat, so suc has an arity and an
-% intro rule, exactly as in Agda. That is what lets a constructor
-% take a non-data argument: abs(app(global(suc), var(zero))) is
-% lambda n. suc n, and normalizes to itself.
+% intro rule, exactly as in Agda. So suc has two spellings --
+% data(suc(zero)) when its argument is already data, and
+% app(global(suc), X) when it is not. The second is what lets
+% abs(app(global(suc), var(zero))) be lambda n. suc n and
+% normalize to itself.
 %
 % Public API:
 %   normalize(Term, Result)
 %   fits(M, Inputs, Labels)
 %     Row i applies M to Inputs_i and reifies to Labels_i.
 %     M is evaluated once and the value reused across rows.
+%   fits_data(M, Inputs, Labels)
+%     fits/3 with every element of every input row, and every
+%     label, wrapped in data/1 for you -- write bare constructors
+%     and drop the noise. Only for all-data tables: it cannot
+%     express a function input like global(not) or a non-data
+%     label like abs(...). Use fits/3 directly for those.
 %   fits_nf(M, Inputs, Labels)
 %     Same, but M is restricted to closed beta-normal terms.
 %     Slower to the first answer, but every answer is a distinct
@@ -45,9 +62,11 @@
 %   arity(or, suc(suc(zero))).
 %   delta(or, [true, Y], true) :- bool(Y).
 %
-% con/1 means "is data at all", independent of sort; the kernel
-% uses it to tell data from closures and stuck spines, so keep
-% its clauses rigid (one per constructor). Do not write
+% con/1 means "is data at all", independent of sort. Terms are
+% discriminated by functor, but values are not wrapped, so the
+% kernel still uses con/1 to tell data from closures and stuck
+% spines in apply. Keep its clauses rigid (one per
+% constructor). Do not write
 % con(X) :- bool(X) -- a variable head cannot be discriminated
 % during synthesis and costs an order of magnitude.
 %
@@ -58,25 +77,39 @@
 %
 % Example queries:
 %
-%   normalize(app(global(not), true), R)                 % R = false
-%   normalize(app(app(global(or), true), false), R)      % R = true
-%   normalize(app(app(global(plus), suc(zero)), suc(zero)), R)
-%                                                        % R = suc(suc(zero))
-%   normalize(app(app(app(global(if), true), zero), suc(zero)), R)
-%                                                        % R = zero
+%   normalize(app(global(not), data(true)), R)           % R = data(false)
+%   normalize(app(app(global(or), data(true)), data(false)), R)
+%                                                        % R = data(true)
+%   normalize(app(app(global(plus), data(suc(zero))), data(suc(zero))), R)
+%                                                    % R = data(suc(suc(zero)))
+%   normalize(app(app(app(global(if), data(true)), data(zero)),
+%             data(suc(zero))), R)                       % R = data(zero)
 %   normalize(abs(app(global(suc), var(zero))), R)       % R = itself
 %   normalize(app(global(not), abs(var(zero))), R)       % R = itself (stuck)
 %
-%   fits(M, [[true], [false]], [false, true])            % M = global(not)
-%   fits(M, [[true, false], [false, false],
-%            [false, true], [true, true]],
-%        [true, false, true, true])                      % M = global(or)
-%   fits(M, [[zero, suc(zero)], [suc(zero), suc(zero)]],
-%        [suc(zero), suc(suc(zero))])                    % M = global(plus)
+%   fits(M, [[data(true)], [data(false)]],
+%        [data(false), data(true)])                      % M = global(not)
+%   fits(M, [[data(true), data(false)], [data(false), data(false)],
+%            [data(false), data(true)], [data(true), data(true)]],
+%        [data(true), data(false), data(true), data(true)])
+%                                                        % M = global(or)
+%   fits(M, [[data(zero), data(suc(zero))],
+%            [data(suc(zero)), data(suc(zero))]],
+%        [data(suc(zero)), data(suc(suc(zero)))])        % M = global(plus)
+%
+%   % the same three tables via fits_data, wrapping done for you:
+%   fits_data(M, [[true], [false]], [false, true])       % M = global(not)
+%   fits_data(M, [[true, false], [false, false],
+%                 [false, true], [true, true]],
+%             [true, false, true, true])                 % M = global(or)
+%   fits_data(M, [[zero, suc(zero)], [suc(zero), suc(zero)]],
+%             [suc(zero), suc(suc(zero))])               % M = global(plus)
 %
 % Runtime-only values: clo(Body, Env), pap(Name, RevArgs, Left),
 % sp(Head, RevArgs) where Head is fvar(Level) or gl(Name),
-% fvar(Level), env(Val, Outer), nil. A stuck application is an
+% fvar(Level), env(Val, Outer), nil. Data values are bare
+% constructors -- data(C) is a term former only, stripped by eval
+% and reapplied by reify. A stuck application is an
 % sp, never an app, which is what keeps derivations unique.
 % Argument lists are closed so a value stays reusable.
 %
@@ -93,7 +126,7 @@ eval(var(N), env(V, E), R) :- lookup(N, env(V, E), R).
 eval(abs(B), E, clo(B, E)).
 eval(app(F, A), E, R) :- eval(F, E, FV), eval(A, E, AV), apply(FV, AV, R).
 eval(global(N), _, pap(N, [], K)) :- arity(N, K).
-eval(T, _, T) :- con(T).
+eval(data(C), _, C) :- con(C).
 
 lookup(zero, env(V, _), V).
 lookup(suc(N), env(_, E), R) :- lookup(N, E, R).
@@ -118,7 +151,7 @@ reify(sp(gl(F), As), L, T) :- reify_spine(global(F), As, L, T).
 reify(sp(fvar(L0), As), L, T) :-
     level_to_idx(L0, L, I),
     reify_spine(var(I), As, L, T).
-reify(V, _, V) :- con(V).
+reify(V, _, data(V)) :- con(V).
 
 reify_spine(H, [], _, H).
 reify_spine(H, [A|As], L, app(T, RA)) :-
@@ -153,6 +186,19 @@ saturate(F, [A|As], R) :-
     apply(F, AV, R1),
     saturate(R1, As, R).
 
+fits_data(M, Ins, Labs) :-
+    wrap_rows(Ins, WIns),
+    wrap_args(Labs, WLabs),
+    fits(M, WIns, WLabs).
+
+wrap_rows([], []).
+wrap_rows([Args|Rest], [WArgs|WRest]) :-
+    wrap_args(Args, WArgs),
+    wrap_rows(Rest, WRest).
+
+wrap_args([], []).
+wrap_args([C|Cs], [data(C)|Ws]) :- wrap_args(Cs, Ws).
+
 % ============================================================
 % Closed beta-normal programs
 %
@@ -161,7 +207,7 @@ saturate(F, [A|As], R) :-
 % ============================================================
 
 nf(abs(B), D) :- nf(B, suc(D)).
-nf(C, _) :- con(C).
+nf(data(C), _) :- con(C).
 nf(X, D) :- ne(X, D).
 
 ne(var(I), D) :- lt(I, D).
