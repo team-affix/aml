@@ -16,21 +16,32 @@
 %     Inputs = [[X1, X2, ...], ...], Labels = [Y, ...].
 %     Point i is normalize(app(...app(M, X1), X2)..., Yi).
 %
-% Adding an operator: identity eval (this is a value) and apply
-% (how it reduces on already-evaluated domain data). Do not write
-% reify, napp, neu, clo, fvar, or partial.
+% ------------------------------------------------------------
+% Extending the language: define eval/2 (Term, Value).
 %
-%   eval(not, _, not).
-%   apply(not, true, false).
-%   apply(not, false, true).
+% That is the ONLY predicate a domain defines, plus its own
+% helpers. Never eval/3, apply/3 or reify/3 — those are the
+% kernel's, and eval/2 cannot reach them (different arity).
 %
-%   eval(or, _, or).
-%   eval(or1(X), _, or1(X)).
-%   apply(or, X, or1(X)).
-%   apply(or1(true),  _, true).
-%   apply(or1(false), X, X).
+% Two shapes of rule:
 %
-% Recursive operators may call a helper (see plus / add).
+%   this is a value        eval(true, true).
+%   this is a redex        eval(app(not, true), false).
+%
+% A redex is keyed on the whole application spine, so a binary
+% operator matches app(app(or, X), Y). An operator that is still
+% waiting for arguments is a value: eval(app(or, X), app(or, X)).
+%
+% Name and guard every argument with your own helper. Do NOT use
+% a discard (_) in an argument position: `or true banana` must
+% not reduce, because banana is an unknown input, not a boolean.
+% Guards are also what stop an unevaluated term or a neutral from
+% being taken for a value, so operators only ever see their own
+% data (true/false, nats) — never closures or free variables.
+%
+% Forward anything non-trivial to a helper of your own (see
+% bool/1, nat/1, add/3 below).
+% ------------------------------------------------------------
 %
 % Example queries:
 %
@@ -38,6 +49,7 @@
 %   normalize(app(app(or, true), false), R)              % R = true
 %   normalize(app(app(plus, suc(zero)), suc(zero)), R)   % R = suc(suc(zero))
 %   normalize(app(abs(var(zero)), true), R)              % R = true
+%   normalize(abs(app(suc, var(zero))), R)               % R = abs(app(suc, var(zero)))
 %
 %   % Synthesis — each data point is a list of arguments:
 %   fits(M, [[true], [false]], [false, true])             % M = not
@@ -54,10 +66,10 @@
 % Runtime-only (never in queries):
 %   clo(Body, Env)   -- lambda closure
 %   fvar(Level)      -- fresh variable at reify level Level
-%   napp(Head, Arg)  -- neutral application (fvar spine)
 %   env(Val, Outer)  -- CBV environment
 %   nil              -- empty environment
-%   or1(X), plus1(X) -- unsaturated domain ops
+%   app(F, A) also carries a stuck spine: a waiting operator or a
+%   free-variable application. Reify walks it, so it prints as itself.
 % ============================================================
 
 % ============================================================
@@ -67,24 +79,29 @@
 eval(var(N), env(V, E), R) :- lookup(N, env(V, E), R).
 eval(abs(B), E, clo(B, E)).
 eval(app(F, A), E, R) :- eval(F, E, FV), eval(A, E, AV), apply(FV, AV, R).
+eval(T, _, V) :- eval(T, V).
 
 lookup(zero, env(V, _), V).
 lookup(suc(N), env(_, E), R) :- lookup(N, E, R).
 
 apply(clo(B, E), V, R) :- eval(B, env(V, E), R).
-apply(fvar(L), V, napp(fvar(L), V)).
-apply(napp(H, A), V, napp(napp(H, A), V)).
-apply(F, N, napp(F, N)) :- neu(N), eval(F, nil, F).
+apply(F, A, R) :- eval(app(F, A), R).
+apply(F, N, app(F, N)) :- neu(N), eval(F, F).
+apply(H, V, app(H, V)) :- neu(H).
 
 reify(clo(B, E), L, abs(R)) :-
     eval(B, env(fvar(L), E), BV),
     reify(BV, suc(L), R).
 reify(fvar(L), Level, var(Idx)) :- level_to_idx(L, Level, Idx).
-reify(napp(H, A), L, app(RH, RA)) :- reify(H, L, RH), reify(A, L, RA).
-reify(V, _, V) :- eval(V, nil, V).
+reify(app(F, A), L, app(RF, RA)) :- reify(F, L, RF), reify(A, L, RA).
+reify(V, _, V) :- eval(V, V).
 
 level_to_idx(L, suc(L), zero).
 level_to_idx(L, suc(N), suc(I)) :- level_to_idx(L, N, I).
+
+neu(fvar(_)).
+neu(app(F, _)) :- neu(F).
+neu(app(_, A)) :- neu(A).
 
 normalize(T, R) :- eval(T, nil, V), reify(V, zero, R).
 
@@ -97,34 +114,40 @@ fits(M, [Args|Rest], [Y|Ys]) :-
     normalize(T, Y),
     fits(M, Rest, Ys).
 
-neu(fvar(_)).
-neu(napp(_, _)).
-
 % ============================================================
-% Domain
+% Domain — booleans
 % ============================================================
 
-eval(true,  _, true).
-eval(false, _, false).
-eval(not,   _, not).
-eval(or,    _, or).
-eval(or1(X), _, or1(X)).
+bool(true).
+bool(false).
 
-apply(not, true,  false).
-apply(not, false, true).
-apply(or, X, or1(X)).
-apply(or1(true),  _, true).
-apply(or1(false), X, X).
+eval(true,  true).
+eval(false, false).
+eval(not,   not).
+eval(or,    or).
+eval(app(or, X), app(or, X)) :- bool(X).
 
-eval(zero, _, zero).
-eval(suc(N), E, suc(V)) :- eval(N, E, V).
-eval(plus, _, plus).
-eval(plus1(X), _, plus1(X)).
+eval(app(not, true),  false).
+eval(app(not, false), true).
+eval(app(app(or, true),  X), true) :- bool(X).
+eval(app(app(or, false), X), X)    :- bool(X).
 
-apply(plus, X, plus1(X)).
-apply(plus1(X), Y, R) :- add(X, Y, R).
+% ============================================================
+% Domain — naturals
+% ============================================================
 
-add(zero, Y, Y).
+nat(zero).
+nat(suc(N)) :- nat(N).
+
+eval(zero, zero).
+eval(suc(X), suc(X)) :- nat(X).
+eval(suc,  suc).
+eval(plus, plus).
+eval(app(suc, X), suc(X)) :- nat(X).
+eval(app(plus, X), app(plus, X)) :- nat(X).
+eval(app(app(plus, X), Y), R) :- add(X, Y, R).
+
+add(zero, Y, Y) :- nat(Y).
 add(suc(X), Y, suc(R)) :- add(X, Y, R).
 
 eq(X, X).
