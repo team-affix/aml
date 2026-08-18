@@ -5,7 +5,7 @@
 %   var(N)     -- de Bruijn variable (Peano; var(zero) = innermost)
 %   abs(B)     -- abstraction
 %   app(F, A)  -- application
-%   plus any custom functor (true, not, suc(N), ite(...), ...)
+%   plus any custom functor (true, not, suc(N), ...)
 %
 % Public API:
 %   normalize(Term, Result)
@@ -16,21 +16,21 @@
 %     Inputs = [[X1, X2, ...], ...], Labels = [Y, ...].
 %     Point i is normalize(app(...app(M, X1), X2)..., Yi).
 %
-% Adding a strict operator (example: not):
-%   eval(not, _, not).            reify(not, _, not).
+% Adding an operator: identity eval (this is a value) and apply
+% (how it reduces on already-evaluated domain data). Do not write
+% reify, napp, neu, clo, fvar, or partial.
+%
+%   eval(not, _, not).
 %   apply(not, true, false).
 %   apply(not, false, true).
 %
-% Adding a binary operator (example: or):
-%   eval(or, _, or).              reify(or, _, or).
+%   eval(or, _, or).
+%   eval(or1(X), _, or1(X)).
 %   apply(or, X, or1(X)).
 %   apply(or1(true),  _, true).
 %   apply(or1(false), X, X).
-%   partial(or1(X), or, X).       -- or1(X) is unsaturated app(or, X)
 %
-% Adding a recursive operator: apply/3 may call a CHC relation
-% (see plus / add below). Lazy control cannot be app — use a
-% dedicated functor (see ite/3).
+% Recursive operators may call a helper (see plus / add).
 %
 % Example queries:
 %
@@ -41,7 +41,10 @@
 %
 %   % Synthesis — each data point is a list of arguments:
 %   fits(M, [[true], [false]], [false, true])             % M = not
-%   fits(M, [[true, false], [false, false]], [true, false])  % M = or
+%   fits(M, [[true, false], [false, false], [false, true], [true, true]],
+%        [true, false, true, true])                      % M = or
+%   fits(M, [[zero, suc(zero)], [suc(zero), suc(zero)]],
+%        [suc(zero), suc(suc(zero))])                    % M = plus
 %
 % Kernel — CBV eval to WHNF, then reify:
 %   eval(Term, Env, Val)
@@ -49,7 +52,7 @@
 %   reify(Val, Level, Term)
 %
 % Runtime-only (never in queries):
-%   clo(Body, Env)   -- lambda closure (delayed substitution)
+%   clo(Body, Env)   -- lambda closure
 %   fvar(Level)      -- fresh variable at reify level Level
 %   napp(Head, Arg)  -- neutral application (fvar spine)
 %   env(Val, Outer)  -- CBV environment
@@ -71,15 +74,14 @@ lookup(suc(N), env(_, E), R) :- lookup(N, E, R).
 apply(clo(B, E), V, R) :- eval(B, env(V, E), R).
 apply(fvar(L), V, napp(fvar(L), V)).
 apply(napp(H, A), V, napp(napp(H, A), V)).
-apply(F, N, napp(F, N)) :- neu(N), reify(F, zero, F).
-apply(U, Y, napp(U, Y)) :- partial(U, _, N), neu(N).
+apply(F, N, napp(F, N)) :- neu(N), eval(F, nil, F).
 
 reify(clo(B, E), L, abs(R)) :-
     eval(B, env(fvar(L), E), BV),
     reify(BV, suc(L), R).
 reify(fvar(L), Level, var(Idx)) :- level_to_idx(L, Level, Idx).
 reify(napp(H, A), L, app(RH, RA)) :- reify(H, L, RH), reify(A, L, RA).
-reify(U, L, app(H, RA)) :- partial(U, H, A), reify(A, L, RA).
+reify(V, _, V) :- eval(V, nil, V).
 
 level_to_idx(L, suc(L), zero).
 level_to_idx(L, suc(N), suc(I)) :- level_to_idx(L, N, I).
@@ -102,38 +104,27 @@ neu(napp(_, _)).
 % Domain
 % ============================================================
 
-% --- booleans ---
-
-eval(true,  _, true).    reify(true,  _, true).
-eval(false, _, false).   reify(false, _, false).
-eval(not,   _, not).     reify(not,   _, not).
-eval(or,    _, or).      reify(or,    _, or).
+eval(true,  _, true).
+eval(false, _, false).
+eval(not,   _, not).
+eval(or,    _, or).
+eval(or1(X), _, or1(X)).
 
 apply(not, true,  false).
 apply(not, false, true).
-
 apply(or, X, or1(X)).
 apply(or1(true),  _, true).
 apply(or1(false), X, X).
-partial(or1(X), or, X).
 
-% --- nats ---
-
-eval(zero, _, zero).     reify(zero, _, zero).
+eval(zero, _, zero).
 eval(suc(N), E, suc(V)) :- eval(N, E, V).
-reify(suc(V), L, suc(R)) :- reify(V, L, R).
-eval(plus, _, plus).     reify(plus, _, plus).
+eval(plus, _, plus).
+eval(plus1(X), _, plus1(X)).
 
 apply(plus, X, plus1(X)).
 apply(plus1(X), Y, R) :- add(X, Y, R).
-partial(plus1(X), plus, X).
 
 add(zero, Y, Y).
 add(suc(X), Y, suc(R)) :- add(X, Y, R).
-
-% --- lazy if (dedicated functor; cannot be app) ---
-
-eval(ite(C, T, _), E, R) :- eval(C, E, true),  eval(T, E, R).
-eval(ite(C, _, F), E, R) :- eval(C, E, false), eval(F, E, R).
 
 eq(X, X).
