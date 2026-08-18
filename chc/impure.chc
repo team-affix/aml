@@ -1,153 +1,209 @@
 % ============================================================
 % Impure Lambda Calculus — CBV Normalization by Evaluation
 %
-% Term constructors:
-%   var(N)     -- de Bruijn variable (Peano; var(zero) = innermost)
-%   abs(B)     -- abstraction
-%   app(F, A)  -- application
-%   plus any custom functor (true, not, suc(N), ...)
+% Term formers:
+%   var(N)        -- de Bruijn (Peano; var(zero) = innermost)
+%   abs(B)        -- abstraction
+%   app(F, A)     -- application
+%   global(Name)  -- declared name (not, suc, or, plus, if)
+%   constructors  -- true, false, zero, suc(N)
+%
+% A name with arity >= 1 is applied as global(Name). Constructors
+% are names too: suc : nat -> nat, so suc has an arity and an
+% intro rule, exactly as in Agda. That is what lets a constructor
+% take a non-data argument: abs(app(global(suc), var(zero))) is
+% lambda n. suc n, and normalizes to itself.
 %
 % Public API:
 %   normalize(Term, Result)
-%     Evaluates a closed term to a normal form.
-%     Does not terminate for terms with no normal form.
 %   fits(M, Inputs, Labels)
-%     Synthesis: each data point is several arguments (a list).
-%     Inputs = [[X1, X2, ...], ...], Labels = [Y, ...].
-%     Point i is normalize(app(...app(M, X1), X2)..., Yi).
+%     Row i applies M to Inputs_i and reifies to Labels_i.
+%     M is evaluated once and the value reused across rows.
+%   fits_nf(M, Inputs, Labels)
+%     Same, but M is restricted to closed beta-normal terms.
+%     Slower to the first answer, but every answer is a distinct
+%     meaningful program: no beta-redexes, no dead subterms.
+%   prog(M)   -- closed beta-normal M, within k_max_size
 %
-% ------------------------------------------------------------
-% Extending the language: define eval/2 (Term, Value).
+% Budgets. Every kernel predicate is fuel-bounded so a rollout
+% always terminates instead of diverging. k_max_fuel bounds eval
+% depth (6 is the minimum that admits the examples below);
+% k_max_size bounds synthesized program size.
 %
-% That is the ONLY predicate a domain defines, plus its own
-% helpers. Never eval/3, apply/3 or reify/3 — those are the
-% kernel's, and eval/2 cannot reach them (different arity).
+% Extending: declare sorts, con/1, arity/2, delta/3. Never
+% eval/4, apply/4, reify/4. Helpers (add/3) are yours.
 %
-% Two shapes of rule:
+%   bool(true).
+%   con(true).
+%   arity(or, suc(suc(zero))).
+%   delta(or, [true, Y], true) :- bool(Y).
 %
-%   this is a value        eval(true, true).
-%   this is a redex        eval(app(not, true), false).
+% con/1 means "is data at all", independent of sort; the kernel
+% uses it to tell data from closures and stuck spines, so keep
+% its clauses rigid (one per constructor). Do not write
+% con(X) :- bool(X) -- a variable head cannot be discriminated
+% during synthesis and costs an order of magnitude.
 %
-% A redex is keyed on the whole application spine, so a binary
-% operator matches app(app(or, X), Y). An operator that is still
-% waiting for arguments is a value: eval(app(or, X), app(or, X)).
-%
-% Name and guard every argument with your own helper. Do NOT use
-% a discard (_) in an argument position: `or true banana` must
-% not reduce, because banana is an unknown input, not a boolean.
-% Guards are also what stop an unevaluated term or a neutral from
-% being taken for a value, so operators only ever see their own
-% data (true/false, nats) — never closures or free variables.
-%
-% Forward anything non-trivial to a helper of your own (see
-% bool/1, nat/1, add/3 below).
-% ------------------------------------------------------------
+% Guard every delta argument with the sort that position wants,
+% not with con: or true zero must not reduce. Do not return
+% var(...) from delta -- that would be a dangling index; the
+% kernel's con(R) check rejects it.
 %
 % Example queries:
 %
-%   normalize(app(not, true), R)                         % R = false
-%   normalize(app(app(or, true), false), R)              % R = true
-%   normalize(app(app(plus, suc(zero)), suc(zero)), R)   % R = suc(suc(zero))
-%   normalize(app(abs(var(zero)), true), R)              % R = true
-%   normalize(abs(app(suc, var(zero))), R)               % R = abs(app(suc, var(zero)))
+%   normalize(app(global(not), true), R)                 % R = false
+%   normalize(app(app(global(or), true), false), R)      % R = true
+%   normalize(app(app(global(plus), suc(zero)), suc(zero)), R)
+%                                                        % R = suc(suc(zero))
+%   normalize(app(app(app(global(if), true), zero), suc(zero)), R)
+%                                                        % R = zero
+%   normalize(abs(app(global(suc), var(zero))), R)       % R = itself
+%   normalize(app(global(not), abs(var(zero))), R)       % R = itself (stuck)
 %
-%   % Synthesis — each data point is a list of arguments:
-%   fits(M, [[true], [false]], [false, true])             % M = not
-%   fits(M, [[true, false], [false, false], [false, true], [true, true]],
-%        [true, false, true, true])                      % M = or
+%   fits(M, [[true], [false]], [false, true])            % M = global(not)
+%   fits(M, [[true, false], [false, false],
+%            [false, true], [true, true]],
+%        [true, false, true, true])                      % M = global(or)
 %   fits(M, [[zero, suc(zero)], [suc(zero), suc(zero)]],
-%        [suc(zero), suc(suc(zero))])                    % M = plus
+%        [suc(zero), suc(suc(zero))])                    % M = global(plus)
 %
-% Kernel — CBV eval to WHNF, then reify:
-%   eval(Term, Env, Val)
-%   apply(FunVal, ArgVal, Val)
-%   reify(Val, Level, Term)
-%
-% Runtime-only (never in queries):
-%   clo(Body, Env)   -- lambda closure
-%   fvar(Level)      -- fresh variable at reify level Level
-%   env(Val, Outer)  -- CBV environment
-%   nil              -- empty environment
-%   app(F, A) also carries a stuck spine: a waiting operator or a
-%   free-variable application. Reify walks it, so it prints as itself.
+% Runtime-only values: clo(Body, Env), pap(Name, RevArgs, Left),
+% sp(Head, RevArgs) where Head is fvar(Level) or gl(Name),
+% fvar(Level), env(Val, Outer), nil. A stuck application is an
+% sp, never an app, which is what keeps derivations unique.
+% Argument lists are closed so a value stays reusable.
 % ============================================================
 
 % ============================================================
 % Kernel
 % ============================================================
 
-eval(var(N), env(V, E), R) :- lookup(N, env(V, E), R).
-eval(abs(B), E, clo(B, E)).
-eval(app(F, A), E, R) :- eval(F, E, FV), eval(A, E, AV), apply(FV, AV, R).
-eval(T, _, V) :- eval(T, V).
+k_max_fuel(suc(suc(suc(suc(suc(suc(suc(suc(zero))))))))).
+k_max_size(suc(suc(suc(suc(suc(suc(zero))))))).
+
+eval(var(N), env(V, E), R, _) :- lookup(N, env(V, E), R).
+eval(abs(B), E, clo(B, E), _).
+eval(app(F, A), E, R, suc(D)) :-
+    eval(F, E, FV, D),
+    eval(A, E, AV, D),
+    apply(FV, AV, R, D).
+eval(global(N), _, pap(N, [], K), _) :- arity(N, K).
+eval(T, _, T, _) :- con(T).
 
 lookup(zero, env(V, _), V).
 lookup(suc(N), env(_, E), R) :- lookup(N, E, R).
 
-apply(clo(B, E), V, R) :- eval(B, env(V, E), R).
-apply(F, A, R) :- eval(app(F, A), R).
-apply(F, N, app(F, N)) :- neu(N), eval(F, F).
-apply(H, V, app(H, V)) :- neu(H).
+apply(clo(B, E), V, R, suc(D)) :- eval(B, env(V, E), R, D).
+apply(pap(F, As, suc(suc(K))), V, pap(F, [V|As], suc(K)), _) :- con(V).
+apply(pap(F, As, suc(zero)), V, R, _) :-
+    con(V),
+    rev([V|As], Args),
+    delta(F, Args, R),
+    con(R).
+apply(pap(F, As, _), V, sp(gl(F), [V|As]), _) :- nondata(V).
+apply(sp(H, As), V, sp(H, [V|As]), _).
+apply(fvar(L), V, sp(fvar(L), [V]), _).
 
-reify(clo(B, E), L, abs(R)) :-
-    eval(B, env(fvar(L), E), BV),
-    reify(BV, suc(L), R).
-reify(fvar(L), Level, var(Idx)) :- level_to_idx(L, Level, Idx).
-reify(app(F, A), L, app(RF, RA)) :- reify(F, L, RF), reify(A, L, RA).
-reify(V, _, V) :- eval(V, V).
+reify(clo(B, E), L, abs(R), suc(D)) :-
+    eval(B, env(fvar(L), E), BV, D),
+    reify(BV, suc(L), R, D).
+reify(fvar(L), Level, var(I), _) :- level_to_idx(L, Level, I).
+reify(pap(F, As, _), L, T, D) :- reify_spine(global(F), As, L, T, D).
+reify(sp(gl(F), As), L, T, D) :- reify_spine(global(F), As, L, T, D).
+reify(sp(fvar(L0), As), L, T, D) :-
+    level_to_idx(L0, L, I),
+    reify_spine(var(I), As, L, T, D).
+reify(V, _, V, _) :- con(V).
+
+reify_spine(H, [], _, H, _).
+reify_spine(H, [A|As], L, app(T, RA), D) :-
+    reify_spine(H, As, L, T, D),
+    reify(A, L, RA, D).
 
 level_to_idx(L, suc(L), zero).
 level_to_idx(L, suc(N), suc(I)) :- level_to_idx(L, N, I).
 
-neu(fvar(_)).
-neu(app(F, _)) :- neu(F).
-neu(app(_, A)) :- neu(A).
+nondata(clo(_, _)).
+nondata(pap(_, _, _)).
+nondata(sp(_, _)).
+nondata(fvar(_)).
 
-normalize(T, R) :- eval(T, nil, V), reify(V, zero, R).
+rev(L, R) :- rev_acc(L, [], R).
+rev_acc([], A, A).
+rev_acc([H|T], A, R) :- rev_acc(T, [H|A], R).
 
-apps(M, [], M).
-apps(M, [A|As], R) :- apps(app(M, A), As, R).
+normalize(T, R) :-
+    k_max_fuel(D),
+    eval(T, nil, V, D),
+    reify(V, zero, R, D).
 
-fits(M, [], []).
-fits(M, [Args|Rest], [Y|Ys]) :-
-    apps(M, Args, T),
-    normalize(T, Y),
-    fits(M, Rest, Ys).
+fits(M, Ins, Labs) :-
+    k_max_fuel(D),
+    eval(M, nil, MV, D),
+    rows(MV, Ins, Labs, D).
+
+rows(_, [], [], _).
+rows(MV, [Args|Rest], [Y|Ys], D) :-
+    saturate(MV, Args, V, D),
+    reify(V, zero, Y, D),
+    rows(MV, Rest, Ys, D).
+
+saturate(V, [], V, _).
+saturate(F, [A|As], R, D) :-
+    eval(A, nil, AV, D),
+    apply(F, AV, R1, D),
+    saturate(R1, As, R, D).
 
 % ============================================================
-% Domain — booleans
+% Closed beta-normal programs
+% ============================================================
+
+nf(abs(B), D, suc(S)) :- nf(B, suc(D), S).
+nf(C, _, _) :- con(C).
+nf(X, D, S) :- ne(X, D, S).
+
+ne(var(I), D, _) :- lt(I, D).
+ne(global(N), _, _) :- arity(N, _).
+ne(app(F, A), D, suc(S)) :- ne(F, D, S), nf(A, D, S).
+
+lt(zero, suc(_)).
+lt(suc(I), suc(D)) :- lt(I, D).
+
+prog(M) :- k_max_size(S), nf(M, zero, S).
+
+fits_nf(M, Ins, Labs) :- prog(M), fits(M, Ins, Labs).
+
+% ============================================================
+% Domain
 % ============================================================
 
 bool(true).
 bool(false).
 
-eval(true,  true).
-eval(false, false).
-eval(not,   not).
-eval(or,    or).
-eval(app(or, X), app(or, X)) :- bool(X).
-
-eval(app(not, true),  false).
-eval(app(not, false), true).
-eval(app(app(or, true),  X), true) :- bool(X).
-eval(app(app(or, false), X), X)    :- bool(X).
-
-% ============================================================
-% Domain — naturals
-% ============================================================
-
 nat(zero).
 nat(suc(N)) :- nat(N).
 
-eval(zero, zero).
-eval(suc(X), suc(X)) :- nat(X).
-eval(suc,  suc).
-eval(plus, plus).
-eval(app(suc, X), suc(X)) :- nat(X).
-eval(app(plus, X), app(plus, X)) :- nat(X).
-eval(app(app(plus, X), Y), R) :- add(X, Y, R).
+con(true).
+con(false).
+con(zero).
+con(suc(N)) :- nat(N).
 
-add(zero, Y, Y) :- nat(Y).
+arity(not,  suc(zero)).
+arity(suc,  suc(zero)).
+arity(or,   suc(suc(zero))).
+arity(plus, suc(suc(zero))).
+arity(if,   suc(suc(suc(zero)))).
+
+delta(not,  [true],  false).
+delta(not,  [false], true).
+delta(suc,  [X], suc(X))      :- nat(X).
+delta(or,   [true,  Y], true) :- bool(Y).
+delta(or,   [false, Y], Y)    :- bool(Y).
+delta(plus, [X, Y], R)        :- add(X, Y, R).
+delta(if,   [true,  T, E], T) :- con(T), con(E).
+delta(if,   [false, T, E], E) :- con(T), con(E).
+
+add(zero,   Y, Y)      :- nat(Y).
 add(suc(X), Y, suc(R)) :- add(X, Y, R).
 
 eq(X, X).
