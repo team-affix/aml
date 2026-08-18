@@ -20,7 +20,13 @@
 %   eval(not, _, not).            reify(not, _, not).
 %   apply(not, true, false).
 %   apply(not, false, true).
-%   apply(not, N, napp(not, N)) :- neu(N).
+%
+% Adding a binary operator (example: or):
+%   eval(or, _, or).              reify(or, _, or).
+%   apply(or, X, or1(X)).
+%   apply(or1(true),  _, true).
+%   apply(or1(false), X, X).
+%   partial(or1(X), or, X).       -- or1(X) is unsaturated app(or, X)
 %
 % Adding a recursive operator: apply/3 may call a CHC relation
 % (see plus / add below). Lazy control cannot be app — use a
@@ -65,12 +71,15 @@ lookup(suc(N), env(_, E), R) :- lookup(N, E, R).
 apply(clo(B, E), V, R) :- eval(B, env(V, E), R).
 apply(fvar(L), V, napp(fvar(L), V)).
 apply(napp(H, A), V, napp(napp(H, A), V)).
+apply(F, N, napp(F, N)) :- neu(N), reify(F, zero, F).
+apply(U, Y, napp(U, Y)) :- partial(U, _, N), neu(N).
 
 reify(clo(B, E), L, abs(R)) :-
     eval(B, env(fvar(L), E), BV),
     reify(BV, suc(L), R).
 reify(fvar(L), Level, var(Idx)) :- level_to_idx(L, Level, Idx).
 reify(napp(H, A), L, app(RH, RA)) :- reify(H, L, RH), reify(A, L, RA).
+reify(U, L, app(H, RA)) :- partial(U, H, A), reify(A, L, RA).
 
 level_to_idx(L, suc(L), zero).
 level_to_idx(L, suc(N), suc(I)) :- level_to_idx(L, N, I).
@@ -102,15 +111,13 @@ eval(or,    _, or).      reify(or,    _, or).
 
 apply(not, true,  false).
 apply(not, false, true).
-apply(not, N, napp(not, N)) :- neu(N).
 
 apply(or, X, or1(X)).
 apply(or1(true),  _, true).
 apply(or1(false), X, X).
-apply(or1(N), X, napp(or1(N), X)) :- neu(N).
-reify(or1(X), L, app(or, RX)) :- reify(X, L, RX).
+partial(or1(X), or, X).
 
-% --- nats (zero/suc shared with de Bruijn indices) ---
+% --- nats ---
 
 eval(zero, _, zero).     reify(zero, _, zero).
 eval(suc(N), E, suc(V)) :- eval(N, E, V).
@@ -119,8 +126,7 @@ eval(plus, _, plus).     reify(plus, _, plus).
 
 apply(plus, X, plus1(X)).
 apply(plus1(X), Y, R) :- add(X, Y, R).
-apply(plus1(N), Y, napp(plus1(N), Y)) :- neu(N).
-reify(plus1(X), L, app(plus, RX)) :- reify(X, L, RX).
+partial(plus1(X), plus, X).
 
 add(zero, Y, Y).
 add(suc(X), Y, suc(R)) :- add(X, Y, R).
