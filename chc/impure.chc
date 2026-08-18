@@ -23,15 +23,22 @@
 %     Same, but M is restricted to closed beta-normal terms.
 %     Slower to the first answer, but every answer is a distinct
 %     meaningful program: no beta-redexes, no dead subterms.
-%   prog(M)   -- closed beta-normal M, within k_max_size
+%   prog(M)   -- closed beta-normal M
 %
-% Budgets. Every kernel predicate is fuel-bounded so a rollout
-% always terminates instead of diverging. k_max_fuel bounds eval
-% depth (6 is the minimum that admits the examples below);
-% k_max_size bounds synthesized program size.
+% No bounds. Nothing here limits evaluation. Normalization depth
+% is unrestricted: output may nest arbitrarily deep, application
+% spines may be arbitrarily long, and delta may recurse as far as
+% it likes. prog/1 generates programs of any size. The only limit
+% is the solver's --max-resolutions, which bounds time.
+%
+% One consequence: a divergent term does not fail. Both
+% app(abs(app(var(zero), var(zero))), abs(app(var(zero), var(zero))))
+% and the Y combinator run until --max-resolutions truncates the
+% rollout, so REFUTED under a low cap is a statement about the
+% budget, not about the term.
 %
 % Extending: declare sorts, con/1, arity/2, delta/3. Never
-% eval/4, apply/4, reify/4. Helpers (add/3) are yours.
+% eval/3, apply/3, reify/3. Helpers (add/3) are yours.
 %
 %   bool(true).
 %   con(true).
@@ -72,53 +79,51 @@
 % fvar(Level), env(Val, Outer), nil. A stuck application is an
 % sp, never an app, which is what keeps derivations unique.
 % Argument lists are closed so a value stays reusable.
+%
+% The Peano numerals inside pap are the remaining-argument count
+% from arity/2, not a budget: they are what makes "still
+% collecting" and "saturated, run delta" mutually exclusive.
 % ============================================================
 
 % ============================================================
 % Kernel
 % ============================================================
 
-k_max_fuel(suc(suc(suc(suc(suc(suc(suc(suc(zero))))))))).
-k_max_size(suc(suc(suc(suc(suc(suc(zero))))))).
-
-eval(var(N), env(V, E), R, _) :- lookup(N, env(V, E), R).
-eval(abs(B), E, clo(B, E), _).
-eval(app(F, A), E, R, suc(D)) :-
-    eval(F, E, FV, D),
-    eval(A, E, AV, D),
-    apply(FV, AV, R, D).
-eval(global(N), _, pap(N, [], K), _) :- arity(N, K).
-eval(T, _, T, _) :- con(T).
+eval(var(N), env(V, E), R) :- lookup(N, env(V, E), R).
+eval(abs(B), E, clo(B, E)).
+eval(app(F, A), E, R) :- eval(F, E, FV), eval(A, E, AV), apply(FV, AV, R).
+eval(global(N), _, pap(N, [], K)) :- arity(N, K).
+eval(T, _, T) :- con(T).
 
 lookup(zero, env(V, _), V).
 lookup(suc(N), env(_, E), R) :- lookup(N, E, R).
 
-apply(clo(B, E), V, R, suc(D)) :- eval(B, env(V, E), R, D).
-apply(pap(F, As, suc(suc(K))), V, pap(F, [V|As], suc(K)), _) :- con(V).
-apply(pap(F, As, suc(zero)), V, R, _) :-
+apply(clo(B, E), V, R) :- eval(B, env(V, E), R).
+apply(pap(F, As, suc(suc(K))), V, pap(F, [V|As], suc(K))) :- con(V).
+apply(pap(F, As, suc(zero)), V, R) :-
     con(V),
     rev([V|As], Args),
     delta(F, Args, R),
     con(R).
-apply(pap(F, As, _), V, sp(gl(F), [V|As]), _) :- nondata(V).
-apply(sp(H, As), V, sp(H, [V|As]), _).
-apply(fvar(L), V, sp(fvar(L), [V]), _).
+apply(pap(F, As, _), V, sp(gl(F), [V|As])) :- nondata(V).
+apply(sp(H, As), V, sp(H, [V|As])).
+apply(fvar(L), V, sp(fvar(L), [V])).
 
-reify(clo(B, E), L, abs(R), suc(D)) :-
-    eval(B, env(fvar(L), E), BV, D),
-    reify(BV, suc(L), R, D).
-reify(fvar(L), Level, var(I), _) :- level_to_idx(L, Level, I).
-reify(pap(F, As, _), L, T, D) :- reify_spine(global(F), As, L, T, D).
-reify(sp(gl(F), As), L, T, D) :- reify_spine(global(F), As, L, T, D).
-reify(sp(fvar(L0), As), L, T, D) :-
+reify(clo(B, E), L, abs(R)) :-
+    eval(B, env(fvar(L), E), BV),
+    reify(BV, suc(L), R).
+reify(fvar(L), Level, var(I)) :- level_to_idx(L, Level, I).
+reify(pap(F, As, _), L, T) :- reify_spine(global(F), As, L, T).
+reify(sp(gl(F), As), L, T) :- reify_spine(global(F), As, L, T).
+reify(sp(fvar(L0), As), L, T) :-
     level_to_idx(L0, L, I),
-    reify_spine(var(I), As, L, T, D).
-reify(V, _, V, _) :- con(V).
+    reify_spine(var(I), As, L, T).
+reify(V, _, V) :- con(V).
 
-reify_spine(H, [], _, H, _).
-reify_spine(H, [A|As], L, app(T, RA), D) :-
-    reify_spine(H, As, L, T, D),
-    reify(A, L, RA, D).
+reify_spine(H, [], _, H).
+reify_spine(H, [A|As], L, app(T, RA)) :-
+    reify_spine(H, As, L, T),
+    reify(A, L, RA).
 
 level_to_idx(L, suc(L), zero).
 level_to_idx(L, suc(N), suc(I)) :- level_to_idx(L, N, I).
@@ -132,44 +137,41 @@ rev(L, R) :- rev_acc(L, [], R).
 rev_acc([], A, A).
 rev_acc([H|T], A, R) :- rev_acc(T, [H|A], R).
 
-normalize(T, R) :-
-    k_max_fuel(D),
-    eval(T, nil, V, D),
-    reify(V, zero, R, D).
+normalize(T, R) :- eval(T, nil, V), reify(V, zero, R).
 
-fits(M, Ins, Labs) :-
-    k_max_fuel(D),
-    eval(M, nil, MV, D),
-    rows(MV, Ins, Labs, D).
+fits(M, Ins, Labs) :- eval(M, nil, MV), rows(MV, Ins, Labs).
 
-rows(_, [], [], _).
-rows(MV, [Args|Rest], [Y|Ys], D) :-
-    saturate(MV, Args, V, D),
-    reify(V, zero, Y, D),
-    rows(MV, Rest, Ys, D).
+rows(_, [], []).
+rows(MV, [Args|Rest], [Y|Ys]) :-
+    saturate(MV, Args, V),
+    reify(V, zero, Y),
+    rows(MV, Rest, Ys).
 
-saturate(V, [], V, _).
-saturate(F, [A|As], R, D) :-
-    eval(A, nil, AV, D),
-    apply(F, AV, R1, D),
-    saturate(R1, As, R, D).
+saturate(V, [], V).
+saturate(F, [A|As], R) :-
+    eval(A, nil, AV),
+    apply(F, AV, R1),
+    saturate(R1, As, R).
 
 % ============================================================
 % Closed beta-normal programs
+%
+% The D argument is de Bruijn scope, not a budget: it counts the
+% enclosing lambdas so lt/2 can reject an out-of-scope index.
 % ============================================================
 
-nf(abs(B), D, suc(S)) :- nf(B, suc(D), S).
-nf(C, _, _) :- con(C).
-nf(X, D, S) :- ne(X, D, S).
+nf(abs(B), D) :- nf(B, suc(D)).
+nf(C, _) :- con(C).
+nf(X, D) :- ne(X, D).
 
-ne(var(I), D, _) :- lt(I, D).
-ne(global(N), _, _) :- arity(N, _).
-ne(app(F, A), D, suc(S)) :- ne(F, D, S), nf(A, D, S).
+ne(var(I), D) :- lt(I, D).
+ne(global(N), _) :- arity(N, _).
+ne(app(F, A), D) :- ne(F, D), nf(A, D).
 
 lt(zero, suc(_)).
 lt(suc(I), suc(D)) :- lt(I, D).
 
-prog(M) :- k_max_size(S), nf(M, zero, S).
+prog(M) :- nf(M, zero).
 
 fits_nf(M, Ins, Labs) :- prog(M), fits(M, Ins, Labs).
 
