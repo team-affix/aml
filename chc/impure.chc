@@ -1,0 +1,133 @@
+% ============================================================
+% Impure Lambda Calculus — CBV Normalization by Evaluation
+%
+% Term constructors:
+%   var(N)     -- de Bruijn variable (Peano; var(zero) = innermost)
+%   abs(B)     -- abstraction
+%   app(F, A)  -- application
+%   plus any custom functor (true, not, suc(N), ite(...), ...)
+%
+% Public API:
+%   normalize(Term, Result)
+%     Evaluates a closed term to a normal form.
+%     Does not terminate for terms with no normal form.
+%   fits(M, Inputs, Labels)
+%     Synthesis: each data point is several arguments (a list).
+%     Inputs = [[X1, X2, ...], ...], Labels = [Y, ...].
+%     Point i is normalize(app(...app(M, X1), X2)..., Yi).
+%
+% Adding a strict operator (example: not):
+%   eval(not, _, not).            reify(not, _, not).
+%   apply(not, true, false).
+%   apply(not, false, true).
+%   apply(not, N, napp(not, N)) :- neu(N).
+%
+% Adding a recursive operator: apply/3 may call a CHC relation
+% (see plus / add below). Lazy control cannot be app — use a
+% dedicated functor (see ite/3).
+%
+% Example queries:
+%
+%   normalize(app(not, true), R)                         % R = false
+%   normalize(app(app(or, true), false), R)              % R = true
+%   normalize(app(app(plus, suc(zero)), suc(zero)), R)   % R = suc(suc(zero))
+%   normalize(app(abs(var(zero)), true), R)              % R = true
+%
+%   % Synthesis — each data point is a list of arguments:
+%   fits(M, [[true], [false]], [false, true])             % M = not
+%   fits(M, [[true, false], [false, false]], [true, false])  % M = or
+%
+% Kernel — CBV eval to WHNF, then reify:
+%   eval(Term, Env, Val)
+%   apply(FunVal, ArgVal, Val)
+%   reify(Val, Level, Term)
+%
+% Runtime-only (never in queries):
+%   clo(Body, Env)   -- lambda closure (delayed substitution)
+%   fvar(Level)      -- fresh variable at reify level Level
+%   napp(Head, Arg)  -- neutral application (fvar spine)
+%   env(Val, Outer)  -- CBV environment
+%   nil              -- empty environment
+%   or1(X), plus1(X) -- unsaturated domain ops
+% ============================================================
+
+% ============================================================
+% Kernel
+% ============================================================
+
+eval(var(N), env(V, E), R) :- lookup(N, env(V, E), R).
+eval(abs(B), E, clo(B, E)).
+eval(app(F, A), E, R) :- eval(F, E, FV), eval(A, E, AV), apply(FV, AV, R).
+
+lookup(zero, env(V, _), V).
+lookup(suc(N), env(_, E), R) :- lookup(N, E, R).
+
+apply(clo(B, E), V, R) :- eval(B, env(V, E), R).
+apply(fvar(L), V, napp(fvar(L), V)).
+apply(napp(H, A), V, napp(napp(H, A), V)).
+
+reify(clo(B, E), L, abs(R)) :-
+    eval(B, env(fvar(L), E), BV),
+    reify(BV, suc(L), R).
+reify(fvar(L), Level, var(Idx)) :- level_to_idx(L, Level, Idx).
+reify(napp(H, A), L, app(RH, RA)) :- reify(H, L, RH), reify(A, L, RA).
+
+level_to_idx(L, suc(L), zero).
+level_to_idx(L, suc(N), suc(I)) :- level_to_idx(L, N, I).
+
+normalize(T, R) :- eval(T, nil, V), reify(V, zero, R).
+
+apps(M, [], M).
+apps(M, [A|As], R) :- apps(app(M, A), As, R).
+
+fits(M, [], []).
+fits(M, [Args|Rest], [Y|Ys]) :-
+    apps(M, Args, T),
+    normalize(T, Y),
+    fits(M, Rest, Ys).
+
+neu(fvar(_)).
+neu(napp(_, _)).
+
+% ============================================================
+% Domain
+% ============================================================
+
+% --- booleans ---
+
+eval(true,  _, true).    reify(true,  _, true).
+eval(false, _, false).   reify(false, _, false).
+eval(not,   _, not).     reify(not,   _, not).
+eval(or,    _, or).      reify(or,    _, or).
+
+apply(not, true,  false).
+apply(not, false, true).
+apply(not, N, napp(not, N)) :- neu(N).
+
+apply(or, X, or1(X)).
+apply(or1(true),  _, true).
+apply(or1(false), X, X).
+apply(or1(N), X, napp(or1(N), X)) :- neu(N).
+reify(or1(X), L, app(or, RX)) :- reify(X, L, RX).
+
+% --- nats (zero/suc shared with de Bruijn indices) ---
+
+eval(zero, _, zero).     reify(zero, _, zero).
+eval(suc(N), E, suc(V)) :- eval(N, E, V).
+reify(suc(V), L, suc(R)) :- reify(V, L, R).
+eval(plus, _, plus).     reify(plus, _, plus).
+
+apply(plus, X, plus1(X)).
+apply(plus1(X), Y, R) :- add(X, Y, R).
+apply(plus1(N), Y, napp(plus1(N), Y)) :- neu(N).
+reify(plus1(X), L, app(plus, RX)) :- reify(X, L, RX).
+
+add(zero, Y, Y).
+add(suc(X), Y, suc(R)) :- add(X, Y, R).
+
+% --- lazy if (dedicated functor; cannot be app) ---
+
+eval(ite(C, T, _), E, R) :- eval(C, E, true),  eval(T, E, R).
+eval(ite(C, _, F), E, R) :- eval(C, E, false), eval(F, E, R).
+
+eq(X, X).
