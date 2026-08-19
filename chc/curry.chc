@@ -1,0 +1,344 @@
+% ============================================================
+% Impure lambda calculus -- curried strict-application kernel
+%
+% CBV normalization by evaluation. Terms are var, abs, app,
+% global and data -- the same five as ho.chc, so the search
+% space is unchanged. Values are clo, wait, accept, sp, fvar and
+% bare constructors.
+%
+% Public: normalize/2, fits/3, fits_data/3, prog/1,
+%         prog_depth_le/2.
+% Domain: def/2, step/4, con/1 (plus whatever sorts the step
+%         guards use -- here bool/1, nat/1, natlist/1).
+%
+% A primitive is not "collect N arguments then reduce". It is a
+% chain of one-argument steps, so there is no arity to declare,
+% no saturation countdown, and no result guard.
+%
+% ------------------------------------------------------------
+% The one-question dispatch rule
+% ------------------------------------------------------------
+%
+% Applying a waiting primitive asks exactly one question about
+% the argument, and the three answers do not overlap:
+%
+%   a constructor -> hand it to step/4
+%   a neutral     -> go stuck as sp(gl(F), Args)
+%   a closure     -> no clause; REFUTED
+%
+% Because the constructor check happens BEFORE dispatch, a step
+% failure means one thing only: ill-sorted. ho.chc conflated
+% "ill-sorted" with "not known yet", which is why it rejected
+% lambda n. suc n. Here the neutral is diverted before step is
+% ever consulted, so that term normalizes to itself.
+%
+% Refuting a closure is deliberate, not an oversight: a closure
+% is a known value of the wrong shape, exactly like zero in
+% not zero.
+%
+% ------------------------------------------------------------
+% Writing a primitive
+% ------------------------------------------------------------
+%
+% def(Name, Value) gives the value of global(Name). step(F,
+% PriorArgs, Arg, Result) consumes one argument. PriorArgs is
+% reversed -- most recent first -- matching what reify_spine
+% consumes, so a step reads its arguments newest-leftmost.
+%
+% A step says what it needs NEXT by what it returns:
+%
+%   wait(F, Args)     next argument must be a constructor
+%   accept(F, Args)   next argument is taken untested
+%   clo(B, E)         next argument is taken by beta
+%
+% Use wait for data, accept for a function argument (a closure
+% cannot pass the constructor check, so a higher-order
+% primitive must accept), and return a clo to consume the next
+% argument WITHOUT deciding anything -- which is what buys
+% early reduction:
+%
+%   step(or, [], true, clo(data(true), nil)).
+%
+% makes or true x = true with x neutral. The cost is that the
+% second argument is then never sort-checked, so or true zero
+% is true rather than refuted. Trade it back with a second
+% strict stage if you prefer the check:
+%
+%   step(or, [], true, wait(or, [true])).
+%   step(or, [true], Y, true) :- bool(Y).
+%
+% ------------------------------------------------------------
+% Exclusivity, and why one derivation stays one derivation
+% ------------------------------------------------------------
+%
+% The con(V) guard on the dispatch clause is load-bearing for
+% uniqueness, not just for speed. Without it a step whose
+% scrutinee is a bare variable -- step(suc, [], N, suc(N)) --
+% unifies with a neutral and only fails later at its nat(N)
+% guard. A step written without any guard would then succeed on
+% a neutral AND the stuck clause would fire, giving two
+% derivations for one term. con(V) makes the split structural,
+% so a domain author cannot break it by forgetting a guard.
+%
+% accept/2 opts out of that check by name, so a step reached
+% through accept must not be reachable through wait. Keep
+% accept for the stage that takes a function and the discipline
+% holds on its own.
+%
+% ------------------------------------------------------------
+% Behavior notes
+% ------------------------------------------------------------
+%
+% * A neutral arising INSIDE a step's own computation is
+%   unrecoverable: map fvar [1,2] is REFUTED where map fvar l
+%   goes stuck, because list_map has already committed to
+%   applying the unknown function. Reaching it needs an unknown
+%   function under a binder, so fitting a data table never
+%   does.
+% * Laziness is per branch. plus zero x = x for any x, but
+%   plus (suc n) x still waits for x to be data.
+% * Nontermination is still possible -- fix f diverges -- and
+%   is bounded by --max-resolutions, not by the kernel.
+%
+% ------------------------------------------------------------
+% Measured against ho.chc
+% ------------------------------------------------------------
+%
+% Curried derivations are longer, so a rollout must make more
+% correct decisions in a row: simulations are individually
+% about twice as cheap, and about 1.7x more of them are needed.
+% Net wall time on the classic suite (not, or, plus, if,
+% and-from-if) is 0.84x, and evaluation cost is at parity
+% (plus 20 20, map suc [0..15], foldr plus 0 [1..10] all need
+% the same resolution budget; map (plus 10) [0..4] halves).
+%
+% Where that trade bites: when --max-resolutions rather than
+% time is the binding constraint. Synthesizing sum as foldr
+% plus 0 takes 0.3s here against 3.3s in ho.chc at Max = 2, but
+% at the looser Max = 3 it exhausts a 50000 cap that ho.chc
+% solves in 564. Prefer the tightest depth bound that can
+% express the target.
+% ============================================================
+
+% ============================================================
+% Kernel
+% ============================================================
+
+eval(var(N), env(V, E), R) :- lookup(N, env(V, E), R).
+eval(abs(B), E, clo(B, E)).
+eval(app(F, A), E, R) :- eval(F, E, FV), eval(A, E, AV), apply(FV, AV, R).
+eval(global(N), _, V) :- def(N, V).
+eval(data(C), _, C) :- con(C).
+
+lookup(zero, env(V, _), V).
+lookup(suc(N), env(_, E), R) :- lookup(N, E, R).
+
+apply(clo(B, E), V, R) :- eval(B, env(V, E), R).
+apply(wait(F, As), V, R) :- con(V), step(F, As, V, R).
+apply(wait(F, As), V, sp(gl(F), [V|As])) :- neutral(V).
+apply(accept(F, As), V, R) :- step(F, As, V, R).
+apply(sp(H, As), V, sp(H, [V|As])).
+apply(fvar(L), V, sp(fvar(L), [V])).
+
+neutral(fvar(_)).
+neutral(sp(_, _)).
+
+reify(clo(B, E), L, abs(R)) :-
+    eval(B, env(fvar(L), E), BV),
+    reify(BV, suc(L), R).
+reify(fvar(L), Level, var(I)) :- level_to_idx(L, Level, I).
+reify(wait(F, As), L, T) :- reify_spine(global(F), As, L, T).
+reify(accept(F, As), L, T) :- reify_spine(global(F), As, L, T).
+reify(sp(gl(F), As), L, T) :- reify_spine(global(F), As, L, T).
+reify(sp(fvar(L0), As), L, T) :-
+    level_to_idx(L0, L, I),
+    reify_spine(var(I), As, L, T).
+reify(V, _, data(V)) :- con(V).
+
+reify_spine(H, [], _, H).
+reify_spine(H, [A|As], L, app(T, RA)) :-
+    reify_spine(H, As, L, T),
+    reify(A, L, RA).
+
+level_to_idx(L, suc(L), zero).
+level_to_idx(L, suc(N), suc(I)) :- level_to_idx(L, N, I).
+
+normalize(T, R) :- eval(T, nil, V), reify(V, zero, R).
+
+fits(M, Ins, Labs) :- eval(M, nil, MV), rows(MV, Ins, Labs).
+
+rows(_, [], []).
+rows(MV, [Args|Rest], [Y|Ys]) :-
+    saturate(MV, Args, V),
+    reify(V, zero, Y),
+    rows(MV, Rest, Ys).
+
+saturate(V, [], V).
+saturate(F, [A|As], R) :-
+    eval(A, nil, AV),
+    apply(F, AV, R1),
+    saturate(R1, As, R).
+
+fits_data(M, Ins, Labs) :-
+    wrap_rows(Ins, WIns),
+    wrap_args(Labs, WLabs),
+    fits(M, WIns, WLabs).
+
+wrap_rows([], []).
+wrap_rows([Args|Rest], [WArgs|WRest]) :-
+    wrap_args(Args, WArgs),
+    wrap_rows(Rest, WRest).
+
+wrap_args([], []).
+wrap_args([C|Cs], [data(C)|Ws]) :- wrap_args(Cs, Ws).
+
+% ============================================================
+% Closed beta-normal programs
+%
+% Two arguments here are easy to confuse.
+%
+% D is de Bruijn scope, not a limit: it counts the enclosing
+% lambdas so lt/2 can reject an out-of-scope index. It has no
+% maximum and cannot run out.
+%
+% Max is a nesting-depth ceiling -- the longest root-to-leaf
+% path. Each abs and each app on a path spends one; var, global
+% and data leaves are free. Siblings each get the full remaining
+% Max rather than splitting it, so wide terms are cheap and only
+% nesting costs. It restricts which candidate programs are
+% considered, never how much evaluation a program may do: beta
+% reduction and step recursion stay unbounded, and a depth-3
+% program still computes plus 10 10. A refutation under Max means
+% "no program this shallow", not "no program".
+%
+% Beware that a curried spine is deeper than it looks: each app
+% costs one AND the deepest argument's own depth adds on top, so
+% lambda x. lambda y. if (less x y) y x needs Max = 7, not 5. An
+% under-set Max does not merely fail -- it returns whatever
+% shallower program happens to fit the table, which is how you get
+% a program that fits every training row and no held-out row.
+%
+% prog/1 leaves Max unbound, which is the unbounded generator.
+% That is what you want to CHECK a term. To SYNTHESIZE, use
+% prog_depth_le/2: an unbounded generator wanders into ever-deeper
+% terms instead of covering the shallow ones, so a target that is
+% not already a primitive stays out of reach. lambda x. if (not
+% x) false, which is and/2, is found in seconds at Max = 4 and
+% not at all unbounded.
+%
+% Higher-order programs are unusually shallow, so they sit well
+% inside reach: map suc is Max = 1 and map (mul 2) is Max = 2.
+% ============================================================
+
+% internal: nf/3, ne/3, lt/2
+nf(abs(B), D, suc(Max)) :- nf(B, suc(D), Max).
+nf(data(C), _, _) :- con(C).
+nf(X, D, Max) :- ne(X, D, Max).
+
+ne(var(I), D, _) :- lt(I, D).
+ne(global(N), _, _) :- def(N, _).
+ne(app(F, A), D, suc(Max)) :- ne(F, D, Max), nf(A, D, Max).
+
+lt(zero, suc(_)).
+lt(suc(I), suc(D)) :- lt(I, D).
+
+% public
+prog(M) :- nf(M, zero, _).
+
+prog_depth_le(M, Max) :- nf(M, zero, Max).
+
+% ============================================================
+% Domain: sorts
+% ============================================================
+
+bool(true).
+bool(false).
+
+nat(zero).
+nat(suc(N)) :- nat(N).
+
+natlist(emp).
+natlist(cons(H, T)) :- nat(H), natlist(T).
+
+con(true).
+con(false).
+con(zero).
+con(suc(N)) :- nat(N).
+con(emp).
+con(cons(H, T)) :- nat(H), natlist(T).
+
+% ============================================================
+% Domain: first order
+% ============================================================
+
+def(not, wait(not, [])).
+step(not, [], true,  false).
+step(not, [], false, true).
+
+def(suc, wait(suc, [])).
+step(suc, [], N, suc(N)) :- nat(N).
+
+% absorbing on true, identity on false -- both consume the
+% second argument lazily, so or true x = true for neutral x
+def(or, wait(or, [])).
+step(or, [], true,  clo(data(true), nil)).
+step(or, [], false, clo(var(zero), nil)).
+
+% lazy on zero (identity, even on a neutral), strict otherwise
+% so the add/3 fast path still applies
+def(plus, wait(plus, [])).
+step(plus, [],       zero,   clo(var(zero), nil)).
+step(plus, [],       suc(N), wait(plus, [suc(N)])).
+step(plus, [suc(N)], Y,      R) :- add(suc(N), Y, R).
+
+% \t.\e. t and \t.\e. e -- branches taken without inspection,
+% so if b x y picks a branch whatever the branches are
+def(if, wait(if, [])).
+step(if, [], true,  clo(abs(var(suc(zero))), nil)).
+step(if, [], false, clo(abs(var(zero)), nil)).
+
+def(cons, wait(cons, [])).
+step(cons, [],  H, wait(cons, [H])) :- nat(H).
+step(cons, [H], T, cons(H, T))      :- natlist(T).
+
+add(zero,   Y, Y)      :- nat(Y).
+add(suc(X), Y, suc(R)) :- add(X, Y, R).
+
+% ============================================================
+% Domain: higher order
+%
+% The function argument arrives through accept -- a closure
+% cannot pass con(V) -- and every later argument through wait.
+% ============================================================
+
+def(map, accept(map, [])).
+step(map, [],  F, wait(map, [F])).
+step(map, [F], L, R) :- list_map(F, L, R).
+
+def(foldr, accept(foldr, [])).
+step(foldr, [],     F, wait(foldr, [F])).
+step(foldr, [F],    Z, wait(foldr, [Z, F])).
+step(foldr, [Z, F], L, R) :- list_foldr(F, Z, L, R).
+
+def(twice, accept(twice, [])).
+step(twice, [],  F, wait(twice, [F])).
+step(twice, [F], X, R) :-
+    apply(F, X, Y),
+    nat(Y),
+    apply(F, Y, R),
+    nat(R).
+
+list_map(_, emp, emp).
+list_map(F, cons(H, T), cons(H2, T2)) :-
+    apply(F, H, H2),
+    nat(H2),
+    list_map(F, T, T2).
+
+list_foldr(_, Z, emp, Z) :- nat(Z).
+list_foldr(F, Z, cons(H, T), R) :-
+    list_foldr(F, Z, T, Acc),
+    apply(F, H, G),
+    apply(G, Acc, R),
+    nat(R).
+
+eq(X, X).
