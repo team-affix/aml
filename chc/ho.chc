@@ -1,0 +1,416 @@
+% ============================================================
+% Impure Lambda Calculus — CBV Normalization by Evaluation
+% Higher-order variant of impure.chc: primitives may take and
+% return functions. Diff the two kernels; only apply/3 differs.
+%
+% Term formers:
+%   var(N)        -- de Bruijn (Peano; var(zero) = innermost)
+%   abs(B)        -- abstraction
+%   app(F, A)     -- application
+%   global(Name)  -- declared name (not, suc, or, plus, if, map, ...)
+%   data(C)       -- constructor data (true, false, zero, suc(N))
+%
+% data(C) wraps a whole constructor term once, never per layer:
+% data(suc(suc(zero))), not data(suc(data(zero))). The wrapper is
+% there so that every term former is a distinct functor and eval
+% never has to guess which clause applies. It is worth roughly 3x
+% on evaluation against an unwrapped, variable-headed data clause,
+% at the cost of a few percent on synthesis and one extra node per
+% data leaf. Values stay unwrapped, so con/1 and delta/3 keep
+% seeing raw constructors and the domain section is unaffected.
+%
+% A name with arity >= 1 is applied as global(Name). Constructors
+% are names too: suc : nat -> nat, so suc has a signature and an
+% intro rule, exactly as in Agda. So suc has two spellings --
+% data(suc(zero)) when its argument is already a literal, and
+% app(global(suc), X) when X still has to be computed, as in
+% app(global(suc), app(app(global(plus), data(suc(zero))),
+% data(suc(suc(zero))))) = data(suc(suc(suc(suc(zero))))).
+%
+% ------------------------------------------------------------
+% Saturated primitives are just tried
+%
+% Once a primitive has its whole arity worth of arguments, apply
+% hands them to delta and that is the end of it: delta succeeds
+% and the application reduces, or delta fails and the derivation
+% dies. There is no third outcome. A saturated primitive never
+% goes stuck, and a primitive that hands back the expression it
+% was given is malformed.
+%
+% This is what makes apply five rigid clauses with no guard on
+% any argument. There is no mode list, no con/nondata split, no
+% callable/neutral distinction -- the three pap clauses are
+% mutually exclusive on the Peano shape of the countdown alone,
+% which is what keeps derivations unique.
+%
+% The price is that a primitive applied to a variable has no
+% normal form. reify walks under a binder by evaluating the body
+% against a fresh fvar, so all of these are REFUTED:
+%
+%   abs(app(global(suc), var(zero)))                 % lambda n. suc n
+%   abs(app(app(global(plus), var(zero)), data(...)))
+%   app(global(not), abs(var(zero)))
+%
+% Only a primitive is strict this way. An unknown HEAD still goes
+% stuck as before, so abs(app(var(zero), data(true))) is fine.
+%
+% Synthesis is unaffected, which is the case that matters: fits/3
+% applies M to its data row before anything is reified, so a
+% program is only ever asked to compute on data. What you lose is
+% function-valued OUTPUT -- an answer that is itself a lambda over
+% a primitive cannot be printed.
+%
+% ------------------------------------------------------------
+% What delta may return
+%
+% Constructor data, checked by con(R). Keep that guard: relaxing
+% it to admit any value is the single most expensive thing you can
+% do to this file. It costs 4x on its own and 10x once the
+% vocabulary grows past a handful of primitives, because pruning
+% candidate delta results is what keeps a large vocabulary
+% affordable. Every looser variant measured -- a second saturating
+% apply clause, a separate delta_fun hook, a declared exception
+% list, no guard at all -- lands between 4x and 10x.
+%
+% To write a primitive that RETURNS a function, do not return one:
+% declare the extra argument and let currying hand out the partial
+% application for free. twice f x = f (f x) at arity 2 gives
+% app(global(twice), global(suc)) as a value, and it reifies --
+% whereas a version returning clo(...) could not be printed at all
+% under the rule above. Eta-expansion is strictly the better deal
+% here.
+%
+% ------------------------------------------------------------
+% Using a supplied function
+%
+% Call it with apply/3. That is the one kernel predicate domain
+% code may call -- you still never define eval/3, apply/3 or
+% reify/3. Do not inspect a supplied function: a clo's body is
+% relative to an env you did not build, and you cannot evaluate it
+% without a de Bruijn level, which apply does not carry. Currying
+% is manual, one apply per argument (see list_foldr/4).
+%
+% A function has no sort you can test, so the guard moves from a
+% pre-check on the argument to a post-check on the result:
+%
+%   apply(F, H, H2), nat(H2)
+%
+% ------------------------------------------------------------
+% Public API:
+%   normalize(Term, Result)
+%   fits(M, Inputs, Labels)
+%     Row i applies M to Inputs_i and reifies to Labels_i.
+%     M is evaluated once and the value reused across rows.
+%   fits_data(M, Inputs, Labels)
+%     fits/3 with every element of every input row, and every
+%     label, wrapped in data/1 for you -- write bare constructors
+%     and drop the noise. Only for all-data tables: it cannot
+%     express a function input like global(not) or a non-data
+%     label like abs(...). Use fits/3 directly for those.
+%   prog(M)   -- M is closed and beta-normal (unbounded)
+%   prog_depth_le(M, Max)
+%     prog/1 with a nesting-depth ceiling: depth(M) <= Max.
+%
+% Everything else is internal. In particular nf/3, ne/3 and lt/2
+% are the grammar's own machinery, not entry points -- they take
+% the de Bruijn scope that prog/1 and prog_depth_le/2 seed.
+%
+% Neither fits/3 nor fits_data/3 constrains M: both will happily
+% answer with a beta-redex or a dead subterm. Conjoin a generator
+% when you care about the shape of the program:
+%
+%   fits_data(M, Ins, Labs)                       -- any M
+%   prog(M), fits_data(M, Ins, Labs)              -- beta-normal M
+%   prog_depth_le(M, D), fits_data(M, Ins, Labs)  -- and depth <= D
+%
+% The last is the one to use for synthesis; the middle one cannot
+% reach a target that is not already a primitive. Reified output
+% is always normal regardless -- that is what reify/3 produces.
+%
+% No bounds. Nothing here limits evaluation. Normalization depth
+% is unrestricted: output may nest arbitrarily deep, application
+% spines may be arbitrarily long, and delta may recurse as far as
+% it likes. prog/1 generates programs of any size. The only limit
+% is the solver's --max-resolutions, which bounds time.
+%
+% One consequence: a divergent term does not fail. Both
+% app(abs(app(var(zero), var(zero))), abs(app(var(zero), var(zero))))
+% and the Y combinator run until --max-resolutions truncates the
+% rollout, so REFUTED under a low cap is a statement about the
+% budget, not about the term.
+%
+% Extending: declare sorts, con/1, arity/2, delta/3. Helpers
+% (add/3, list_map/3) are yours.
+%
+%   bool(true).
+%   con(true).
+%   arity(or,    suc(suc(zero))).
+%   delta(or, [true, Y], true) :- bool(Y).
+%
+% con/1 means "is data at all", independent of sort. Terms are
+% discriminated by functor, but values are not wrapped, so the
+% kernel still uses con/1 to tell data from closures and stuck
+% spines. Keep its clauses rigid (one per constructor). Do not
+% write con(X) :- bool(X) -- a variable head cannot be
+% discriminated during synthesis and costs an order of magnitude.
+%
+% Guard every data argument of delta with the sort that position
+% wants, not with con: or true zero must not reduce. A function
+% argument has no sort to guard, so guard its result instead.
+% Those guards are also the whole of the domain's contract now
+% that apply checks nothing: an argument that reaches delta may be
+% any value at all, including a closure, so a rule that would
+% misfire on one must say so itself.
+%
+% Example queries:
+%
+%   normalize(app(global(not), data(true)), R)           % R = data(false)
+%   normalize(app(app(global(or), data(true)), data(false)), R)
+%                                                        % R = data(true)
+%   normalize(app(global(plus), data(suc(zero))), R)      % R = itself (partial)
+%   normalize(abs(app(var(zero), data(true))), R)         % R = itself (stuck head)
+%
+%   % higher order: the same rule serves all three call shapes
+%   normalize(app(app(global(map), global(suc)),
+%             data(cons(zero, cons(suc(zero), emp)))), R)
+%                            % R = data(cons(suc(zero), cons(suc(suc(zero)), emp)))
+%   normalize(app(app(global(map), app(global(plus), data(suc(zero)))),
+%             data(cons(zero, emp))), R)      % R = data(cons(suc(zero), emp))
+%   normalize(app(app(global(map),
+%             abs(app(app(global(plus), var(zero)), var(zero)))),
+%             data(cons(suc(zero), emp))), R) % R = data(cons(suc(suc(zero)), emp))
+%   normalize(app(app(app(global(foldr), global(plus)), data(zero)),
+%             data(cons(suc(zero), cons(suc(zero), emp)))), R)
+%                                                    % R = data(suc(suc(zero)))
+%
+%   % a function-valued primitive, via currying rather than a return
+%   normalize(app(global(twice), global(suc)), R)
+%                                    % R = app(global(twice), global(suc))
+%   normalize(app(app(global(twice), global(suc)), data(zero)), R)
+%                                                    % R = data(suc(suc(zero)))
+%   normalize(app(app(global(map), app(global(twice), global(suc))),
+%             data(cons(zero, emp))), R)  % R = data(cons(suc(suc(zero)), emp))
+%
+%   fits_data(M, [[true], [false]], [false, true])       % M = global(not)
+%   fits_data(M, [[cons(zero, emp)]], [cons(suc(zero), emp)])
+%                                          % M = app(global(map), global(suc))
+%
+% Runtime-only values: clo(Body, Env), pap(Name, RevArgs, Left),
+% sp(Head, RevArgs) where Head is fvar(Level) or gl(Name),
+% fvar(Level), env(Val, Outer), nil. Data values are bare
+% constructors -- data(C) is a term former only, stripped by eval
+% and reapplied by reify. A stuck application is an sp, never an
+% app, which is what keeps derivations unique. Argument lists are
+% closed so a value stays reusable.
+%
+% Left inside pap is a Peano countdown of arguments still owed,
+% seeded from arity/2. It is not a budget: its shape is what makes
+% "still collecting" (suc(suc(K))) and "saturated, run delta"
+% (suc(zero)) mutually exclusive without a guard.
+% ============================================================
+
+% ============================================================
+% Kernel
+% ============================================================
+
+eval(var(N), env(V, E), R) :- lookup(N, env(V, E), R).
+eval(abs(B), E, clo(B, E)).
+eval(app(F, A), E, R) :- eval(F, E, FV), eval(A, E, AV), apply(FV, AV, R).
+eval(global(N), _, pap(N, [], K)) :- arity(N, K).
+eval(data(C), _, C) :- con(C).
+
+lookup(zero, env(V, _), V).
+lookup(suc(N), env(_, E), R) :- lookup(N, E, R).
+
+apply(clo(B, E), V, R) :- eval(B, env(V, E), R).
+apply(pap(F, As, suc(suc(K))), V, pap(F, [V|As], suc(K))).
+apply(pap(F, As, suc(zero)), V, R) :-
+    rev([V|As], Args),
+    delta(F, Args, R),
+    con(R).
+apply(sp(H, As), V, sp(H, [V|As])).
+apply(fvar(L), V, sp(fvar(L), [V])).
+
+reify(clo(B, E), L, abs(R)) :-
+    eval(B, env(fvar(L), E), BV),
+    reify(BV, suc(L), R).
+reify(fvar(L), Level, var(I)) :- level_to_idx(L, Level, I).
+reify(pap(F, As, _), L, T) :- reify_spine(global(F), As, L, T).
+reify(sp(gl(F), As), L, T) :- reify_spine(global(F), As, L, T).
+reify(sp(fvar(L0), As), L, T) :-
+    level_to_idx(L0, L, I),
+    reify_spine(var(I), As, L, T).
+reify(V, _, data(V)) :- con(V).
+
+reify_spine(H, [], _, H).
+reify_spine(H, [A|As], L, app(T, RA)) :-
+    reify_spine(H, As, L, T),
+    reify(A, L, RA).
+
+level_to_idx(L, suc(L), zero).
+level_to_idx(L, suc(N), suc(I)) :- level_to_idx(L, N, I).
+
+rev(L, R) :- rev_acc(L, [], R).
+rev_acc([], A, A).
+rev_acc([H|T], A, R) :- rev_acc(T, [H|A], R).
+
+normalize(T, R) :- eval(T, nil, V), reify(V, zero, R).
+
+fits(M, Ins, Labs) :- eval(M, nil, MV), rows(MV, Ins, Labs).
+
+rows(_, [], []).
+rows(MV, [Args|Rest], [Y|Ys]) :-
+    saturate(MV, Args, V),
+    reify(V, zero, Y),
+    rows(MV, Rest, Ys).
+
+saturate(V, [], V).
+saturate(F, [A|As], R) :-
+    eval(A, nil, AV),
+    apply(F, AV, R1),
+    saturate(R1, As, R).
+
+fits_data(M, Ins, Labs) :-
+    wrap_rows(Ins, WIns),
+    wrap_args(Labs, WLabs),
+    fits(M, WIns, WLabs).
+
+wrap_rows([], []).
+wrap_rows([Args|Rest], [WArgs|WRest]) :-
+    wrap_args(Args, WArgs),
+    wrap_rows(Rest, WRest).
+
+wrap_args([], []).
+wrap_args([C|Cs], [data(C)|Ws]) :- wrap_args(Cs, Ws).
+
+% ============================================================
+% Closed beta-normal programs
+%
+% Two arguments here are easy to confuse.
+%
+% D is de Bruijn scope, not a limit: it counts the enclosing
+% lambdas so lt/2 can reject an out-of-scope index. It has no
+% maximum and cannot run out.
+%
+% Max is a nesting-depth ceiling -- the longest root-to-leaf
+% path. Each abs and each app on a path spends one; var, global
+% and data leaves are free. Siblings each get the full remaining
+% Max rather than splitting it, so wide terms are cheap and only
+% nesting costs. It restricts which candidate programs are
+% considered, never how much evaluation a program may do: beta
+% reduction and delta recursion stay unbounded, and a depth-3
+% program still computes plus 10 10. A refutation under Max means
+% "no program this shallow", not "no program".
+%
+% Beware that a curried spine is deeper than it looks: each app
+% costs one AND the deepest argument's own depth adds on top, so
+% lambda x. lambda y. if (less x y) y x needs Max = 7, not 5. An
+% under-set Max does not merely fail -- it returns whatever
+% shallower program happens to fit the table, which is how you get
+% a program that fits every training row and no held-out row.
+%
+% prog/1 leaves Max unbound, which is the unbounded generator.
+% That is what you want to CHECK a term. To SYNTHESIZE, use
+% prog_depth_le/2: an unbounded generator wanders into ever-deeper
+% terms instead of covering the shallow ones, so a target that is
+% not already a primitive stays out of reach. lambda x. if (not
+% x) false, which is and/2, is found in seconds at Max = 4 and
+% not at all unbounded.
+%
+% Higher-order programs are unusually shallow, so they sit well
+% inside reach: map suc is Max = 1 and map (mul 2) is Max = 2.
+% ============================================================
+
+% internal: nf/3, ne/3, lt/2
+nf(abs(B), D, suc(Max)) :- nf(B, suc(D), Max).
+nf(data(C), _, _) :- con(C).
+nf(X, D, Max) :- ne(X, D, Max).
+
+ne(var(I), D, _) :- lt(I, D).
+ne(global(N), _, _) :- arity(N, _).
+ne(app(F, A), D, suc(Max)) :- ne(F, D, Max), nf(A, D, Max).
+
+lt(zero, suc(_)).
+lt(suc(I), suc(D)) :- lt(I, D).
+
+% public
+prog(M) :- nf(M, zero, _).
+
+prog_depth_le(M, Max) :- nf(M, zero, Max).
+
+% ============================================================
+% Domain
+% ============================================================
+
+bool(true).
+bool(false).
+
+nat(zero).
+nat(suc(N)) :- nat(N).
+
+natlist(emp).
+natlist(cons(H, T)) :- nat(H), natlist(T).
+
+con(true).
+con(false).
+con(zero).
+con(suc(N)) :- nat(N).
+con(emp).
+con(cons(H, T)) :- nat(H), natlist(T).
+
+arity(not,   suc(zero)).
+arity(suc,   suc(zero)).
+arity(or,    suc(suc(zero))).
+arity(plus,  suc(suc(zero))).
+arity(if,    suc(suc(suc(zero)))).
+arity(cons,  suc(suc(zero))).
+
+delta(not,  [true],  false).
+delta(not,  [false], true).
+delta(suc,  [X], suc(X))      :- nat(X).
+delta(or,   [true,  Y], true) :- bool(Y).
+delta(or,   [false, Y], Y)    :- bool(Y).
+delta(plus, [X, Y], R)        :- add(X, Y, R).
+delta(if,   [true,  T, E], T) :- con(T), con(E).
+delta(if,   [false, T, E], E) :- con(T), con(E).
+delta(cons, [H, T], cons(H, T)) :- nat(H), natlist(T).
+
+add(zero,   Y, Y)      :- nat(Y).
+add(suc(X), Y, suc(R)) :- add(X, Y, R).
+
+% ============================================================
+% Domain: higher order
+%
+% map and foldr ingest a function and call it with apply/3. twice
+% is the function-valued one: rather than returning f (f .), it
+% takes the extra argument, so app(global(twice), global(suc)) is
+% a partial application the kernel hands out for free.
+% ============================================================
+
+arity(map,   suc(suc(zero))).
+arity(foldr, suc(suc(suc(zero)))).
+arity(twice, suc(suc(zero))).
+
+delta(map,   [F, L], R)    :- list_map(F, L, R).
+delta(foldr, [F, Z, L], R) :- list_foldr(F, Z, L, R).
+delta(twice, [F, X], R) :-
+    apply(F, X, Y),
+    nat(Y),
+    apply(F, Y, R),
+    nat(R).
+
+list_map(_, emp, emp).
+list_map(F, cons(H, T), cons(H2, T2)) :-
+    apply(F, H, H2),
+    nat(H2),
+    list_map(F, T, T2).
+
+% one apply per argument: currying a binary function is manual
+list_foldr(_, Z, emp, Z) :- nat(Z).
+list_foldr(F, Z, cons(H, T), R) :-
+    list_foldr(F, Z, T, Acc),
+    apply(F, H, G),
+    apply(G, Acc, R),
+    nat(R).
+
+eq(X, X).
