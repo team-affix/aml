@@ -36,17 +36,25 @@
 %     and drop the noise. Only for all-data tables: it cannot
 %     express a function input like global(not) or a non-data
 %     label like abs(...). Use fits/3 directly for those.
-%   fits_nf(M, Inputs, Labels)
-%     Same, but M is restricted to closed beta-normal terms.
-%     Slower to the first answer, but every answer is a distinct
-%     meaningful program: no beta-redexes, no dead subterms.
-%   prog(M)   -- closed beta-normal M
-%   prog_depth(M, Max)
-%     prog/1 with a nesting-depth ceiling you pass in. Needed to
-%     synthesize anything that is not already a primitive:
-%       prog_depth(M, suc(suc(suc(suc(zero))))), fits_data(M, ...)
-%     Bounds candidate program shape only -- evaluation is still
-%     unbounded, so a shallow program may compute for a long time.
+%   prog(M)   -- M is closed and beta-normal (unbounded)
+%   prog_depth_le(M, Max)
+%     prog/1 with a nesting-depth ceiling: depth(M) <= Max.
+%
+% Everything else is internal. In particular nf/3, ne/3 and lt/2
+% are the grammar's own machinery, not entry points -- they take
+% the de Bruijn scope that prog/1 and prog_depth_le/2 seed.
+%
+% Neither fits/3 nor fits_data/3 constrains M: both will happily
+% answer with a beta-redex or a dead subterm. Conjoin a generator
+% when you care about the shape of the program:
+%
+%   fits_data(M, Ins, Labs)                       -- any M
+%   prog(M), fits_data(M, Ins, Labs)              -- beta-normal M
+%   prog_depth_le(M, D), fits_data(M, Ins, Labs)  -- and depth <= D
+%
+% The last is the one to use for synthesis; the middle one cannot
+% reach a target that is not already a primitive. Reified output
+% is always normal regardless -- that is what reify/3 produces.
 %
 % No bounds. Nothing here limits evaluation. Normalization depth
 % is unrestricted: output may nest arbitrarily deep, application
@@ -208,57 +216,47 @@ wrap_args([C|Cs], [data(C)|Ws]) :- wrap_args(Cs, Ws).
 % ============================================================
 % Closed beta-normal programs
 %
-% The D argument is de Bruijn scope, not a budget: it counts the
-% enclosing lambdas so lt/2 can reject an out-of-scope index.
+% Two arguments here are easy to confuse.
+%
+% D is de Bruijn scope, not a limit: it counts the enclosing
+% lambdas so lt/2 can reject an out-of-scope index. It has no
+% maximum and cannot run out.
+%
+% Max is a nesting-depth ceiling -- the longest root-to-leaf
+% path. Each abs and each app on a path spends one; var, global
+% and data leaves are free. Siblings each get the full remaining
+% Max rather than splitting it, so wide terms are cheap and only
+% nesting costs. It restricts which candidate programs are
+% considered, never how much evaluation a program may do: beta
+% reduction and delta recursion stay unbounded, and a depth-3
+% program still computes plus 10 10. A refutation under Max means
+% "no program this shallow", not "no program".
+%
+% prog/1 leaves Max unbound, which is the unbounded generator.
+% That is what you want to CHECK a term. To SYNTHESIZE, use
+% prog_depth_le/2: an unbounded generator wanders into ever-deeper
+% terms instead of covering the shallow ones, so a target that is
+% not already a primitive stays out of reach. lambda x. if (not
+% x) false, which is and/2, is found in seconds at Max = 4 and
+% not at all unbounded.
 % ============================================================
 
-nf(abs(B), D) :- nf(B, suc(D)).
-nf(data(C), _) :- con(C).
-nf(X, D) :- ne(X, D).
+% internal: nf/3, ne/3, lt/2
+nf(abs(B), D, suc(Max)) :- nf(B, suc(D), Max).
+nf(data(C), _, _) :- con(C).
+nf(X, D, Max) :- ne(X, D, Max).
 
-ne(var(I), D) :- lt(I, D).
-ne(global(N), _) :- arity(N, _).
-ne(app(F, A), D) :- ne(F, D), nf(A, D).
+ne(var(I), D, _) :- lt(I, D).
+ne(global(N), _, _) :- arity(N, _).
+ne(app(F, A), D, suc(Max)) :- ne(F, D, Max), nf(A, D, Max).
 
 lt(zero, suc(_)).
 lt(suc(I), suc(D)) :- lt(I, D).
 
-prog(M) :- nf(M, zero).
+% public
+prog(M) :- nf(M, zero, _).
 
-fits_nf(M, Ins, Labs) :- prog(M), fits(M, Ins, Labs).
-
-% ============================================================
-% Depth-bounded programs
-%
-% The same relation with a ceiling supplied by the caller, so the
-% limit lives in the goal rather than in this file.
-%
-% Max bounds nesting depth -- the longest root-to-leaf path --
-% not the node count: siblings each get the full remaining Max
-% rather than splitting it. It restricts only which candidate
-% programs are considered, never how much evaluation a program
-% may do, so beta reduction and delta recursion stay unbounded.
-% A depth-3 program still computes plus 10 10.
-%
-% Needed for compositional synthesis. An unbounded generator
-% wanders into ever-deeper terms instead of covering the shallow
-% ones, so a target that is not already a primitive stays out of
-% reach: lambda x. if (not x) false, which is and/2, is found in
-% seconds at Max = 4 and not at all unbounded.
-%
-% A refutation under Max means "no program this shallow", not
-% "no program".
-% ============================================================
-
-nf_depth(abs(B), D, suc(Max)) :- nf_depth(B, suc(D), Max).
-nf_depth(data(C), _, _) :- con(C).
-nf_depth(X, D, Max) :- ne_depth(X, D, Max).
-
-ne_depth(var(I), D, _) :- lt(I, D).
-ne_depth(global(N), _, _) :- arity(N, _).
-ne_depth(app(F, A), D, suc(Max)) :- ne_depth(F, D, Max), nf_depth(A, D, Max).
-
-prog_depth(M, Max) :- nf_depth(M, zero, Max).
+prog_depth_le(M, Max) :- nf(M, zero, Max).
 
 % ============================================================
 % Domain
