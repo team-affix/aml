@@ -1,0 +1,348 @@
+% ============================================================
+% Impure lambda calculus, call by value, normalization by
+% evaluation, with primitives that cannot see function syntax.
+%
+% Public predicates
+%
+%   normalize(Term, NormalForm)
+%   fits(Prog, Inputs, Labels)        arguments already wrapped
+%   fits_data(Prog, Inputs, Labels)   bare constructors, wrapped here
+%   prog(Term)                        closed beta-normal terms
+%   prog_depth_le(Term, MaxDepth)     the same, depth bounded
+%
+% Terms
+%
+%   var(I)  abs(B)  app(F, A)  global(N)  data(C)  arg(H)
+%
+% data(C) carries a constructor term of the domain. arg(H) is a
+% handle and appears only inside what a delta rule returns.
+%
+% Values
+%
+%   dat(C)          a constructor term
+%   clo(B, E)       a closure
+%   pap(F, As, K)   a primitive still short of K arguments
+%   sp(H, As)       a stuck spine
+%   fvar(L)         a free variable, made by reify
+%
+% ------------------------------------------------------------
+% Writing a domain
+% ------------------------------------------------------------
+%
+% Three declarations, and no others.
+%
+%   con/1       which constructor terms are well sorted
+%   arity(N, K) how many arguments N matches on, K in Peano
+%   delta(N, Args, Term)
+%               the rule for N, given K arguments, returning a
+%               term the kernel evaluates
+%
+% What a rule sees of an argument depends only on that
+% argument's shape, and the kernel decides it, not the domain:
+%
+%   a constructor  data(C), the term itself, free to match on
+%   a function     arg(H), a handle
+%   a neutral      nothing: the whole application goes stuck
+%
+% so a rule can never take a function apart, and never holds a
+% value of any kind. It gets terms and gives back a term, which
+% may mention its handles:
+%
+%   delta(twice, [F], abs(app(F, app(F, var(zero))))).
+%
+% A handle resolves to a closed value, so a returned function
+% cannot capture. Applying a handle is the only thing that can
+% be done with one, which is exactly Agda's discipline: return
+% a function freely, case split on one never.
+%
+% Two habits make a domain fast and lazy.
+%
+% Declare an arity of only the arguments actually matched, and
+% hand the rest back as a lambda. or is arity one because it
+% matches only its first argument:
+%
+%   delta(or, [data(true)],  abs(data(true))).
+%   delta(or, [data(false)], abs(var(zero))).
+%
+% which short circuits: or true x is true even where x is a
+% variable, because the second argument is never demanded. An
+% arity of two would instead go stuck there.
+%
+% Let sort checking happen at the edges. The grammar checks a
+% literal when it generates one and reify checks a result on
+% the way out, so a delta rule that merely rebuilds data needs
+% no guard of its own -- guarding cons with natlist makes map
+% quadratic and buys nothing.
+%
+% ------------------------------------------------------------
+% What holds
+% ------------------------------------------------------------
+%
+% Total: every closed term has a normal form or diverges; none
+% is refused. lambda n. suc n, lambda f. map f [1,2] and
+% twice twice suc all normalize, the first two to stuck spines
+% and the third to lambda x. suc (suc (suc (suc x))).
+%
+% One derivation per result: the clauses of eval, apply, see
+% and fire are pairwise exclusive, so a solved goal is found
+% exactly once and Atlas never re-explores a spelling.
+%
+% Ill-sorted data cannot leave the kernel. It can exist inside
+% it -- suc true is built if a rule builds it -- but reify
+% refuses it, so no goal can be answered with one.
+%
+% Divergence is still possible and is bounded by
+% --max-resolutions, not by the kernel.
+%
+% ------------------------------------------------------------
+% Measured against ho.chc and curry.chc
+% ------------------------------------------------------------
+%
+% Evaluation, minimum resolutions, this file / ho / curry:
+% plus 20 20 103/182/180, map suc [0..15] 655/1045/962,
+% foldr plus 0 [1..10] 668/1487/1485, map (plus 10) [0..4]
+% 321/430/319. Fastest of the three everywhere.
+%
+% Synthesis, mean simulations over three seeds: not 23/20/48,
+% or 79/64/99, plus 36/33/108, if 113/76/146, sum as foldr
+% 742/319/1375 but 0.8s against 16.9s and 0.7s.
+%
+% and-from-if at Max = 4 is the weak case: about 6000
+% simulations and 12s, against 29s for ho.chc and 2s for
+% curry.chc. Rollouts here are cheap and numerous rather than
+% few and expensive. One seed in eight takes far longer, a tail
+% ho.chc shares and curry.chc does not.
+% ============================================================
+
+% ============================================================
+% Kernel
+% ============================================================
+
+eval(var(N), E, R) :- lookup(N, E, R).
+eval(abs(B), E, clo(B, E)).
+eval(app(F, A), E, R) :- eval(F, E, FV), eval(A, E, AV), apply(FV, AV, R).
+eval(global(N), _, pap(N, [], K)) :- arity(N, K).
+eval(data(C), _, dat(C)).
+eval(arg(H), E, V) :- held(E, H, V).
+
+lookup(zero, env(V, _), V).
+lookup(suc(N), env(_, E), R) :- lookup(N, E, R).
+
+held(bl(Bs, Ws), H, V) :- pick(Bs, Ws, H, V).
+held(env(_, E), H, V) :- held(E, H, V).
+
+apply(clo(B, E), V, R) :- eval(B, env(V, E), R).
+apply(pap(F, As, suc(suc(K))), V, pap(F, [V|As], suc(K))).
+apply(pap(F, As, suc(zero)), V, R) :-
+    arity(F, K),
+    walk(K, [V|As], [], [], ok, Bs, Ws, St),
+    fire(St, F, Bs, Ws, [V|As], R).
+apply(sp(H, As), V, sp(H, [V|As])).
+apply(fvar(L), V, sp(fvar(L), [V])).
+
+% ---------- saturation ----------
+%
+% One pass over the collected arguments, newest first, building
+% the oldest-first view the domain sees and the values behind
+% it. A handle names the blots that follow it, which is enough
+% to find its value again and carries no value itself, so a
+% handle a rule passes around leaks nothing.
+
+walk(zero, [], Bs, Ws, St, Bs, Ws, St).
+walk(suc(K), [V|As], Bs0, Ws0, St0, Bs, Ws, St) :-
+    see(V, Bs0, B, St0, St1),
+    walk(K, As, [B|Bs0], [V|Ws0], St1, Bs, Ws, St).
+
+see(dat(C), _, data(C), St, St).
+see(clo(_, _), H, arg(H), St, St).
+see(pap(_, _, _), H, arg(H), St, St).
+see(fvar(_), _, nil, _, stuck).
+see(sp(_, _), _, nil, _, stuck).
+
+fire(ok, F, Bs, Ws, _, R) :- delta(F, Bs, T), eval(T, bl(Bs, Ws), R).
+fire(stuck, F, _, _, As, sp(gl(F), As)).
+
+pick([_|H], [V|_], H, V).
+pick([_|Bs], [_|Ws], H, V) :- pick(Bs, Ws, H, V).
+
+% ---------- reify ----------
+
+reify(clo(B, E), L, abs(R)) :-
+    eval(B, env(fvar(L), E), BV),
+    reify(BV, suc(L), R).
+reify(fvar(L0), L, var(I)) :- level_to_idx(L0, L, I).
+reify(pap(F, As, _), L, T) :- reify_spine(global(F), As, L, T).
+reify(sp(gl(F), As), L, T) :- reify_spine(global(F), As, L, T).
+reify(sp(fvar(L0), As), L, T) :-
+    level_to_idx(L0, L, I),
+    reify_spine(var(I), As, L, T).
+reify(dat(C), _, data(C)) :- con(C).
+
+reify_spine(H, [], _, H).
+reify_spine(H, [A|As], L, app(T, RA)) :-
+    reify_spine(H, As, L, T),
+    reify(A, L, RA).
+
+level_to_idx(L, suc(L), zero).
+level_to_idx(L, suc(N), suc(I)) :- level_to_idx(L, N, I).
+
+% ============================================================
+% Public
+% ============================================================
+
+normalize(T, R) :- eval(T, nil, V), reify(V, zero, R).
+
+fits(M, Ins, Labs) :- eval(M, nil, MV), rows(MV, Ins, Labs).
+
+rows(_, [], []).
+rows(MV, [Args|Rest], [Y|Ys]) :-
+    saturate(MV, Args, V),
+    reify(V, zero, Y),
+    rows(MV, Rest, Ys).
+
+saturate(V, [], V).
+saturate(F, [A|As], R) :-
+    eval(A, nil, AV),
+    apply(F, AV, R1),
+    saturate(R1, As, R).
+
+fits_data(M, Ins, Labs) :-
+    wrap_rows(Ins, WIns),
+    wrap_args(Labs, WLabs),
+    fits(M, WIns, WLabs).
+
+wrap_rows([], []).
+wrap_rows([Args|Rest], [WArgs|WRest]) :-
+    wrap_args(Args, WArgs),
+    wrap_rows(Rest, WRest).
+
+wrap_args([], []).
+wrap_args([C|Cs], [data(C)|Ws]) :- wrap_args(Cs, Ws).
+
+% ============================================================
+% Closed beta-normal programs
+%
+% Two arguments here are easy to confuse.
+%
+% D is de Bruijn scope, not a limit: it counts the enclosing
+% lambdas so lt/2 can reject an out-of-scope index. It has no
+% maximum and cannot run out.
+%
+% Max is a nesting-depth ceiling -- the longest root-to-leaf
+% path. Each abs and each app on a path spends one; var, global
+% and data leaves are free. Siblings each get the full remaining
+% Max rather than splitting it, so wide terms are cheap and only
+% nesting costs. It restricts which candidate programs are
+% considered, never how much evaluation a program may do: beta
+% reduction and delta recursion stay unbounded, and a depth-3
+% program still computes plus 10 10. A refutation under Max means
+% "no program this shallow", not "no program".
+%
+% Beware that a curried spine is deeper than it looks: each app
+% costs one AND the deepest argument's own depth adds on top, so
+% lambda x. lambda y. if (less x y) y x needs Max = 7, not 5. An
+% under-set Max does not merely fail -- it returns whatever
+% shallower program happens to fit the table, which is how you get
+% a program that fits every training row and no held-out row.
+%
+% prog/1 leaves Max unbound, which is the unbounded generator.
+% That is what you want to CHECK a term. To SYNTHESIZE, use
+% prog_depth_le/2: an unbounded generator wanders into ever-deeper
+% terms instead of covering the shallow ones, so a target that is
+% not already a primitive stays out of reach.
+%
+% Higher-order programs are unusually shallow, so they sit well
+% inside reach: map suc is Max = 1 and map (plus 2) is Max = 2.
+% ============================================================
+
+% internal: nf/3, ne/3, lt/2
+nf(abs(B), D, suc(Max)) :- nf(B, suc(D), Max).
+nf(data(C), _, _) :- con(C).
+nf(X, D, Max) :- ne(X, D, Max).
+
+ne(var(I), D, _) :- lt(I, D).
+ne(global(N), _, _) :- arity(N, _).
+ne(app(F, A), D, suc(Max)) :- ne(F, D, Max), nf(A, D, Max).
+
+lt(zero, suc(_)).
+lt(suc(I), suc(D)) :- lt(I, D).
+
+% public
+prog(M) :- nf(M, zero, _).
+
+prog_depth_le(M, Max) :- nf(M, zero, Max).
+
+% ============================================================
+% Domain: sorts
+% ============================================================
+
+bool(true).
+bool(false).
+
+nat(zero).
+nat(suc(N)) :- nat(N).
+
+natlist(emp).
+natlist(cons(H, T)) :- nat(H), natlist(T).
+
+con(true).
+con(false).
+con(zero).
+con(suc(N)) :- nat(N).
+con(emp).
+con(cons(H, T)) :- nat(H), natlist(T).
+
+% ============================================================
+% Domain: first order
+% ============================================================
+
+arity(not, suc(zero)).
+delta(not, [data(true)], data(false)).
+delta(not, [data(false)], data(true)).
+
+arity(suc, suc(zero)).
+delta(suc, [data(N)], data(suc(N))).
+
+% absorbing on true, identity on false, so or true x is true
+arity(or, suc(zero)).
+delta(or, [data(true)], abs(data(true))).
+delta(or, [data(false)], abs(var(zero))).
+
+arity(plus, suc(suc(zero))).
+delta(plus, [data(X), data(Y)], data(R)) :- add(X, Y, R).
+
+% \t.\e. t and \t.\e. e, so a branch is never inspected and may
+% be a function
+arity(if, suc(zero)).
+delta(if, [data(true)], abs(abs(var(suc(zero))))).
+delta(if, [data(false)], abs(abs(var(zero)))).
+
+arity(cons, suc(suc(zero))).
+delta(cons, [data(H), data(T)], data(cons(H, T))).
+
+add(zero, Y, Y) :- nat(Y).
+add(suc(X), Y, suc(R)) :- add(X, Y, R).
+
+% ============================================================
+% Domain: higher order
+%
+% F is a handle. A rule applies it by writing app(F, X) into
+% the term it returns, and cannot look inside it.
+% ============================================================
+
+arity(map, suc(suc(zero))).
+delta(map, [F, data(L)], T) :- map_t(L, F, T).
+
+map_t(emp, _, data(emp)).
+map_t(cons(H, T), F, app(app(global(cons), app(F, data(H))), R)) :- map_t(T, F, R).
+
+arity(foldr, suc(suc(suc(zero)))).
+delta(foldr, [F, Z, data(L)], T) :- foldr_t(L, F, Z, T).
+
+foldr_t(emp, _, Z, Z).
+foldr_t(cons(H, T), F, Z, app(app(F, data(H)), R)) :- foldr_t(T, F, Z, R).
+
+arity(twice, suc(zero)).
+delta(twice, [F], abs(app(F, app(F, var(zero))))).
+
+eq(X, X).
