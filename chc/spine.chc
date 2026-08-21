@@ -97,6 +97,16 @@
 %
 %   delta(twice, [F], abs(app(val(F), app(val(F), var(zero))))).
 %
+% That term is evaluated in the empty environment, so a rule is
+% hygienic whether it likes it or not: everything from outside
+% arrives as val(V), and every var(I) written must be bound by an
+% abs inside the same term. There is no ambient scope to reach
+% into, so a rule cannot capture and cannot shift an index, and
+% val(V) ignores the environment -- which is why twice may put
+% the same F under a fresh binder twice over without a thought.
+% Duplicating a value is free; duplicating the work done to it is
+% not, and that is the one thing to weigh when writing a rule.
+%
 % Nothing stops a rule from taking a closure apart, and nothing
 % good comes of it: a closure's body only means anything next to
 % its environment, so re-using one elsewhere captures. Pass
