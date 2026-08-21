@@ -9,6 +9,7 @@
 %   fits(Prog, Inputs, Labels)
 %   prog(Term)                        closed beta-normal terms
 %   prog_depth_le(Term, MaxDepth)     the same, depth bounded
+%   prog_size_le(Term, MaxNodes)      the same, node bounded
 %
 % Terms
 %
@@ -366,6 +367,34 @@ saturate(F, [A|As], R) :-
 % use it to CHECK a term. To SYNTHESIZE use prog_depth_le/2, as
 % an unbounded generator wanders into ever-deeper terms instead
 % of covering the shallow ones.
+%
+% ------------------------------------------------------------
+% Nodes instead of depth
+% ------------------------------------------------------------
+%
+% prog_size_le/2 bounds the total node count: every abs, app,
+% var, global and data spends exactly one, so abs(var(zero)) is
+% two and app(global(not), data(true)) is three. It is the
+% honester measure of how big a program is -- a depth bound lets
+% both children of every app be as deep as the parent, so depth
+% four already admits terms of thirty nodes.
+%
+% It is three judgments conjoined, not one woven measure: the
+% grammar says the term is closed and normal, node_count/2 says
+% how big it is, le/2 says that is small enough. Threading a
+% budget through the grammar instead was measured and is worse on
+% every task, because it spends a decision at every node and ties
+% each sibling to what the one before it left over, where three
+% separate judgments tie nothing together and need no second copy
+% of the grammar.
+%
+% Which bound to reach for still depends on the size of what is
+% wanted. Nodes win on a small target and depth on a large one:
+% map suc takes 85 simulations by nodes against 654 by depth,
+% while and-from-if takes 12853 by nodes against 6874 by depth.
+% Below roughly five nodes prefer prog_size_le/2, above it prefer
+% prog_depth_le/2, and remember a spine literal is nodes too, so
+% a number costs two apiece.
 % ============================================================
 
 % internal: nf/3, ne/3, lt/2
@@ -380,10 +409,30 @@ ne(app(F, A), D, suc(Max)) :- ne(F, D, Max), nf(A, D, Max).
 lt(zero, suc(_)).
 lt(suc(I), suc(D)) :- lt(I, D).
 
+% internal: node_count/2, nat_sum/3, le/2 -- size is its own
+% judgment, laid alongside the grammar instead of woven into it.
+% Every former counts one and an app adds its children's counts.
+node_count(var(_), suc(zero)).
+node_count(global(_), suc(zero)).
+node_count(data(_), suc(zero)).
+node_count(abs(B), suc(N)) :- node_count(B, N).
+node_count(app(F, A), suc(N)) :-
+    node_count(F, NF),
+    node_count(A, NA),
+    nat_sum(NF, NA, N).
+
+nat_sum(zero, N, N).
+nat_sum(suc(M), N, suc(R)) :- nat_sum(M, N, R).
+
+le(zero, _).
+le(suc(N), suc(M)) :- le(N, M).
+
 % public
 prog(M) :- nf(M, zero, _).
 
 prog_depth_le(M, Max) :- nf(M, zero, Max).
+
+prog_size_le(M, N) :- prog(M), node_count(M, C), le(C, N).
 
 % ============================================================
 % Domain: tags and sorts

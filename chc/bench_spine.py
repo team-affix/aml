@@ -26,6 +26,7 @@ Examples
   ./bench_spine.py                          both suites, seeds 1 2 3
   ./bench_spine.py --suite synth --seeds 1,2,3,4,5
   ./bench_spine.py --only and-from-if --cap 2000
+  ./bench_spine.py --suite synth --bound size   node count instead of depth
   ./bench_spine.py --db /tmp/variant.chc    any file with the same API
   ./bench_spine.py --only sum-as-foldr --show-commands
 """
@@ -157,11 +158,25 @@ EVAL = [
 EVAL_CAP = 2_000_000
 
 
-def synth_goal(p: Synth) -> str:
+def nodes(term: str) -> int:
+    """Node count of a term, read off the intended answer.
+
+    Kept derived rather than declared so a task cannot drift out of step
+    with the size its own answer needs.
+    """
+    return sum(term.count(former)
+               for former in ("var(", "global(", "data(", "abs(", "app("))
+
+
+def synth_goal(p: Synth, bound: str) -> str:
     ins = "[" + ", ".join(
         "[" + ", ".join(enc(a) for a in args) + "]" for args, _ in p.rows) + "]"
     labs = "[" + ", ".join(enc(lab) for _, lab in p.rows) + "]"
-    return "prog_depth_le(M, %s), fits(M, %s, %s)" % (peano(p.max_depth), ins, labs)
+    if bound == "size":
+        limit = "prog_size_le(M, %s)" % peano(nodes(p.intended))
+    else:
+        limit = "prog_depth_le(M, %s)" % peano(p.max_depth)
+    return "%s, fits(M, %s, %s)" % (limit, ins, labs)
 
 
 def eval_goal(p: Eval) -> str:
@@ -248,6 +263,8 @@ def main() -> int:
     ap_.add_argument("--atlas", default=ATLAS_DEFAULT)
     ap_.add_argument("--db", default=DB_DEFAULT)
     ap_.add_argument("--suite", choices=("synth", "eval", "all"), default="all")
+    ap_.add_argument("--bound", choices=("depth", "size"), default="depth",
+                     help="bound candidate programs by nesting depth or by node count")
     ap_.add_argument("--seeds", default="1,2,3")
     ap_.add_argument("--timeout", type=float, default=60.0)
     ap_.add_argument("--cap", type=int, default=0, help="override --max-resolutions")
@@ -269,7 +286,7 @@ def main() -> int:
     if args.show_commands:
         for p in synth if args.suite in ("synth", "all") else []:
             print("# %s" % p.name)
-            print(" ".join(command(args.atlas, args.db, "'%s'" % synth_goal(p),
+            print(" ".join(command(args.atlas, args.db, "'%s'" % synth_goal(p, args.bound),
                                    args.cap or p.cap, seeds[0])) + "\n")
         for p in evals if args.suite in ("eval", "all") else []:
             print("# %s" % p.name)
@@ -277,15 +294,15 @@ def main() -> int:
                                    args.cap or EVAL_CAP, seeds[0])) + "\n")
         return 0
 
-    print("atlas=%s\ndb=%s\nseeds=%s timeout=%ss\n"
+    print("atlas=%s\ndb=%s\nseeds=%s timeout=%ss bound=%s\n"
           "metric: simulations and seconds to the first solution, median over seeds"
-          % (args.atlas, args.db, seeds, args.timeout))
+          % (args.atlas, args.db, seeds, args.timeout, args.bound))
 
-    failures = 0
+    failures, flaky = 0, 0
     if args.suite in ("synth", "all"):
         rows = []
         for p in synth:
-            goal, cap = synth_goal(p), args.cap or p.cap
+            goal, cap = synth_goal(p, args.bound), args.cap or p.cap
             runs = [run_one(args.atlas, args.db, goal, cap, s, args.timeout)
                     for s in seeds]
             ok = [r for r in runs if r[0] == "solved"]
@@ -294,10 +311,14 @@ def main() -> int:
                 rows.append((p.name, runs[0][0], 0, median([r[2] for r in runs]),
                              "wanted %s" % p.intended))
                 continue
+            if len(ok) != len(runs):
+                flaky += 1
             rows.append((p.name, "solved" if len(ok) == len(runs) else "flaky",
                          int(median([r[3] for r in ok])),
                          median([r[2] for r in ok]), ok[0][1]))
-        report("synthesis: prog_depth_le(M, Max), fits(M, Ins, Labs)", rows)
+        bound_call = ("prog_size_le(M, Nodes)" if args.bound == "size"
+                      else "prog_depth_le(M, Max)")
+        report("synthesis: %s, fits(M, Ins, Labs)" % bound_call, rows)
 
     if args.suite in ("eval", "all"):
         rows = []
@@ -314,7 +335,12 @@ def main() -> int:
                          min(r[2] for r in ok), ok[0][1]))
         report("evaluation: normalize(Term, R)", rows)
 
-    print("\n%d task(s) did not solve" % failures if failures else "\nall solved")
+    if failures:
+        print("\n%d task(s) did not solve" % failures)
+    elif flaky:
+        print("\nall solved, %d only on some seeds" % flaky)
+    else:
+        print("\nall solved on every seed")
     return 1 if failures else 0
 
 
