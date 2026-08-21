@@ -1,0 +1,407 @@
+% ============================================================
+% Impure lambda calculus, call by value, normalization by
+% evaluation, where data is an application spine and a rule
+% fires only on arguments that can no longer change shape.
+%
+% Public predicates
+%
+%   normalize(Term, NormalForm)
+%   fits(Prog, Inputs, Labels)
+%   prog(Term)                        closed beta-normal terms
+%   prog_depth_le(Term, MaxDepth)     the same, depth bounded
+%
+% Terms
+%
+%   var(I)  abs(B)  app(F, A)  global(N)  data(C)  val(V)
+%
+% data(C) names a constructor and carries nothing: composite
+% data is built by application, so three is
+% app(data(suc), app(data(suc), app(data(suc), data(zero)))).
+% Nothing may hide inside a constructor, which is what lets the
+% kernel walk data at all. val(V) puts a value back into a term
+% and appears only in what a rule returns.
+%
+% Values
+%
+%   sp(C, As)         data, and nothing in it can change shape
+%   nsp(H, As)        a spine with a variable somewhere in it
+%   clo(B, E)         a closure
+%   pap(F, As, K, B)  a primitive short of K arguments
+%
+% Four forms, because a bare constructor is just a spine holding
+% nothing, sp(C, []), and a free variable is just a spine headed
+% by one, nsp(fv(L), []). A neutral spine's head says which kind
+% it is: dat(C) for data, gl(F) for a stuck primitive, fv(L) for
+% a variable reify introduced. Those three are kept apart so that
+% no value can be read back two ways.
+%
+% ------------------------------------------------------------
+% When a rule fires
+% ------------------------------------------------------------
+%
+% One rule, and it is the whole design: a primitive fires once
+% it holds all its arguments and no argument has a variable in a
+% position that could still turn into something else. Otherwise
+% the application stays as it is.
+%
+% A variable is the only thing that can change shape, so it is
+% the only thing that stops a rule. A closure never can -- no
+% substitution turns a function into a constructor -- so a
+% lambda argument is as settled as a literal, however many free
+% variables its body mentions. That exemption is what keeps the
+% test cheap: it stops at every lambda, so it never has to look
+% inside one.
+%
+% Firing on settled arguments means a rule that does not match
+% is a refutation, not a delay: not (lambda x. x) is refused
+% because a function is not a boolean and never will be, while
+% not x waits because x might yet be one.
+%
+% ------------------------------------------------------------
+% How the verdict is kept
+% ------------------------------------------------------------
+%
+% Never by searching. Every value carries the answer, and the
+% two places a value grows keep it up to date, each in one
+% resolution: grow/3 when an application is recorded, taint/3
+% when a primitive takes another argument. Saturation then has
+% nothing left to examine.
+%
+% The verdict cannot go stale, because nothing is edited in
+% place -- reify re-evaluates a body under a fresh variable, so
+% anything a new binding touches is rebuilt with a fresh
+% verdict.
+%
+% One trap. A pap is settled as an argument even when the
+% arguments it has collected are not: plus x is stably a
+% function, so map (plus x) [1, 2] passes it along and only goes
+% stuck when it saturates. Those are two different verdicts on
+% one value and taint/3 must not confuse them.
+%
+% ------------------------------------------------------------
+% Writing a domain
+% ------------------------------------------------------------
+%
+% Four declarations, and no others.
+%
+%   tag/1        which names are constructors
+%   con(C, As)   a constructor applied to these arguments is
+%                well sorted data
+%   arity(N, K)  how many arguments N matches on, K in Peano
+%   delta(N, Args, Term)
+%                the rule for N, given its arguments as values,
+%                oldest first, returning a term
+%
+% A rule receives values and hands back a term, mentioning any
+% value it was given as val(V):
+%
+%   delta(twice, [F], abs(app(val(F), app(val(F), var(zero))))).
+%
+% Nothing stops a rule from taking a closure apart, and nothing
+% good comes of it: a closure's body only means anything next to
+% its environment, so re-using one elsewhere captures. Pass
+% functions along, apply them, and never look inside -- which is
+% Agda's discipline, kept by convention here rather than by
+% construction.
+%
+% con/2 need only look one level down, at the shape of each
+% argument, because reify visits every node and so asks it
+% everywhere. Shallow answers at every node add up to a whole
+% one, which is why nat_top/1 and list_top/1 do not recurse.
+%
+% Two habits make a domain fast and lazy.
+%
+% Declare an arity of only the arguments actually matched and
+% hand the rest back as a lambda. or is arity one because it
+% matches only its first argument:
+%
+%   delta(or, [sp(true, [])],  abs(data(true))).
+%   delta(or, [sp(false, [])], abs(var(zero))).
+
+% A saturated constructor is matched as sp(C, Args), youngest
+% argument first, and a nullary one as sp(C, []).
+%
+% which short circuits: or true x is true even where x is a
+% variable, because the second argument is never demanded.
+%
+% Let sort checking happen at the edge. con/2 at reify is the
+% only barrier, so a rule that merely rebuilds data needs no
+% guard of its own.
+%
+% ------------------------------------------------------------
+% What holds
+% ------------------------------------------------------------
+%
+% Total: every closed term has a normal form or diverges; none
+% is refused. lambda n. suc n, lambda f. map f [1, 2] and an
+% unsaturated data(suc) all normalize, the first two to spines.
+%
+% One derivation per result: the clauses of eval, apply, grow,
+% taint, fire and reify are pairwise exclusive, so a solved goal
+% is found exactly once.
+%
+% Data may hold functions, which is what the spine buys. Both
+% cons id emp and map (lambda g. g 1) [suc, suc] work, the
+% second collapsing back to ordinary data.
+%
+% Ill-sorted data cannot leave the kernel: suc true is built if
+% a rule builds it, and reify refuses it. A list is deliberately
+% not sorted in its head, since that is what allows a function
+% there, so [true] is admitted where suc true is not.
+%
+% Divergence is still possible and is bounded by
+% --max-resolutions, not by the kernel.
+%
+% Composite literals cost program depth, unavoidably: a spine is
+% applications all the way down, so lambda n. plus n 3 needs
+% Max = 4 rather than 2. Nullary tags stay free, so tables of
+% booleans are unaffected.
+%
+% Datasets are spelled as spines. There is no wrapper that turns
+% a compact constructor term into one; build them in the harness.
+%
+% ------------------------------------------------------------
+% Measured against opaque.chc, curry.chc and ho.chc
+% ------------------------------------------------------------
+%
+% Evaluation always takes one simulation here, against up to 206
+% for opaque, because every clause on the path is exclusive and
+% nothing is guessed. Best of three, seconds, this file / opaque:
+% plus 20 20 .009/.004, map suc [0..15] .025/.266,
+% foldr plus 0 [1..10] .019/.017, map (plus 10) [0..4] .014/.031,
+% twice twice suc 1 .004/.010. Rebuilding data one application at
+% a time costs where arithmetic is heaviest and wins back more
+% wherever opaque has to search. ho.chc is about twice as fast on
+% the numeric ones and cannot do twice twice suc 1 at all.
+%
+% Synthesis, three seeds, mean simulations and seconds: not 16
+% and .01, or 19 and .01, plus 17 and .01, if 61 and .02. The
+% fewest simulations of any kernel here on or, plus and if, where
+% the others need 27 to 108 and 63 to 146; ho edges it on not,
+% 15 against 16.
+%
+% sum as foldr plus 0 at Max = 2, three rows: 1154 simulations
+% and 1.3s, ahead of opaque's 1179 and 1.7s and behind ho's 262
+% and 0.2s. Set Max to the point-free answer and not to the
+% eta-expanded one -- fits applies the candidate to the row, so
+% foldr plus 0 is depth two, and budgeting for the lambda that
+% wraps it puts the task out of reach for every kernel here.
+%
+% and-from-if at Max = 4, cap 2000, is where this file is
+% weakest: 7547 simulations and 10.4s against curry's 2735 and
+% 1.9s and ho's 1093 and 1.1s. Resolutions per simulation are
+% close, 178 against 153, so the whole gap is simulation count,
+% and six attempts to close it all failed. Producing literals
+% only in argument position left simulations unchanged and
+% doubled the time. Giving tags an arity so an over-applied
+% constructor dies at apply, and moving the sort barrier from
+% reify to the moment a constructor saturates, each bought a few
+% percent of simulations and gave it back in resolutions. Folding
+% the verdict into the reverse walk to be rid of taint made
+% synthesis worse. Making if strict, as ho has it, timed out.
+% Staging the leaf choice by kind, so the generator picks twice
+% narrowly instead of once widely, doubled the simulations: this
+% solver pays per decision, so wide choices are the cheap ones.
+%
+% What does move the number is how many leaves the generator may
+% pick at all -- cutting the alphabet from thirteen to the five a
+% boolean task needs halves the simulations. Since ho offers more
+% leaves than this file and still wins, the cost is not the
+% alphabet but the decisions spent reaching a program, which is
+% what spine data charges for and what ho gets for free by
+% keeping a literal in one payload. ho also refuses
+% twice twice suc 1, so some of that speed is bought by
+% refuting more than it should.
+% ============================================================
+
+% ============================================================
+% Kernel
+% ============================================================
+
+eval(var(N), E, R) :- lookup(N, E, R).
+eval(abs(B), E, clo(B, E)).
+eval(app(F, A), E, R) :- eval(F, E, FV), eval(A, E, AV), apply(FV, AV, R).
+eval(global(N), _, pap(N, [], K, firm)) :- arity(N, K).
+eval(data(C), _, sp(C, [])).
+eval(val(V), _, V).
+
+lookup(zero, env(V, _), V).
+lookup(suc(N), env(_, E), R) :- lookup(N, E, R).
+
+apply(clo(B, E), V, R) :- eval(B, env(V, E), R).
+apply(pap(F, As, suc(suc(K)), B), V, pap(F, [V|As], suc(K), B1)) :- taint(V, B, B1).
+apply(pap(F, As, suc(zero), B), V, R) :- taint(V, B, B1), fire(B1, F, [V|As], R).
+apply(sp(C, As), V, R) :- grow(V, sp(C, [V|As]), R).
+apply(nsp(H, As), V, nsp(H, [V|As])).
+
+% ---------- the verdict ----------
+%
+% grow is handed the spine it would like to build and either
+% passes it through or renames it. taint folds the same answer
+% into the join a primitive carries while it fills up. Both look
+% only at the outermost shape of the piece just added.
+
+grow(sp(_, _), S, S).
+grow(clo(_, _), S, S).
+grow(pap(_, _, _, _), S, S).
+grow(nsp(_, _), sp(C, As), nsp(dat(C), As)).
+
+taint(sp(_, _), B, B).
+taint(clo(_, _), B, B).
+taint(pap(_, _, _, _), B, B).
+taint(nsp(_, _), _, neut).
+
+fire(firm, F, As, R) :-
+    arity(F, K),
+    rev(K, As, [], Args),
+    delta(F, Args, T),
+    eval(T, nil, R).
+fire(neut, F, As, nsp(gl(F), As)).
+
+% Arguments are collected newest first and shown oldest first.
+% Counted by the arity so a list still being guessed cannot make
+% this generate.
+rev(zero, [], Args, Args).
+rev(suc(K), [A|As], Acc, Args) :- rev(K, As, [A|Acc], Args).
+
+% ---------- reify ----------
+
+reify(clo(B, E), L, abs(R)) :-
+    eval(B, env(nsp(fv(L), []), E), BV),
+    reify(BV, suc(L), R).
+reify(pap(F, As, _, _), L, T) :- reify_spine(global(F), As, L, T).
+reify(sp(C, []), _, data(C)).
+reify(sp(C, [A|As]), L, T) :- con(C, [A|As]), reify_spine(data(C), [A|As], L, T).
+reify(nsp(gl(F), As), L, T) :- reify_spine(global(F), As, L, T).
+reify(nsp(fv(L0), As), L, T) :-
+    level_to_idx(L0, L, I),
+    reify_spine(var(I), As, L, T).
+reify(nsp(dat(C), As), L, T) :- reify_spine(data(C), As, L, T).
+
+reify_spine(H, [], _, H).
+reify_spine(H, [A|As], L, app(T, RA)) :-
+    reify_spine(H, As, L, T),
+    reify(A, L, RA).
+
+level_to_idx(L, suc(L), zero).
+level_to_idx(L, suc(N), suc(I)) :- level_to_idx(L, N, I).
+
+% ============================================================
+% Public
+% ============================================================
+
+normalize(T, R) :- eval(T, nil, V), reify(V, zero, R).
+
+fits(M, Ins, Labs) :- eval(M, nil, MV), rows(MV, Ins, Labs).
+
+rows(_, [], []).
+rows(MV, [Args|Rest], [Y|Ys]) :-
+    saturate(MV, Args, V),
+    reify(V, zero, Y),
+    rows(MV, Rest, Ys).
+
+saturate(V, [], V).
+saturate(F, [A|As], R) :-
+    eval(A, nil, AV),
+    apply(F, AV, R1),
+    saturate(R1, As, R).
+
+% ============================================================
+% Closed beta-normal programs
+%
+% D is de Bruijn scope, not a limit: it counts the enclosing
+% lambdas so lt/2 can reject an out-of-scope index.
+%
+% Max is a nesting-depth ceiling -- the longest root-to-leaf
+% path. Each abs and each app on a path spends one; var, global
+% and data leaves are free. Siblings each get the full remaining
+% Max, so wide terms are cheap and only nesting costs. It
+% restricts which programs are considered, never how much
+% evaluation one may do.
+%
+% Beware that composite data is applications too, so a literal
+% spends depth the way a call does.
+%
+% prog/1 leaves Max unbound, which is the unbounded generator:
+% use it to CHECK a term. To SYNTHESIZE use prog_depth_le/2, as
+% an unbounded generator wanders into ever-deeper terms instead
+% of covering the shallow ones.
+% ============================================================
+
+% internal: nf/3, ne/3, lt/2
+nf(abs(B), D, suc(Max)) :- nf(B, suc(D), Max).
+nf(X, D, Max) :- ne(X, D, Max).
+
+ne(var(I), D, _) :- lt(I, D).
+ne(global(N), _, _) :- arity(N, _).
+ne(data(C), _, _) :- tag(C).
+ne(app(F, A), D, suc(Max)) :- ne(F, D, Max), nf(A, D, Max).
+
+lt(zero, suc(_)).
+lt(suc(I), suc(D)) :- lt(I, D).
+
+% public
+prog(M) :- nf(M, zero, _).
+
+prog_depth_le(M, Max) :- nf(M, zero, Max).
+
+% ============================================================
+% Domain: tags and sorts
+% ============================================================
+
+tag(true).
+tag(false).
+tag(zero).
+tag(suc).
+tag(emp).
+tag(cons).
+
+con(suc, [X]) :- nat_top(X).
+con(cons, [T, _]) :- list_top(T).
+
+nat_top(sp(zero, [])).
+nat_top(sp(suc, [_])).
+
+list_top(sp(emp, [])).
+list_top(sp(cons, [_, _])).
+
+% ============================================================
+% Domain: primitives
+% ============================================================
+
+arity(not, suc(zero)).
+delta(not, [sp(true, [])], data(false)).
+delta(not, [sp(false, [])], data(true)).
+
+arity(or, suc(zero)).
+delta(or, [sp(true, [])], abs(data(true))).
+delta(or, [sp(false, [])], abs(var(zero))).
+
+arity(if, suc(zero)).
+delta(if, [sp(true, [])], abs(abs(var(suc(zero))))).
+delta(if, [sp(false, [])], abs(abs(var(zero)))).
+
+arity(plus, suc(suc(zero))).
+delta(plus, [X, Y], T) :- add(X, Y, T).
+
+add(sp(zero, []), Y, val(Y)) :- nat_top(Y).
+add(sp(suc, [X]), Y, app(data(suc), T)) :- add(X, Y, T).
+
+arity(map, suc(suc(zero))).
+delta(map, [F, L], T) :- map_t(L, F, T).
+
+map_t(sp(emp, []), _, data(emp)).
+map_t(sp(cons, [T, H]), F, app(app(data(cons), app(val(F), val(H))), R)) :-
+    map_t(T, F, R).
+
+arity(foldr, suc(suc(suc(zero)))).
+delta(foldr, [F, Z, L], T) :- foldr_t(L, F, Z, T).
+
+foldr_t(sp(emp, []), _, Z, val(Z)).
+foldr_t(sp(cons, [T, H]), F, Z, app(app(val(F), val(H)), R)) :-
+    foldr_t(T, F, Z, R).
+
+arity(twice, suc(zero)).
+delta(twice, [F], abs(app(val(F), app(val(F), var(zero))))).
+
+eq(X, X).
