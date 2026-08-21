@@ -189,9 +189,39 @@
 %
 % and-from-if at Max = 4, cap 2000, is where this file is
 % weakest: 7547 simulations and 10.4s against curry's 2735 and
-% 1.9s and ho's 1093 and 1.1s. Resolutions per simulation are
-% close, 178 against 153, so the whole gap is simulation count,
-% and six attempts to close it all failed. Producing literals
+% 1.9s and ho's 1093 and 1.1s. All three find the same program,
+% and against ho the resolutions per simulation and the decisions
+% per simulation are identical, 178 and 5 to 6 apiece, so the gap
+% is purely which candidates get explored.
+%
+% It is bought by features, not lost to a flaw. Measured on a
+% boolean-only alphabet, so that ho and this file offer exactly
+% not, or, if, true and false, ho needs about 900 simulations and
+% this file about 3900. Three quarters of that is accounted for:
+%
+%   * ho sort-checks the RESULT of every primitive, con(R), which
+%     only admits data. A candidate that produces a function
+%     anywhere dies at once. Imposing the same rule here drops
+%     3900 simulations to 1800 and 3.8s to 1.0s -- and forbids
+%     lazy if and or, twice, and functions inside data, which is
+%     to say it forbids the point of this file.
+%   * strict or and if, as ho declares them, buy a further fifth.
+%   * a lazy arity-one twice duplicates its argument, so it both
+%     keeps wrong candidates alive and makes each simulation dear:
+%     7785 simulations and 9.3s against 4962 and 4.6s with twice
+%     out of the alphabet, and 5027 and 6.4s with it made strict.
+%
+% What is left is roughly a factor of two, and ho pays for its
+% share of this in totality: it cannot normalize twice twice suc 1.
+%
+% Things that do NOT explain it, each measured: the alphabet (the
+% gap survives when both offer the same five names, and ho offers
+% more names than this file in the full domain), whether data may
+% be applied (making it inapplicable, as in ho, changes nothing),
+% and the solver's exploration constant (swamped by seed variance,
+% which on this task runs from 3.1s to a timeout).
+%
+% Producing literals
 % only in argument position left simulations unchanged and
 % doubled the time. Giving tags an arity so an over-applied
 % constructor dies at apply, and moving the sort barrier from
