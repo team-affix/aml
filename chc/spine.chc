@@ -120,7 +120,7 @@
 % everywhere. Shallow answers at every node add up to a whole
 % one, which is why nat_top/1 and list_top/1 do not recurse.
 %
-% Two habits make a domain fast and lazy.
+% Three habits make a domain fast and lazy.
 %
 % Declare an arity of only the arguments actually matched and
 % hand the rest back as a lambda. or is arity one because it
@@ -138,6 +138,18 @@
 % Let sort checking happen at the edge. con/2 at reify is the
 % only barrier, so a rule that merely rebuilds data needs no
 % guard of its own.
+%
+% Recur through the term returned rather than inside the rule. A
+% rule may name any primitive, so mult emits one plus per unit of
+% the argument it counts down and pow one mult per unit of its
+% exponent:
+%
+%   mul(sp(suc, [X]), Y, app(app(global(plus), val(Y)), T)) :-
+%       mul(X, Y, T).
+%
+% The spine of sucs has to be built either way, so this costs
+% nothing and keeps each rule to the two clauses its own induction
+% needs.
 %
 % ------------------------------------------------------------
 % What holds
@@ -190,6 +202,32 @@
 % fewest simulations of any kernel here on or, plus and if, where
 % the others need 27 to 108 and 63 to 146; ho edges it on not,
 % 15 against 16.
+%
+% Arithmetic synthesis, at --max-resolutions 2000 and
+% --grant-increment-interval 1, whose value is within seed noise
+% here. Labels are kept small deliberately: a Peano answer is built
+% one suc at a time, so a large number spends the rollout budget
+% counting rather than searching. Every task below verifies inside
+% 900 resolutions of the 2000 allowed.
+%
+% Three seeds each, median simulations and seconds: mult 30 and
+% .03, pow 25 and .04, square 1222 and 1.1, n^n 1165 and 1.0, 2n+1
+% 1262 and 1.1, 2^n 2647 and 3.1, n^2+1 2288 and 2.4, flipped pow
+% 2444 and 2.7, n^2+n 5783 and 10.0, (n+1)^2 7215 and 11.0, n^3
+% 7516 and 16.8, product as foldr mult 1 8517 and 15.7. Depth is
+% what costs: everything point free or at Max = 3 lands inside
+% four seconds, and Max = 4 runs to twenty.
+%
+% Two operations nested on BOTH sides of one application is out of
+% reach at Max = 4 in a minute -- n^4 as mult (mult n n) (mult n n)
+% and 2n^2 as plus (mult n n) (mult n n) both time out, though each
+% verifies in under 800 resolutions. 2n^2 does solve when the table
+% is cut to two rows, as twice (mult n) 2.
+%
+% The search is happy to answer with a program other than the one
+% budgeted for, which is the point of asking for a fit rather than
+% for a term: n^3 comes back as twice (mult n) n, n^2+n as
+% mult (suc n) n, and 2n+1 as plus n (suc n).
 %
 % sum as foldr plus 0 at Max = 2, three rows: 1154 simulations
 % and 1.3s, ahead of opaque's 1179 and 1.7s and behind ho's 262
@@ -475,6 +513,26 @@ delta(plus, [X, Y], T) :- add(X, Y, T).
 
 add(sp(zero, []), Y, val(Y)) :- nat_top(Y).
 add(sp(suc, [X]), Y, app(data(suc), T)) :- add(X, Y, T).
+
+% mult and pow each spend their recursion in the term they return,
+% one call to the operation below per unit of the argument they
+% count down. The work is the same either way -- a spine of that
+% many sucs has to be built -- and delegating keeps each rule to
+% the two clauses its own induction needs.
+
+arity(mult, suc(suc(zero))).
+delta(mult, [X, Y], T) :- mul(X, Y, T).
+
+mul(sp(zero, []), Y, data(zero)) :- nat_top(Y).
+mul(sp(suc, [X]), Y, app(app(global(plus), val(Y)), T)) :- mul(X, Y, T).
+
+% pow counts down its exponent, so the base is guarded where the
+% exponent runs out.
+arity(pow, suc(suc(zero))).
+delta(pow, [B, E], T) :- power(E, B, T).
+
+power(sp(zero, []), B, app(data(suc), data(zero))) :- nat_top(B).
+power(sp(suc, [E]), B, app(app(global(mult), val(B)), T)) :- power(E, B, T).
 
 arity(map, suc(suc(zero))).
 delta(map, [F, L], T) :- map_t(L, F, T).
