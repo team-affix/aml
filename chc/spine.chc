@@ -8,8 +8,9 @@
 %   normalize(Term, NormalForm)
 %   fits(Prog, Inputs, Labels)
 %   prog(Term)                        closed beta-normal terms
-%   prog_depth_le(Term, MaxDepth)     the same, depth bounded
-%   prog_size_le(Term, MaxNodes)      the same, node bounded
+%   prog_depth(Term, Depth)           longest abs/app path
+%   prog_depth_le(Term, MaxDepth)     closed, normal, depth bounded
+%   prog_size_le(Term, MaxNodes)      closed, normal, node bounded
 %
 % Terms
 %
@@ -413,67 +414,63 @@ saturate(F, [A|As], R) :-
 % Closed beta-normal programs
 %
 % D is de Bruijn scope, not a limit: it counts the enclosing
-% lambdas so lt/2 can reject an out-of-scope index.
+% lambdas so lt/2 can reject an out-of-scope index. nf/ne say
+% only that a term is closed and beta-normal. They do not
+% measure it.
 %
-% Max is a nesting-depth ceiling -- the longest root-to-leaf
-% path. Each abs and each app on a path spends one; var, global
-% and data leaves are free. Siblings each get the full remaining
-% Max, so wide terms are cheap and only nesting costs. It
-% restricts which programs are considered, never how much
-% evaluation one may do.
+% Depth and size are their own judgments, laid alongside the
+% grammar instead of woven into it. prog_depth/2 is the longest
+% root-to-leaf path of abs and app; var, global and data are
+% zero. prog_size_le/2 counts every former as one, so
+% abs(var(zero)) is two and app(global(not), data(true)) is
+% three. Each bound is three conjuncts: the grammar, a measure,
+% le/2. Threading a budget through the grammar was measured for
+% size and is worse, because it spends a decision at every node
+% and ties each sibling to what the one before it left over.
 %
-% Beware that composite data is applications too, so a literal
-% spends depth the way a call does.
+% Neither bound cuts the generator. prog/1 is unbounded, and
+% both prog_depth_le/2 and prog_size_le/2 generate a closed
+% normal term and then filter it. An unbounded generator wanders
+% into ever-deeper terms; the filter only rejects after the term
+% is built. Composite data is applications too, so a literal
+% spends depth and nodes the way a call does.
 %
-% prog/1 leaves Max unbound, which is the unbounded generator:
-% use it to CHECK a term. To SYNTHESIZE use prog_depth_le/2, as
-% an unbounded generator wanders into ever-deeper terms instead
-% of covering the shallow ones.
-%
-% ------------------------------------------------------------
-% Nodes instead of depth
-% ------------------------------------------------------------
-%
-% prog_size_le/2 bounds the total node count: every abs, app,
-% var, global and data spends exactly one, so abs(var(zero)) is
-% two and app(global(not), data(true)) is three. It is the
-% honester measure of how big a program is -- a depth bound lets
-% both children of every app be as deep as the parent, so depth
-% four already admits terms of thirty nodes.
-%
-% It is three judgments conjoined, not one woven measure: the
-% grammar says the term is closed and normal, node_count/2 says
-% how big it is, le/2 says that is small enough. Threading a
-% budget through the grammar instead was measured and is worse on
-% every task, because it spends a decision at every node and ties
-% each sibling to what the one before it left over, where three
-% separate judgments tie nothing together and need no second copy
-% of the grammar.
-%
+% Size is the honester measure of how big a program is -- a
+% depth bound lets both children of every app be as deep as the
+% parent, so depth four already admits terms of thirty nodes.
 % Which bound to reach for still depends on the size of what is
-% wanted. Nodes win on a small target and depth on a large one:
-% map suc takes 85 simulations by nodes against 654 by depth,
-% while and-from-if takes 12853 by nodes against 6874 by depth.
-% Below roughly five nodes prefer prog_size_le/2, above it prefer
-% prog_depth_le/2, and remember a spine literal is nodes too, so
-% a number costs two apiece.
+% wanted, and remember a spine literal is nodes too, so a number
+% costs two apiece.
 % ============================================================
 
-% internal: nf/3, ne/3, lt/2
-nf(abs(B), D, suc(Max)) :- nf(B, suc(D), Max).
-nf(X, D, Max) :- ne(X, D, Max).
+% internal: nf/2, ne/2, lt/2
+nf(abs(B), D) :- nf(B, suc(D)).
+nf(X, D) :- ne(X, D).
 
-ne(var(I), D, _) :- lt(I, D).
-ne(global(N), _, _) :- arity(N, _).
-ne(data(C), _, _) :- tag(C).
-ne(app(F, A), D, suc(Max)) :- ne(F, D, Max), nf(A, D, Max).
+ne(var(I), D) :- lt(I, D).
+ne(global(N), _) :- arity(N, _).
+ne(data(C), _) :- tag(C).
+ne(app(F, A), D) :- ne(F, D), nf(A, D).
 
 lt(zero, suc(_)).
 lt(suc(I), suc(D)) :- lt(I, D).
 
-% internal: node_count/2, nat_sum/3, le/2 -- size is its own
-% judgment, laid alongside the grammar instead of woven into it.
-% Every former counts one and an app adds its children's counts.
+% internal: prog_depth/2, node_count/2, nat_max/3, nat_sum/3, le/2
+% -- measure is its own judgment. Every abs and app spends one of
+% depth; every former spends one of size.
+prog_depth(var(_), zero).
+prog_depth(global(_), zero).
+prog_depth(data(_), zero).
+prog_depth(abs(B), suc(N)) :- prog_depth(B, N).
+prog_depth(app(F, A), suc(N)) :-
+    prog_depth(F, NF),
+    prog_depth(A, NA),
+    nat_max(NF, NA, N).
+
+nat_max(zero, N, N).
+nat_max(suc(M), zero, suc(M)).
+nat_max(suc(M), suc(N), suc(R)) :- nat_max(M, N, R).
+
 node_count(var(_), suc(zero)).
 node_count(global(_), suc(zero)).
 node_count(data(_), suc(zero)).
@@ -490,9 +487,9 @@ le(zero, _).
 le(suc(N), suc(M)) :- le(N, M).
 
 % public
-prog(M) :- nf(M, zero, _).
+prog(M) :- nf(M, zero).
 
-prog_depth_le(M, Max) :- nf(M, zero, Max).
+prog_depth_le(M, Max) :- prog(M), prog_depth(M, D), le(D, Max).
 
 prog_size_le(M, N) :- prog(M), node_count(M, C), le(C, N).
 

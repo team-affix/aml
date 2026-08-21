@@ -16,9 +16,12 @@ Data is spelled as spines, which is what spine.chc requires: data(emp) for
 the empty list, app(app(data(cons), Head), Tail) for a cons, and a number n
 as n nested app(data(suc), ...) around data(zero).
 
-Max must fit the POINT-FREE answer. fits applies the candidate to each row's
-arguments, so sum is foldr plus 0 at depth two and NOT the lambda that wraps
-it -- budgeting for the lambda puts the task out of reach entirely.
+Each task's depth and size bounds are the tightest known to admit a
+solution, so reported time and simulations are the charitable reading.
+fits applies the candidate to each row's arguments, so sum is foldr plus 0
+at depth two and NOT the lambda that wraps it -- and a recovered program
+is sometimes smaller than the spelling we first budgeted for (n^2+n as
+mult (suc n) n, 2n+1 as plus n (suc n)). Bound those, not the longer form.
 
 Get a row wrong and nothing fits, which looks exactly like a hard task: the
 search runs until the timeout and says nothing. Two of the arith tables below
@@ -118,9 +121,10 @@ def ap(head: str, *args: str) -> str:
 class Synth:
     name: str
     rows: list  # [(inputs, label)]
-    max_depth: int  # depth of the POINT-FREE answer
+    max_depth: int  # tightest depth known to admit a fit
+    max_nodes: int  # tightest node count known to admit a fit
     cap: int  # --max-resolutions
-    intended: str
+    intended: str  # a witness that meets both bounds
 
 
 @dataclass
@@ -130,30 +134,31 @@ class Eval:
 
 
 SYNTH = [
-    Synth("not", [([False], True), ([True], False)], 1, 2000, "global(not)"),
+    Synth("not", [([False], True), ([True], False)], 0, 1, 2000, "global(not)"),
     Synth(
         "or",
         [([False, False], False), ([False, True], True),
          ([True, False], True), ([True, True], True)],
-        1, 2000, "global(or)",
+        0, 1, 2000, "global(or)",
     ),
-    Synth("plus", [([1, 1], 2), ([2, 1], 3), ([0, 3], 3)], 1, 2000, "global(plus)"),
-    Synth("if", [([True, 1, 2], 1), ([False, 1, 2], 2)], 1, 2000, "global(if)"),
+    Synth("plus", [([1, 1], 2), ([2, 1], 3), ([0, 3], 3)], 0, 1, 2000, "global(plus)"),
+    Synth("if", [([True, 1, 2], 1), ([False, 1, 2], 2)], 0, 1, 2000, "global(if)"),
     Synth(
         "sum-as-foldr",
         [([[]], 0), ([[1, 2]], 3), ([[1, 2, 3]], 6)],
-        2, 2000, "app(app(global(foldr), global(plus)), data(zero))",
+        2, 5, 2000, "app(app(global(foldr), global(plus)), data(zero))",
     ),
     Synth(
         "and-from-if",
         [([False, False], False), ([False, True], False),
          ([True, False], False), ([True, True], True)],
-        4, 2000, "abs(app(app(global(if), app(global(not), var(zero))), data(false)))",
+        4, 8, 2000,
+        "abs(app(app(global(if), app(global(not), var(zero))), data(false)))",
     ),
     Synth(
         "map-suc",
         [([[]], []), ([[1]], [2]), ([[1, 2]], [2, 3])],
-        2, 2000, "app(global(map), data(suc))",
+        1, 3, 2000, "app(global(map), data(suc))",
     ),
 ]
 
@@ -163,29 +168,28 @@ SYNTH = [
 # than on searching. The whole battery verifies inside 900 resolutions.
 SQUARE = ap("global(mult)", "var(zero)", "var(zero)")
 SUC_N = ap("data(suc)", "var(zero)")
-DOUBLE = ap("global(plus)", "var(zero)", "var(zero)")
 
 ARITH = [
-    Synth("mult", [([2, 3], 6), ([4, 1], 4), ([0, 5], 0)], 1, 2000, "global(mult)"),
-    Synth("pow", [([2, 3], 8), ([3, 2], 9), ([5, 1], 5)], 1, 2000, "global(pow)"),
-    Synth("square", [([1], 1), ([2], 4), ([3], 9)], 3, 2000, "abs(%s)" % SQUARE),
-    Synth("n-to-the-n", [([1], 1), ([2], 4), ([3], 27)], 3, 2000,
+    Synth("mult", [([2, 3], 6), ([4, 1], 4), ([0, 5], 0)], 0, 1, 2000, "global(mult)"),
+    Synth("pow", [([2, 3], 8), ([3, 2], 9), ([5, 1], 5)], 0, 1, 2000, "global(pow)"),
+    Synth("square", [([1], 1), ([2], 4), ([3], 9)], 3, 6, 2000, "abs(%s)" % SQUARE),
+    Synth("n-to-the-n", [([1], 1), ([2], 4), ([3], 27)], 3, 6, 2000,
           "abs(%s)" % ap("global(pow)", "var(zero)", "var(zero)")),
-    Synth("two-to-the-n", [([0], 1), ([1], 2), ([3], 8)], 3, 2000,
+    Synth("two-to-the-n", [([0], 1), ([1], 2), ([3], 8)], 3, 7, 2000,
           ap("global(pow)", nat(2))),
-    Synth("product-as-foldr", [([[]], 1), ([[2, 3]], 6), ([[2, 3, 4]], 24)], 3, 2000,
+    Synth("product-as-foldr", [([[]], 1), ([[2, 3]], 6), ([[2, 3, 4]], 24)], 2, 7, 2000,
           ap("global(foldr)", "global(mult)", nat(1))),
-    Synth("double-plus-one", [([0], 1), ([1], 3), ([2], 5)], 3, 2000,
-          "abs(%s)" % ap("data(suc)", DOUBLE)),
-    Synth("square-plus-one", [([1], 2), ([2], 5), ([3], 10)], 4, 2000,
+    Synth("double-plus-one", [([0], 1), ([1], 3), ([2], 5)], 3, 8, 2000,
+          "abs(%s)" % ap("global(plus)", "var(zero)", SUC_N)),
+    Synth("square-plus-one", [([1], 2), ([2], 5), ([3], 10)], 4, 8, 2000,
           "abs(%s)" % ap("data(suc)", SQUARE)),
-    Synth("square-plus-n", [([1], 2), ([2], 6), ([3], 12)], 4, 2000,
-          "abs(%s)" % ap("global(plus)", SQUARE, "var(zero)")),
-    Synth("cube", [([1], 1), ([2], 8), ([3], 27)], 4, 2000,
-          "abs(%s)" % ap("global(mult)", "var(zero)", SQUARE)),
-    Synth("suc-squared", [([0], 1), ([1], 4), ([2], 9)], 4, 2000,
+    Synth("square-plus-n", [([1], 2), ([2], 6), ([3], 12)], 4, 8, 2000,
+          "abs(%s)" % ap("global(mult)", SUC_N, "var(zero)")),
+    Synth("cube", [([1], 1), ([2], 8), ([3], 27)], 4, 8, 2000,
+          "abs(%s)" % ap("global(twice)", ap("global(mult)", "var(zero)"), "var(zero)")),
+    Synth("suc-squared", [([0], 1), ([1], 4), ([2], 9)], 4, 10, 2000,
           "abs(%s)" % ap("global(mult)", SUC_N, SUC_N)),
-    Synth("pow-flipped", [([2, 3], 9), ([3, 2], 8), ([4, 1], 1)], 4, 2000,
+    Synth("pow-flipped", [([2, 3], 9), ([3, 2], 8), ([4, 1], 1)], 4, 7, 2000,
           "abs(abs(%s))" % ap("global(pow)", "var(zero)", "var(suc(zero))")),
 ]
 
@@ -198,23 +202,23 @@ Y = "var(zero)"
 N = "var(zero)"
 
 COMPLEX = [
-    Synth("times-three", [([0], 0), ([1], 3), ([2], 6)], 4, 2000,
+    Synth("times-three", [([0], 0), ([1], 3), ([2], 6)], 4, 8, 2000,
           "abs(%s)" % ap("global(twice)", ap("global(plus)", N), N)),
-    Synth("n-times-n-plus-2", [([0], 0), ([1], 3), ([2], 8)], 4, 2000,
+    Synth("n-times-n-plus-2", [([0], 0), ([1], 3), ([2], 8)], 4, 10, 2000,
           "abs(%s)" % ap("global(mult)", N, ap("data(suc)", ap("data(suc)", N)))),
-    Synth("n-to-the-suc-n", [([1], 1), ([2], 8), ([3], 81)], 3, 2000,
+    Synth("n-to-the-suc-n", [([1], 1), ([2], 8), ([3], 81)], 3, 8, 2000,
           "abs(%s)" % ap("global(pow)", N, ap("data(suc)", N))),
-    Synth("suc-n-to-the-n", [([1], 2), ([2], 9), ([3], 64)], 4, 2000,
+    Synth("suc-n-to-the-n", [([1], 2), ([2], 9), ([3], 64)], 4, 8, 2000,
           "abs(%s)" % ap("global(pow)", ap("data(suc)", N), N)),
-    Synth("map-double", [([[1]], [2]), ([[1, 2]], [2, 4])], 4, 2000,
-          ap("global(map)", ap("global(mult)", nat(2)))),
-    Synth("two-n-squared", [([1], 2), ([2], 8)], 4, 2000,
+    Synth("map-double", [([[1]], [2]), ([[1, 2]], [2, 4])], 4, 8, 2000,
+          ap("global(map)", "abs(%s)" % ap("global(plus)", N, N))),
+    Synth("two-n-squared", [([1], 2), ([2], 8)], 4, 12, 2000,
           "abs(%s)" % ap("global(twice)", ap("global(mult)", N), nat(2))),
-    Synth("x-times-suc-y", [([2, 1], 4), ([3, 1], 6), ([3, 2], 9)], 4, 2000,
+    Synth("x-times-suc-y", [([2, 1], 4), ([3, 1], 6), ([3, 2], 9)], 4, 9, 2000,
           "abs(abs(%s))" % ap("global(mult)", X, ap("data(suc)", Y))),
-    Synth("suc-x-to-the-y", [([1, 2], 4), ([2, 2], 9), ([1, 3], 8)], 4, 2000,
-          "abs(abs(%s))" % ap("global(pow)", ap("data(suc)", X), Y)),
-    Synth("sum-of-sucs", [([[1]], 2), ([[1, 2]], 5)], 4, 2000,
+    Synth("suc-x-to-the-y", [([1, 2], 4), ([2, 2], 9), ([1, 3], 8)], 3, 6, 2000,
+          "abs(%s)" % ap("global(pow)", ap("data(suc)", N))),
+    Synth("sum-of-sucs", [([[1]], 2), ([[1, 2]], 5)], 4, 12, 2000,
           "abs(%s)" % ap(ap("global(foldr)", "global(plus)", nat(0)),
                          ap("global(map)", "data(suc)", N))),
 ]
@@ -255,7 +259,7 @@ def synth_goal(p: Synth, bound: str) -> str:
         "[" + ", ".join(enc(a) for a in args) + "]" for args, _ in p.rows) + "]"
     labs = "[" + ", ".join(enc(lab) for _, lab in p.rows) + "]"
     if bound == "size":
-        limit = "prog_size_le(M, %s)" % peano(nodes(p.intended))
+        limit = "prog_size_le(M, %s)" % peano(p.max_nodes)
     else:
         limit = "prog_depth_le(M, %s)" % peano(p.max_depth)
     return "%s, fits(M, %s, %s)" % (limit, ins, labs)
@@ -274,7 +278,7 @@ def command(atlas: str, db: str, goal: str, cap: int, seed: int) -> list:
     return [atlas, "dbuct-ridge-fc", db, "-g", goal,
             "--max-resolutions", str(cap), "--seed", str(seed),
             "--grant-increment-interval", "1",
-            "--sim-progress-interval", "1"]
+            "--sim-progress-interval", "100"]
 
 
 def _drain(stream, q):
