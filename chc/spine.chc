@@ -218,6 +218,30 @@
 % what costs: everything point free or at Max = 3 lands inside
 % four seconds, and Max = 4 runs to twenty.
 %
+% Bounding by node count instead, prog_size_le, same cap and seeds.
+% One-node leaves are a wash (mult 22 and .02, pow 24 and .03). At
+% six to eight nodes depth wins by two to fifteen: square 2783 and
+% 3.4 against 1222 and 1.1, 2n+1 12096 and 19.5 against 1262 and
+% 1.1. At ten nodes size timed out on n^2+n, n^3 and (n+1)^2, all
+% of which depth solved inside twenty seconds. The one exception is
+% product as foldr, seven nodes and point free, where size is ahead
+% (6532 and 12.5 against 8517 and 15.7). Size also flakes where
+% depth is solid: n^2+1 and flipped pow each missed a seed.
+%
+% Harder arithmetic -- more operators, a second argument, or a list
+% combinator wrapping the arithmetic -- at Max = 4 unless noted,
+% three seeds, 90s. Solved: 3n as mult 3 (3389 and 4.1, the
+% point-free spelling; twice (plus n) n is in the budget too),
+% n^(n+1) at Max = 3 (1638 and 2.0), n(n+2) (16665 and 34.6),
+% 2n^2 on two rows as twice (mult n) 2 (13454 and 24.2),
+% x * suc(y) (4346 and 6.3), (suc x)^y as pow (suc x) with y left
+% for fits (5353 and 10.0), (n+1)^n at Max = 4 (8688 and 24.5).
+% Out of reach at 90s: map (mult 2), and foldr plus 0 composed with
+% map suc. Size on the same tasks is worse still: x * suc(y) took
+% 64s on one seed where depth took 6, and the rest timed out --
+% size of the intended twice-plus spelling of 3n is 8, which
+% excludes the 9-node literal mult 3 that depth found.
+%
 % Two operations nested on BOTH sides of one application is out of
 % reach at Max = 4 in a minute -- n^4 as mult (mult n n) (mult n n)
 % and 2n^2 as plus (mult n n) (mult n n) both time out, though each

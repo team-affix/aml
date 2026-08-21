@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """Benchmark Atlas dbuct-ridge-fc on chc/spine.chc.
 
-Three suites, reported in simulations and seconds to the first solution:
+Four suites, reported in simulations and seconds to the first solution:
 
-  synth   prog_depth_le(M, Max), fits(M, Ins, Labs)   -- guess a program
-  arith   the same, over targets built from plus, mult and pow
-  eval    normalize(Term, R)                          -- run a known term
+  synth    prog_depth_le(M, Max), fits(M, Ins, Labs)   -- guess a program
+  arith    the same, over targets built from plus, mult and pow
+  complex  more operators, two arguments, or a list combinator on top
+  eval     normalize(Term, R)                          -- run a known term
 
 arith takes several minutes: its targets nest two operations, which is
-deep enough to be real work. --suite synth is the quick one.
+deep enough to be real work. complex is slower still and is not part of
+--suite all. --suite synth is the quick one.
 
 Data is spelled as spines, which is what spine.chc requires: data(emp) for
 the empty list, app(app(data(cons), Head), Tail) for a cons, and a number n
@@ -35,6 +37,8 @@ Examples
   ./bench_spine.py                          every suite, seeds 1 2 3
   ./bench_spine.py --suite synth --seeds 1,2,3,4,5
   ./bench_spine.py --suite arith --timeout 90
+  ./bench_spine.py --suite arith --bound size --timeout 90
+  ./bench_spine.py --suite complex --timeout 90
   ./bench_spine.py --only and-from-if --cap 2000
   ./bench_spine.py --suite synth --bound size   node count instead of depth
   ./bench_spine.py --db /tmp/variant.chc    any file with the same API
@@ -185,6 +189,36 @@ ARITH = [
           "abs(abs(%s))" % ap("global(pow)", "var(zero)", "var(suc(zero))")),
 ]
 
+# More operators in one term, a second argument, or a list combinator
+# wrapping arithmetic. Labels stay small for the same Peano reason as
+# ARITH; n^(n+1) is the exception, where 3^4 = 81 is what separates it
+# from n^3 (which agrees at 1 and 2).
+X = "var(suc(zero))"
+Y = "var(zero)"
+N = "var(zero)"
+
+COMPLEX = [
+    Synth("times-three", [([0], 0), ([1], 3), ([2], 6)], 4, 2000,
+          "abs(%s)" % ap("global(twice)", ap("global(plus)", N), N)),
+    Synth("n-times-n-plus-2", [([0], 0), ([1], 3), ([2], 8)], 4, 2000,
+          "abs(%s)" % ap("global(mult)", N, ap("data(suc)", ap("data(suc)", N)))),
+    Synth("n-to-the-suc-n", [([1], 1), ([2], 8), ([3], 81)], 3, 2000,
+          "abs(%s)" % ap("global(pow)", N, ap("data(suc)", N))),
+    Synth("suc-n-to-the-n", [([1], 2), ([2], 9), ([3], 64)], 4, 2000,
+          "abs(%s)" % ap("global(pow)", ap("data(suc)", N), N)),
+    Synth("map-double", [([[1]], [2]), ([[1, 2]], [2, 4])], 4, 2000,
+          ap("global(map)", ap("global(mult)", nat(2)))),
+    Synth("two-n-squared", [([1], 2), ([2], 8)], 4, 2000,
+          "abs(%s)" % ap("global(twice)", ap("global(mult)", N), nat(2))),
+    Synth("x-times-suc-y", [([2, 1], 4), ([3, 1], 6), ([3, 2], 9)], 4, 2000,
+          "abs(abs(%s))" % ap("global(mult)", X, ap("data(suc)", Y))),
+    Synth("suc-x-to-the-y", [([1, 2], 4), ([2, 2], 9), ([1, 3], 8)], 4, 2000,
+          "abs(abs(%s))" % ap("global(pow)", ap("data(suc)", X), Y)),
+    Synth("sum-of-sucs", [([[1]], 2), ([[1, 2]], 5)], 4, 2000,
+          "abs(%s)" % ap(ap("global(foldr)", "global(plus)", nat(0)),
+                         ap("global(map)", "data(suc)", N))),
+]
+
 EVAL = [
     Eval("plus 20 20", ap("global(plus)", nat(20), nat(20))),
     Eval("map suc [0..15]", ap("global(map)", "data(suc)", lst(list(range(16))))),
@@ -317,14 +351,18 @@ def synth_suite(args, tasks: list, seeds: list) -> tuple:
         ok = [r for r in runs if r[0] == "solved"]
         if not ok:
             failures += 1
-            rows.append((p.name, runs[0][0], 0, median([r[2] for r in runs]),
-                         "wanted %s" % p.intended))
-            continue
-        if len(ok) != len(runs):
-            flaky += 1
-        rows.append((p.name, "solved" if len(ok) == len(runs) else "flaky",
-                     int(median([r[3] for r in ok])),
-                     median([r[2] for r in ok]), ok[0][1]))
+            row = (p.name, runs[0][0], 0, median([r[2] for r in runs]),
+                   "wanted %s" % p.intended)
+        else:
+            if len(ok) != len(runs):
+                flaky += 1
+            row = (p.name, "solved" if len(ok) == len(runs) else "flaky",
+                   int(median([r[3] for r in ok])),
+                   median([r[2] for r in ok]), ok[0][1])
+        rows.append(row)
+        print("%-22s %-8s %8s %8s  %s" % (
+            row[0], row[1], row[2] if row[2] else "-", "%.3f" % row[3], row[4][:44]),
+              flush=True)
     return rows, failures, flaky
 
 
@@ -332,7 +370,7 @@ def main() -> int:
     ap_ = argparse.ArgumentParser()
     ap_.add_argument("--atlas", default=ATLAS_DEFAULT)
     ap_.add_argument("--db", default=DB_DEFAULT)
-    ap_.add_argument("--suite", choices=("synth", "arith", "eval", "all"),
+    ap_.add_argument("--suite", choices=("synth", "arith", "complex", "eval", "all"),
                      default="all")
     ap_.add_argument("--bound", choices=("depth", "size"), default="depth",
                      help="bound candidate programs by nesting depth or by node count")
@@ -348,10 +386,11 @@ def main() -> int:
     want = {x.strip() for x in args.only.split(",") if x.strip()}
     synth = [p for p in SYNTH if not want or p.name in want]
     ariths = [p for p in ARITH if not want or p.name in want]
+    complexs = [p for p in COMPLEX if not want or p.name in want]
     evals = [p for p in EVAL if not want or p.name in want]
     if want:
         missing = (want - {p.name for p in synth} - {p.name for p in ariths}
-                   - {p.name for p in evals})
+                   - {p.name for p in complexs} - {p.name for p in evals})
         if missing:
             print("unknown tasks: %s" % sorted(missing), file=sys.stderr)
             return 2
@@ -362,6 +401,8 @@ def main() -> int:
             shown += synth
         if args.suite in ("arith", "all"):
             shown += ariths
+        if args.suite == "complex":
+            shown += complexs
         for p in shown:
             print("# %s" % p.name)
             print(" ".join(command(args.atlas, args.db, "'%s'" % synth_goal(p, args.bound),
@@ -380,14 +421,28 @@ def main() -> int:
     bound_call = ("prog_size_le(M, Nodes)" if args.bound == "size"
                   else "prog_depth_le(M, Max)")
     if args.suite in ("synth", "all"):
+        print("\nsynthesis: %s, fits(M, Ins, Labs)" % bound_call, flush=True)
+        print("%-22s %-8s %8s %8s  %s" % ("task", "status", "sims", "secs", "model"),
+              flush=True)
+        print("-" * 96, flush=True)
         rows, f, k = synth_suite(args, synth, seeds)
         failures, flaky = failures + f, flaky + k
-        report("synthesis: %s, fits(M, Ins, Labs)" % bound_call, rows)
 
     if args.suite in ("arith", "all"):
+        print("\narithmetic: %s, fits(M, Ins, Labs)" % bound_call, flush=True)
+        print("%-22s %-8s %8s %8s  %s" % ("task", "status", "sims", "secs", "model"),
+              flush=True)
+        print("-" * 96, flush=True)
         rows, f, k = synth_suite(args, ariths, seeds)
         failures, flaky = failures + f, flaky + k
-        report("arithmetic: %s, fits(M, Ins, Labs)" % bound_call, rows)
+
+    if args.suite == "complex":
+        print("\ncomplex: %s, fits(M, Ins, Labs)" % bound_call, flush=True)
+        print("%-22s %-8s %8s %8s  %s" % ("task", "status", "sims", "secs", "model"),
+              flush=True)
+        print("-" * 96, flush=True)
+        rows, f, k = synth_suite(args, complexs, seeds)
+        failures, flaky = failures + f, flaky + k
 
     if args.suite in ("eval", "all"):
         rows = []
