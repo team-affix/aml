@@ -493,4 +493,10 @@ foldr_t(sp(cons, [T, H]), F, Z, app(app(val(F), val(H)), R)) :-
 arity(twice, suc(zero)).
 delta(twice, [F], abs(app(val(F), app(val(F), var(zero))))).
 
+arity(xor, suc(suc(zero))).
+delta(xor, [sp(true, []), sp(true, [])], data(false)).
+delta(xor, [sp(true, []), sp(false, [])], data(true)).
+delta(xor, [sp(false, []), sp(true, [])], data(true)).
+delta(xor, [sp(false, []), sp(false, [])], data(false)).
+
 eq(X, X).
