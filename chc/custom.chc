@@ -1,59 +1,173 @@
+% ============================================================
+% custom.chc — NbE kernel with built-in pattern matching
+%
+% Term language:
+%   var(N)           de Bruijn index
+%   lam(B)           lambda, body B
+%   app(F, A)        application
+%   o(C)             opaque constructor atom
+%   t(F)             transparent named function (has a def/2 clause)
+%   switch(P, T, El) arity-1 match: pattern P, then T, else El
+%   fresh            wildcard in a pattern — introduces one binding
+%   fail             explicit failure (legal only as El)
+%
+% switch(P, T, El) applied to V:
+%   - if V is neutral (fvar in head spine): stay stuck
+%   - if pm(V, P, Binds) succeeds: eval T with Binds extending env
+%   - if pm_fail(V, P): reduce El; if El = fail, conflict terminates branch
+%
+% switch/3 is ternary to allow nesting:
+%   switch(P1, T1, switch(P2, T2, fail))
+%
 % map =
-%       abs( // F
-%           switch( // L
-%               case(o(nil), o(nil)),
-%               case( // L
-%                   app(app(o(cons), fresh), fresh),
-%                   app(app(o(cons), app(var(suc(suc(zero))), var(suc(zero)))), app(app(t(map), var(suc(suc(zero)))), var(zero)))
-%               )
-%           )
+%   lam(lam(switch(
+%       o(nil), o(nil),
+%       switch(
+%           app(app(o(cons), fresh), fresh),
+%           app(app(o(cons), app(var(suc(suc(zero))), var(suc(zero)))),
+%                           app(app(t(map), var(suc(suc(zero)))), var(zero))),
+%           fail
 %       )
+%   )))
 %
-% switch(C1,C2) means try pattern-matching on C1 (case 1) and if that fails, try C2 (case 2)
-% case(P, R) means P is the pattern (lhs) and R is the result
-%     (potentially under bindings introduced by pattern, if pattern involves fresh keyword)
-% fresh is a nullary keyword which means that during pattern matching, match anything at that position
-%     and just introduce a new var binding in the lambda calculus context to support it.
-% o(X) means X is opaque (taken from agda)
-% t(X) means X is transparent (has a definition)
-%
-% When reducing a switch statement, we start from trying to match the arg against the
-%     first pattern, if that fails, we COMMIT to the second branch of the switch. Switches
-%     can be nested to allow for more than 2 cases. Note that a case can be directly applied
-%     to inputs as well:
-%
-% app(case(o(nil), o(zero)), o(nil))  // this is totally valid. It will reduce to o(zero)
-%     since pattern-matching succeeds. If pattern-matching fails, we are actually conflicted
-%     at that point in the solver. This massively reduces the search space since it terminates
-%     early in the search in case of undefined behavior.
-%
+% Outer lam binds F (de Bruijn index suc(suc(zero)) inside the body).
+% The switch matches L: nil -> nil; cons H T -> cons (F H) (map F T).
+% ============================================================
 
+% ============================================================
+% Constructor identity — used by pm and pm_fail to compare
+% constructor heads without relying on Prolog unification.
+% Add one id/2 clause per constructor in the domain.
+% ============================================================
 
-% ID system: we never directly unify two quantities. This is for several reasons:
-% 1. we need to be able to detect DISUnification of quantities (when they definitely cannot unify),
-%     so that we know when to try the next case in the switch
-% 2. less danger of the user defining functions which actually capture hidden details of the value space / lambda terms,
-%     since there is no actual direct var binding going on between the arg and the pattern.
 id(zero, zero).
-id(suc, suc(zero)).
-id(nil, suc(suc(suc(zero)))).
-id(cons, suc(suc(suc(suc(zero))))).
+id(suc,  suc(zero)).
+id(nil,  suc(suc(zero))).
+id(cons, suc(suc(suc(zero)))).
 
-id_neq(zero, suc(_)).
+id_neq(zero,   suc(_)).
 id_neq(suc(_), zero).
-id_neq(suc(X), suc(Y)) :- id_neq(X,Y).
+id_neq(suc(X), suc(Y)) :- id_neq(X, Y).
 
 eq(X, Y)  :- id(X, T), id(Y, T).
-neq(X, Y) :- id(X,T1),id(Y,T2),id_neq(T1,T2).
+neq(X, Y) :- id(X, T1), id(Y, T2), id_neq(T1, T2).
 
-% NV short for "Next Var". We wire it thru to make sure that
-% we keep a counter of what the next available var is while pattern-matching.
-% we also get new bindings out while we go
-pm(Input, fresh, NV, suc(NV), [[NV|Input]]).
-pm(o(X), o(Y), NV, NV, []) :- eq(X, Y).
-pm(app(A, B), app(C, D), NV, NV2, B) :- pm(A,C,NV,NV1,B1), pm(B,D,NV1,NV2,B2),
-    append(B1,B2,B).
+% ============================================================
+% Pattern matching
+%
+% pm(Value, Pattern, Binds)
+%   Succeeds when Value matches Pattern.
+%   Binds is a list of values captured by fresh sub-patterns,
+%   left-to-right as they appear in the pattern.
+%
+% pm_fail(Value, Pattern)
+%   Succeeds when Value definitely cannot match Pattern —
+%   constructor heads provably differ, or shapes are incompatible.
+%   pm and pm_fail are mutually exclusive on firm values.
+% ============================================================
 
-% need to define pm_fail as well, for use in the reduction rule for switch.
-% switch's reduction needs to know deterministically that matching on first pattern has failed
-% before it tries the second pattern.
+append([], Ys, Ys).
+append([X|Xs], Ys, [X|Zs]) :- append(Xs, Ys, Zs).
+
+pm(V,          fresh,      [V]).
+pm(o(C),       o(C),       []).
+pm(app(A,B),   app(P,Q),   Binds) :-
+    pm(A, P, B1), pm(B, Q, B2), append(B1, B2, Binds).
+
+pm_fail(o(C),        o(D))        :- neq(C, D).
+pm_fail(o(_),        app(_, _)).
+pm_fail(app(_, _),   o(_)).
+pm_fail(app(A, _),   app(P, _))   :- pm_fail(A, P).
+pm_fail(app(A, B),   app(P, Q))   :- pm(A, P, _), pm_fail(B, Q).
+pm_fail(lam(_, _),   o(_)).
+pm_fail(lam(_, _),   app(_, _)).
+
+% ============================================================
+% Kernel
+% ============================================================
+
+% neutral/1 — a value is neutral when a fvar sits at the head
+% of its application spine. Such a value may yet reduce further
+% once the fvar is filled in, so switch must wait.
+
+neutral(fvar(_)).
+neutral(app(F, _)) :- neutral(F).
+
+% eval/3 — call-by-value: both sides of app are evaluated before apply.
+
+eval(var(N),        E, V) :- lookup(N, E, V).
+eval(lam(B),        E, lam(B, E)).
+eval(o(C),          _, o(C)).
+eval(t(F),          _, V) :- def(F, Body), eval(Body, nil, V).
+eval(app(F, A),     E, R) :- eval(F, E, FV), eval(A, E, AV), apply(FV, AV, R).
+eval(switch(P,T,El),E, sw(P, T, El, E)).
+
+% apply/3
+
+apply(lam(B, E),      V, R)              :- eval(B, env(V, E), R).
+apply(sw(P,T,El,E),   V, app(sw(P,T,El,E), V)) :- neutral(V).
+apply(sw(P,T,El,E),   V, R)              :- pm(V, P, Binds), eval_with(T, E, Binds, R).
+apply(sw(P,T,El,E),   V, R)              :- pm_fail(V, P), eval(El, E, SW), apply(SW, V, R).
+apply(o(C),           V, app(o(C), V)).
+apply(fvar(L),        V, app(fvar(L), V)).
+apply(app(F, A),      V, app(app(F, A), V)).
+
+% eval(fail, …) has no clause — applying a switch whose El is fail
+% and whose pattern definitively does not match produces a conflict,
+% which the solver interprets as a dead branch and terminates it.
+
+lookup(zero,   env(V, _), V).
+lookup(suc(N), env(_, E), V) :- lookup(N, E, V).
+
+eval_with(T, E, [],     R) :- eval(T, E, R).
+eval_with(T, E, [V|Vs], R) :- eval_with(T, env(V, E), Vs, R).
+
+% ============================================================
+% Reify — convert a value back to a term.
+% L is the current lambda depth (a Peano nat), used to name
+% fresh variables introduced under binders.
+% ============================================================
+
+reify(lam(B, E),    L, lam(R)) :-
+    eval(B, env(fvar(L), E), BV),
+    reify(BV, suc(L), R).
+reify(o(C),         _, o(C)).
+reify(sw(P,T,El,_), _, switch(P, T, El)).
+reify(app(F, V),    L, app(RF, RV)) :- reify(F, L, RF), reify(V, L, RV).
+reify(fvar(L0),     L, var(I))      :- level_to_idx(L0, L, I).
+
+level_to_idx(L,    suc(L), zero).
+level_to_idx(L,    suc(N), suc(I)) :- level_to_idx(L, N, I).
+
+% ============================================================
+% Public
+% ============================================================
+
+normalize(T, R) :- eval(T, nil, V), reify(V, zero, R).
+
+% ============================================================
+% Domain: named functions
+%
+% def(Name, Body) — Body is a term (chain of lam / switch).
+% eval(t(Name), _, V) evaluates Body in the empty environment.
+% ============================================================
+
+% map : (A -> B) -> List A -> List B
+%
+% One lam binds F. switch is itself arity-1 and binds L implicitly.
+% Inside the then-branch of the cons case, after eval_with pushes
+% the two fresh bindings onto the env:
+%   var(zero)         = T  (tail, rightmost fresh)
+%   var(suc(zero))    = H  (head, leftmost fresh)
+%   var(suc(suc(zero))) = F  (from the outer env)
+def(map,
+    lam(switch(
+        o(nil),
+        o(nil),
+        switch(
+            app(app(o(cons), fresh), fresh),
+            app(app(o(cons), app(var(suc(suc(zero))), var(suc(zero)))),
+                             app(app(t(map), var(suc(suc(zero)))), var(zero))),
+            fail
+        )
+    ))).
