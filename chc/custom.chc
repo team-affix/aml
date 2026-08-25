@@ -1,0 +1,59 @@
+% map =
+%       abs( // F
+%           switch( // L
+%               case(o(nil), o(nil)),
+%               case( // L
+%                   app(app(o(cons), fresh), fresh),
+%                   app(app(o(cons), app(var(suc(suc(zero))), var(suc(zero)))), app(app(t(map), var(suc(suc(zero)))), var(zero)))
+%               )
+%           )
+%       )
+%
+% switch(C1,C2) means try pattern-matching on C1 (case 1) and if that fails, try C2 (case 2)
+% case(P, R) means P is the pattern (lhs) and R is the result
+%     (potentially under bindings introduced by pattern, if pattern involves fresh keyword)
+% fresh is a nullary keyword which means that during pattern matching, match anything at that position
+%     and just introduce a new var binding in the lambda calculus context to support it.
+% o(X) means X is opaque (taken from agda)
+% t(X) means X is transparent (has a definition)
+%
+% When reducing a switch statement, we start from trying to match the arg against the
+%     first pattern, if that fails, we COMMIT to the second branch of the switch. Switches
+%     can be nested to allow for more than 2 cases. Note that a case can be directly applied
+%     to inputs as well:
+%
+% app(case(o(nil), o(zero)), o(nil))  // this is totally valid. It will reduce to o(zero)
+%     since pattern-matching succeeds. If pattern-matching fails, we are actually conflicted
+%     at that point in the solver. This massively reduces the search space since it terminates
+%     early in the search in case of undefined behavior.
+%
+
+
+% ID system: we never directly unify two quantities. This is for several reasons:
+% 1. we need to be able to detect DISUnification of quantities (when they definitely cannot unify),
+%     so that we know when to try the next case in the switch
+% 2. less danger of the user defining functions which actually capture hidden details of the value space / lambda terms,
+%     since there is no actual direct var binding going on between the arg and the pattern.
+id(zero, zero).
+id(suc, suc(zero)).
+id(nil, suc(suc(suc(zero)))).
+id(cons, suc(suc(suc(suc(zero))))).
+
+id_neq(zero, suc(_)).
+id_neq(suc(_), zero).
+id_neq(suc(X), suc(Y)) :- id_neq(X,Y).
+
+eq(X, Y)  :- id(X, T), id(Y, T).
+neq(X, Y) :- id(X,T1),id(Y,T2),id_neq(T1,T2).
+
+% NV short for "Next Var". We wire it thru to make sure that
+% we keep a counter of what the next available var is while pattern-matching.
+% we also get new bindings out while we go
+pm(Input, fresh, NV, suc(NV), [[NV|Input]]).
+pm(o(X), o(Y), NV, NV, []) :- eq(X, Y).
+pm(app(A, B), app(C, D), NV, NV2, B) :- pm(A,C,NV,NV1,B1), pm(B,D,NV1,NV2,B2),
+    append(B1,B2,B).
+
+% need to define pm_fail as well, for use in the reduction rule for switch.
+% switch's reduction needs to know deterministically that matching on first pattern has failed
+% before it tries the second pattern.
