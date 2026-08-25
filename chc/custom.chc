@@ -11,10 +11,27 @@
 %   fresh            wildcard in a pattern — introduces one binding
 %   fail             explicit failure (legal only as El)
 %
+% Value language (runtime only):
+%   lam(B, E)        closure
+%   o(C)             opaque constructor
+%   app(F, V)        firm application — head is o/sw/lam/app
+%   nap(F, V)        neutral application — head is fvar or nap
+%   sw(P,T,El,E)     suspended switch waiting for its argument
+%   fvar(L)          free variable at de Bruijn level L
+%
+% app vs nap: neutrality is embedded at construction time so the neutral/1
+% check in apply is O(1) — no recursive head-spine scan required.
+%
 % switch(P, T, El) applied to V:
-%   - if V is neutral (fvar in head spine): stay stuck
+%   - if neutral(V): stay stuck as nap(sw(...), V)
 %   - if pm(V, P, Binds) succeeds: eval T with Binds extending env
 %   - if pm_fail(V, P): reduce El; if El = fail, conflict terminates branch
+%
+% Neutrality is a property of V alone, independent of P. Any switch applied
+% to a neutral argument is stuck — including switch(fresh, ...). We wait
+% for the argument to reach a known head (WHNF) before firing. Reducing
+% under an unknown is wasted work: the outer variable must be given an
+% opaque value first, at which point the switch unblocks naturally.
 %
 % switch/3 is ternary to allow nesting:
 %   switch(P1, T1, switch(P2, T2, fail))
@@ -82,16 +99,15 @@ pm_fail(app(A, B),   app(P, Q))   :- pm(A, P, _), pm_fail(B, Q).
 pm_fail(lam(_, _),   o(_)).
 pm_fail(lam(_, _),   app(_, _)).
 
+% neutral/1 — a value is neutral when its head cannot be decided without
+% more information. Neutrality is a property of the value alone.
+neutral(fvar(_)).
+neutral(nap(_, _)).
+neutral(sw(_, _, _, _)).
+
 % ============================================================
 % Kernel
 % ============================================================
-
-% neutral/1 — a value is neutral when a fvar sits at the head
-% of its application spine. Such a value may yet reduce further
-% once the fvar is filled in, so switch must wait.
-
-neutral(fvar(_)).
-neutral(app(F, _)) :- neutral(F).
 
 % eval/3 — call-by-value: both sides of app are evaluated before apply.
 
@@ -103,14 +119,20 @@ eval(app(F, A),     E, R) :- eval(F, E, FV), eval(A, E, AV), apply(FV, AV, R).
 eval(switch(P,T,El),E, sw(P, T, El, E)).
 
 % apply/3
+%
+% app(F, V)  — firm application: head is o(C), sw, lam, or firm app.
+% nap(F, V)  — neutral application: head is fvar or neutral nap.
+% Neutrality is tagged at construction time so switch can check it
+% in O(1) by pattern matching on the outermost constructor.
 
-apply(lam(B, E),      V, R)              :- eval(B, env(V, E), R).
-apply(sw(P,T,El,E),   V, app(sw(P,T,El,E), V)) :- neutral(V).
-apply(sw(P,T,El,E),   V, R)              :- pm(V, P, Binds), eval_with(T, E, Binds, R).
-apply(sw(P,T,El,E),   V, R)              :- pm_fail(V, P), eval(El, E, SW), apply(SW, V, R).
-apply(o(C),           V, app(o(C), V)).
-apply(fvar(L),        V, app(fvar(L), V)).
-apply(app(F, A),      V, app(app(F, A), V)).
+apply(lam(B, E),    V, R)              :- eval(B, env(V, E), R).
+apply(sw(P,T,El,E), V, nap(sw(P,T,El,E), V)) :- neutral(V).
+apply(sw(P,T,El,E), V, R)              :- pm(V, P, Binds), eval_with(T, E, Binds, R).
+apply(sw(P,T,El,E), V, R)              :- pm_fail(V, P), eval(El, E, SW), apply(SW, V, R).
+apply(o(C),              V, app(o(C), V)).
+apply(fvar(L),           V, nap(fvar(L), V)).
+apply(app(F, A),         V, app(app(F, A), V)).
+apply(nap(F, A),         V, nap(nap(F, A), V)).
 
 % eval(fail, …) has no clause — applying a switch whose El is fail
 % and whose pattern definitively does not match produces a conflict,
@@ -134,6 +156,7 @@ reify(lam(B, E),    L, lam(R)) :-
 reify(o(C),         _, o(C)).
 reify(sw(P,T,El,_), _, switch(P, T, El)).
 reify(app(F, V),    L, app(RF, RV)) :- reify(F, L, RF), reify(V, L, RV).
+reify(nap(F, V),    L, app(RF, RV)) :- reify(F, L, RF), reify(V, L, RV).
 reify(fvar(L0),     L, var(I))      :- level_to_idx(L0, L, I).
 
 level_to_idx(L,    suc(L), zero).
