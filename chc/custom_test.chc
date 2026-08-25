@@ -9,13 +9,21 @@
 % Run a single test:
 %   cat chc/custom.chc chc/custom_test.chc | atlas basic /dev/stdin -g "test_name"
 
-% ── id/2 and neq/2 ─────────────────────────────────────────────
+% ── id/2, id_neq/2, eq/2, neq/2 ───────────────────────────────
 
 test_id_nil  :- id(nil,  suc(suc(zero))).
 test_id_zero :- id(zero, zero).
 
+% id_neq on raw Peano encodings
+test_id_neq  :- id_neq(zero, suc(zero)).
+
+test_eq_nil_nil   :- eq(nil, nil).
 test_neq_nil_cons :- neq(nil,  cons).
 test_neq_zero_suc :- neq(zero, suc).
+
+% ── append/3 ───────────────────────────────────────────────────
+
+test_append :- append([o(nil), o(cons)], [o(zero)], [o(nil), o(cons), o(zero)]).
 
 % ── pm/3 ───────────────────────────────────────────────────────
 
@@ -31,9 +39,11 @@ test_pm_app_nested :- pm(app(app(o(cons), o(zero)), o(nil)),
 test_pm_fail_neq      :- pm_fail(o(nil),               o(cons)).
 test_pm_fail_o_vs_app :- pm_fail(o(nil),               app(o(cons), fresh)).
 test_pm_fail_app_vs_o :- pm_fail(app(o(cons), o(nil)), o(nil)).
-test_pm_fail_app_head :- pm_fail(app(o(nil),  o(zero)), app(o(cons), fresh)).
-test_pm_fail_lam_o    :- pm_fail(lam(var(zero), nil),  o(nil)).
-test_pm_fail_lam_app  :- pm_fail(lam(var(zero), nil),  app(o(cons), fresh)).
+test_pm_fail_app_head :- pm_fail(app(o(nil),  o(zero)),  app(o(cons), fresh)).
+% head matches (cons=cons) but arg fails (zero≠nil) — exercises second pm_fail app clause
+test_pm_fail_app_arg  :- pm_fail(app(o(cons), o(zero)), app(o(cons), o(nil))).
+test_pm_fail_lam_o    :- pm_fail(lam(var(zero), nil),   o(nil)).
+test_pm_fail_lam_app  :- pm_fail(lam(var(zero), nil),   app(o(cons), fresh)).
 
 % ── neutral/1 ──────────────────────────────────────────────────
 
@@ -46,11 +56,21 @@ test_neutral_sw   :- neutral(sw(o(nil), o(zero), fail, nil)).
 test_lookup_zero :- lookup(zero,      env(o(nil),  nil),              o(nil)).
 test_lookup_suc  :- lookup(suc(zero), env(o(cons), env(o(nil), nil)), o(nil)).
 
+% ── eval_with/4 ────────────────────────────────────────────────
+
+% Push one binding: var(zero) retrieves it
+test_eval_with :- eval_with(var(zero), nil, [o(nil)], o(nil)).
+
+% ── def/2 and eval t() ─────────────────────────────────────────
+
+test_def_map  :- def(map, _).
+test_eval_t   :- eval(t(map), nil, _).
+
 % ── eval/3 ─────────────────────────────────────────────────────
 
-test_eval_o   :- eval(o(nil),                    nil, o(nil)).
-test_eval_lam :- eval(lam(var(zero)),             nil, lam(var(zero), nil)).
-test_eval_var :- eval(var(zero),      env(o(nil), nil), o(nil)).
+test_eval_o   :- eval(o(nil),                     nil, o(nil)).
+test_eval_lam :- eval(lam(var(zero)),              nil, lam(var(zero), nil)).
+test_eval_var :- eval(var(zero),       env(o(nil), nil), o(nil)).
 test_eval_app :- eval(app(lam(var(zero)), o(nil)), nil, o(nil)).
 
 % ── apply/3 ────────────────────────────────────────────────────
@@ -73,6 +93,10 @@ test_apply_sw_neutral :-
     apply(sw(o(nil), o(zero), fail, nil), fvar(zero),
           nap(sw(o(nil), o(zero), fail, nil), fvar(zero))).
 
+% firm app as function applied to arg → extends app spine
+test_apply_app_head :- apply(app(o(cons), o(nil)), o(zero),
+                             app(app(o(cons), o(nil)), o(zero))).
+
 % switch fires on matching firm arg
 test_apply_sw_match :- apply(sw(o(nil), o(zero), fail, nil), o(nil), o(zero)).
 
@@ -81,8 +105,20 @@ test_apply_sw_fail  :- apply(sw(o(nil), o(zero), fail, nil), o(cons), _).
 
 % ── reify/3 and level_to_idx/3 ────────────────────────────────
 
-test_reify_o    :- reify(o(nil),    zero,      o(nil)).
+test_reify_o    :- reify(o(nil),     zero,      o(nil)).
 test_reify_fvar :- reify(fvar(zero), suc(zero), var(zero)).
+
+% lam: introduces fvar(zero), body var(zero) → fvar(zero), reifies to var(zero)
+test_reify_lam  :- reify(lam(var(zero), nil), zero, lam(var(zero))).
+
+% app: both sides reified
+test_reify_app  :- reify(app(o(cons), o(nil)), zero, app(o(cons), o(nil))).
+
+% nap: reifies to app (neutrality tag erased at term level)
+test_reify_nap  :- reify(nap(fvar(zero), o(nil)), suc(zero), app(var(zero), o(nil))).
+
+% sw: environment dropped, returns switch term
+test_reify_sw   :- reify(sw(o(nil), o(zero), fail, nil), zero, switch(o(nil), o(zero), fail)).
 
 test_level_to_idx_zero :- level_to_idx(zero, suc(zero),       zero).
 test_level_to_idx_one  :- level_to_idx(zero, suc(suc(zero)),  suc(zero)).
@@ -127,6 +163,26 @@ test_norm_switch_chain :-
     normalize(
         app(switch(o(nil), o(zero), switch(o(cons), o(suc), fail)), o(cons)),
         o(suc)).
+
+% Two binders — K combinator: (\x.\y. x) nil cons → nil
+test_norm_k_comb :-
+    normalize(app(app(lam(lam(var(suc(zero)))), o(nil)), o(cons)), o(nil)).
+
+% Lambda wrapping a switch: (\x. switch(o(nil), o(zero), fail) x) nil → o(zero)
+test_norm_lam_switch :-
+    normalize(
+        app(lam(app(switch(o(nil), o(zero), fail), var(zero))), o(nil)),
+        o(zero)).
+
+% Switch fires, then-branch itself requires evaluation (nested switch)
+% switch(o(nil), app(switch(o(zero), o(cons), fail), o(zero)), fail) nil → o(cons)
+test_norm_nested_switch :-
+    normalize(
+        app(switch(o(nil),
+                   app(switch(o(zero), o(cons), fail), o(zero)),
+                   fail),
+            o(nil)),
+        o(cons)).
 
 % ── normalize/2 — conflict (REFUTED expected) ──────────────────
 
@@ -175,8 +231,11 @@ conflict_main :- test_apply_sw_fail.
 main :-
     test_id_nil,
     test_id_zero,
+    test_id_neq,
+    test_eq_nil_nil,
     test_neq_nil_cons,
     test_neq_zero_suc,
+    test_append,
     test_pm_fresh,
     test_pm_ctor,
     test_pm_app_fresh,
@@ -185,6 +244,7 @@ main :-
     test_pm_fail_o_vs_app,
     test_pm_fail_app_vs_o,
     test_pm_fail_app_head,
+    test_pm_fail_app_arg,
     test_pm_fail_lam_o,
     test_pm_fail_lam_app,
     test_neutral_fvar,
@@ -192,6 +252,9 @@ main :-
     test_neutral_sw,
     test_lookup_zero,
     test_lookup_suc,
+    test_eval_with,
+    test_def_map,
+    test_eval_t,
     test_eval_o,
     test_eval_lam,
     test_eval_var,
@@ -200,10 +263,15 @@ main :-
     test_apply_o,
     test_apply_fvar,
     test_apply_nap,
+    test_apply_app_head,
     test_apply_sw_neutral,
     test_apply_sw_match,
     test_reify_o,
     test_reify_fvar,
+    test_reify_lam,
+    test_reify_app,
+    test_reify_nap,
+    test_reify_sw,
     test_level_to_idx_zero,
     test_level_to_idx_one,
     test_norm_ctor,
@@ -214,6 +282,9 @@ main :-
     test_norm_switch_fresh,
     test_norm_switch_cons,
     test_norm_switch_chain,
+    test_norm_k_comb,
+    test_norm_lam_switch,
+    test_norm_nested_switch,
     test_norm_stuck_fvar,
     test_norm_stuck_nap,
     test_norm_map_nil,
