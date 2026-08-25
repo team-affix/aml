@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Benchmark Atlas dbuct-ridge-fc on the custom.chc kernel.
+"""Benchmark Atlas dbuct-genius-fc on the custom.chc kernel.
 
 Same task tables as bench_spine.py, translated into custom's term
 language: t(name) for named functions, o(C) for constructors, lam
@@ -308,7 +308,7 @@ def eval_goal(p: Eval) -> str:
 
 
 def command(atlas: str, db: str, goal: str, cap: int, seed: int,
-            solver: str = "dbuct-ridge-fc") -> list:
+            solver: str = "dbuct-genius-fc") -> list:
     return [atlas, solver, db, "-g", goal,
             "--max-resolutions", str(cap), "--seed", str(seed),
             "--grant-increment-interval", "1",
@@ -325,7 +325,7 @@ def _drain(stream, q):
 
 
 def run_one(atlas: str, db: str, goal: str, cap: int, seed: int, timeout: float,
-            solver: str = "dbuct-ridge-fc"):
+            solver: str = "dbuct-genius-fc"):
     """Seconds and simulations to the FIRST solution.
 
     The solver prompts for further solutions, so it is killed as soon as the
