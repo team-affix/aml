@@ -1,0 +1,220 @@
+% custom_test.chc — tests for custom.chc
+%
+% Run all positive tests:
+%   cat chc/custom.chc chc/custom_test.chc | atlas basic /dev/stdin -g "main"
+%
+% Run all conflict tests (all branches should refute):
+%   cat chc/custom.chc chc/custom_test.chc | atlas basic /dev/stdin -g "conflict_main"
+%
+% Run a single test:
+%   cat chc/custom.chc chc/custom_test.chc | atlas basic /dev/stdin -g "test_name"
+
+% ── id/2 and neq/2 ─────────────────────────────────────────────
+
+test_id_nil  :- id(nil,  suc(suc(zero))).
+test_id_zero :- id(zero, zero).
+
+test_neq_nil_cons :- neq(nil,  cons).
+test_neq_zero_suc :- neq(zero, suc).
+
+% ── pm/3 ───────────────────────────────────────────────────────
+
+test_pm_fresh      :- pm(o(nil), fresh, [o(nil)]).
+test_pm_ctor       :- pm(o(nil), o(nil), []).
+test_pm_app_fresh  :- pm(app(o(cons), o(nil)), app(o(cons), fresh), [o(nil)]).
+test_pm_app_nested :- pm(app(app(o(cons), o(zero)), o(nil)),
+                           app(app(o(cons), fresh),  fresh),
+                           [o(zero), o(nil)]).
+
+% ── pm_fail/2 ──────────────────────────────────────────────────
+
+test_pm_fail_neq      :- pm_fail(o(nil),               o(cons)).
+test_pm_fail_o_vs_app :- pm_fail(o(nil),               app(o(cons), fresh)).
+test_pm_fail_app_vs_o :- pm_fail(app(o(cons), o(nil)), o(nil)).
+test_pm_fail_app_head :- pm_fail(app(o(nil),  o(zero)), app(o(cons), fresh)).
+test_pm_fail_lam_o    :- pm_fail(lam(var(zero), nil),  o(nil)).
+test_pm_fail_lam_app  :- pm_fail(lam(var(zero), nil),  app(o(cons), fresh)).
+
+% ── neutral/1 ──────────────────────────────────────────────────
+
+test_neutral_fvar :- neutral(fvar(zero)).
+test_neutral_nap  :- neutral(nap(fvar(zero), o(nil))).
+test_neutral_sw   :- neutral(sw(o(nil), o(zero), fail, nil)).
+
+% ── lookup/3 ───────────────────────────────────────────────────
+
+test_lookup_zero :- lookup(zero,      env(o(nil),  nil),              o(nil)).
+test_lookup_suc  :- lookup(suc(zero), env(o(cons), env(o(nil), nil)), o(nil)).
+
+% ── eval/3 ─────────────────────────────────────────────────────
+
+test_eval_o   :- eval(o(nil),                    nil, o(nil)).
+test_eval_lam :- eval(lam(var(zero)),             nil, lam(var(zero), nil)).
+test_eval_var :- eval(var(zero),      env(o(nil), nil), o(nil)).
+test_eval_app :- eval(app(lam(var(zero)), o(nil)), nil, o(nil)).
+
+% ── apply/3 ────────────────────────────────────────────────────
+
+% beta step
+test_apply_lam :- apply(lam(var(zero), nil), o(nil), o(nil)).
+
+% constructor applied to arg → firm app
+test_apply_o   :- apply(o(cons), o(nil), app(o(cons), o(nil))).
+
+% free variable applied to arg → nap
+test_apply_fvar :- apply(fvar(zero), o(nil), nap(fvar(zero), o(nil))).
+
+% nap applied to arg → nap (neutral head propagates)
+test_apply_nap :- apply(nap(fvar(zero), o(nil)), o(zero),
+                        nap(nap(fvar(zero), o(nil)), o(zero))).
+
+% switch on neutral arg → stays stuck as nap
+test_apply_sw_neutral :-
+    apply(sw(o(nil), o(zero), fail, nil), fvar(zero),
+          nap(sw(o(nil), o(zero), fail, nil), fvar(zero))).
+
+% switch fires on matching firm arg
+test_apply_sw_match :- apply(sw(o(nil), o(zero), fail, nil), o(nil), o(zero)).
+
+% switch on definitively mismatched firm arg → conflict (REFUTED expected)
+test_apply_sw_fail  :- apply(sw(o(nil), o(zero), fail, nil), o(cons), _).
+
+% ── reify/3 and level_to_idx/3 ────────────────────────────────
+
+test_reify_o    :- reify(o(nil),    zero,      o(nil)).
+test_reify_fvar :- reify(fvar(zero), suc(zero), var(zero)).
+
+test_level_to_idx_zero :- level_to_idx(zero, suc(zero),       zero).
+test_level_to_idx_one  :- level_to_idx(zero, suc(suc(zero)),  suc(zero)).
+
+% ── normalize/2 — basic ────────────────────────────────────────
+
+% constructor and partial application are already in normal form
+test_norm_ctor        :- normalize(o(nil),               o(nil)).
+test_norm_partial_app :- normalize(app(o(cons), o(nil)), app(o(cons), o(nil))).
+
+% beta: (\x. x) nil → nil
+test_norm_beta :- normalize(app(lam(var(zero)), o(nil)), o(nil)).
+
+% beta const: (\x. nil) cons → nil
+test_norm_beta_const :- normalize(app(lam(o(nil)), o(cons)), o(nil)).
+
+% ── normalize/2 — switch match ─────────────────────────────────
+
+% switch(o(nil), o(zero), fail) nil → o(zero)
+test_norm_switch_nil :-
+    normalize(app(switch(o(nil), o(zero), fail), o(nil)), o(zero)).
+
+% switch(fresh, var(zero), fail) nil → nil
+% fresh captures nil; var(zero) retrieves the binding
+test_norm_switch_fresh :-
+    normalize(app(switch(fresh, var(zero), fail), o(nil)), o(nil)).
+
+% Destructure cons H T; return app(H, T)
+% Pattern: app(app(o(cons), fresh), fresh)
+% Then:    app(var(suc(zero)), var(zero))   [var(suc(zero))=H, var(zero)=T]
+% Applied to cons zero nil → app(o(zero), o(nil))
+test_norm_switch_cons :-
+    normalize(
+        app(switch(app(app(o(cons), fresh), fresh),
+                   app(var(suc(zero)), var(zero)),
+                   fail),
+            app(app(o(cons), o(zero)), o(nil))),
+        app(o(zero), o(nil))).
+
+% Chained else: switch nil → 0 / cons → suc; applied to cons → o(suc)
+test_norm_switch_chain :-
+    normalize(
+        app(switch(o(nil), o(zero), switch(o(cons), o(suc), fail)), o(cons)),
+        o(suc)).
+
+% ── normalize/2 — conflict (REFUTED expected) ──────────────────
+
+test_norm_conflict :- normalize(app(switch(o(nil), o(zero), fail), o(cons)), _).
+
+% ── normalize/2 — stuckness (identity result) ──────────────────
+
+% \x. switch(o(nil), o(zero), fail) x → itself
+% x = fvar(0) is neutral; switch stays stuck
+test_norm_stuck_fvar :-
+    normalize(
+        lam(app(switch(o(nil), o(zero), fail), var(zero))),
+        lam(app(switch(o(nil), o(zero), fail), var(zero)))).
+
+% \x. switch(o(nil), o(zero), fail) (x nil) → itself
+% (x nil) = nap(fvar(0), o(nil)) is neutral; switch stays stuck
+test_norm_stuck_nap :-
+    normalize(
+        lam(app(switch(o(nil), o(zero), fail), app(var(zero), o(nil)))),
+        lam(app(switch(o(nil), o(zero), fail), app(var(zero), o(nil))))).
+
+% ── normalize/2 — map ──────────────────────────────────────────
+
+% map id [] → []
+test_norm_map_nil :-
+    normalize(
+        app(app(t(map), lam(var(zero))), o(nil)),
+        o(nil)).
+
+% map suc [zero, zero] → [suc zero, suc zero]
+test_norm_map_suc :-
+    normalize(
+        app(app(t(map), lam(app(o(suc), var(zero)))),
+            app(app(o(cons), o(zero)), app(app(o(cons), o(zero)), o(nil)))),
+        app(app(o(cons), app(o(suc), o(zero))),
+            app(app(o(cons), app(o(suc), o(zero))), o(nil)))).
+
+% ── conflict_main — OR of all conflict tests ───────────────────
+% Running -g "conflict_main" should produce REFUTED (every branch dead).
+
+conflict_main :- test_norm_conflict.
+conflict_main :- test_apply_sw_fail.
+
+% ── main — conjunction of all positive tests ───────────────────
+
+main :-
+    test_id_nil,
+    test_id_zero,
+    test_neq_nil_cons,
+    test_neq_zero_suc,
+    test_pm_fresh,
+    test_pm_ctor,
+    test_pm_app_fresh,
+    test_pm_app_nested,
+    test_pm_fail_neq,
+    test_pm_fail_o_vs_app,
+    test_pm_fail_app_vs_o,
+    test_pm_fail_app_head,
+    test_pm_fail_lam_o,
+    test_pm_fail_lam_app,
+    test_neutral_fvar,
+    test_neutral_nap,
+    test_neutral_sw,
+    test_lookup_zero,
+    test_lookup_suc,
+    test_eval_o,
+    test_eval_lam,
+    test_eval_var,
+    test_eval_app,
+    test_apply_lam,
+    test_apply_o,
+    test_apply_fvar,
+    test_apply_nap,
+    test_apply_sw_neutral,
+    test_apply_sw_match,
+    test_reify_o,
+    test_reify_fvar,
+    test_level_to_idx_zero,
+    test_level_to_idx_one,
+    test_norm_ctor,
+    test_norm_partial_app,
+    test_norm_beta,
+    test_norm_beta_const,
+    test_norm_switch_nil,
+    test_norm_switch_fresh,
+    test_norm_switch_cons,
+    test_norm_switch_chain,
+    test_norm_stuck_fvar,
+    test_norm_stuck_nap,
+    test_norm_map_nil,
+    test_norm_map_suc.
