@@ -1,0 +1,124 @@
+% ============================================================
+% custom_synth.chc — synthesis helpers for custom.chc
+%
+% Load by concatenating with the kernel:
+%   cat chc/custom.chc chc/custom_synth.chc | atlas basic /dev/stdin -g "..."
+%
+% Predicates:
+%   le/2            Peano <=
+%   lt/2            Peano <
+%   nat_sum/3       Peano addition
+%   size/2          syntax-tree node count
+%   fits/3          evaluate candidate against input/output rows
+%   rows/3          helper: apply candidate value to each row
+%   saturate/3      helper: apply a value to a list of arguments
+%   fresh_count/2   count fresh wildcards in a pattern
+%   nf_pat/1        well-formed patterns
+%   nf_el/2         well-formed else-branches
+%   nf/2            closed beta-normal form checker
+%   ne/2            neutral expressions (head-spine position)
+% ============================================================
+
+% ============================================================
+% Arithmetic
+% ============================================================
+
+le(zero,   _).
+le(suc(N), suc(M)) :- le(N, M).
+
+lt(zero,   suc(_)).
+lt(suc(I), suc(D)) :- lt(I, D).
+
+nat_sum(zero,   N, N).
+nat_sum(suc(M), N, suc(R)) :- nat_sum(M, N, R).
+
+% ============================================================
+% size/2 — count every node in the syntax tree
+%
+% Leaves contribute 1. Each compound node contributes 1 plus
+% the sum of its children.
+%
+%   size(app(o(cons), o(nil)), S)  =>  S = suc(suc(suc(zero)))  (3)
+%   size(lam(var(zero)), S)        =>  S = suc(suc(zero))        (2)
+% ============================================================
+
+size(var(_),           suc(zero)).
+size(o(_),             suc(zero)).
+size(t(_),             suc(zero)).
+size(fresh,            suc(zero)).
+size(fail,             suc(zero)).
+size(lam(B),           suc(N))   :- size(B, N).
+size(app(F, A),        suc(N))   :- size(F, NF), size(A, NA), nat_sum(NF, NA, N).
+size(switch(P, T, El), suc(N))   :- size(P, NP), size(T, NT), size(El, NEl),
+                                     nat_sum(NP, NT, N1), nat_sum(N1, NEl, N).
+
+% ============================================================
+% fits/3 — check a candidate term M against input/output rows
+%
+%   fits(M, Ins, Labs)
+%     M    : a closed term (candidate program)
+%     Ins  : list of argument lists, one per example
+%     Labs : list of expected output terms, one per example
+%
+% M is evaluated once; the resulting value is applied to each
+% row of arguments and the reified result is unified with the
+% corresponding label.
+% ============================================================
+
+fits(M, Ins, Labs) :- eval(M, nil, MV), rows(MV, Ins, Labs).
+
+rows(_, [], []).
+rows(MV, [Args|Rest], [Y|Ys]) :-
+    saturate(MV, Args, V),
+    reify(V, zero, Y),
+    rows(MV, Rest, Ys).
+
+saturate(V, [],     V).
+saturate(F, [A|As], R) :-
+    eval(A, nil, AV),
+    apply(F, AV, R1),
+    saturate(R1, As, R).
+
+% ============================================================
+% Normal-form checker
+%
+% nf(T, D)  — T is a closed beta-normal term at de Bruijn depth D
+% ne(T, D)  — T is a neutral expression (head-spine position);
+%             same as nf but lam is excluded (lam head => redex)
+%
+% D is a Peano nat counting the enclosing lambdas, which gives
+% the range of valid de Bruijn indices (0 .. D-1).
+% ============================================================
+
+fresh_count(fresh,      suc(zero)).
+fresh_count(o(_),       zero).
+fresh_count(app(P, Q),  N) :- fresh_count(P, NP), fresh_count(Q, NQ), nat_sum(NP, NQ, N).
+
+nf_pat(fresh).
+nf_pat(o(C))      :- id(C, _).
+nf_pat(app(P, Q)) :- nf_pat(P), nf_pat(Q).
+
+nf_el(fail, _).
+nf_el(switch(P, T, El), D) :-
+    nf_pat(P),
+    fresh_count(P, K),
+    nat_sum(D, K, D2),
+    nf(T, D2),
+    nf_el(El, D).
+
+nf(var(N),    D) :- lt(N, D).
+nf(o(C),      _) :- id(C, _).
+nf(t(F),      _) :- def(F, _).
+nf(lam(B),    D) :- nf(B, suc(D)).
+nf(app(F, A), D) :- ne(F, D), nf(A, D).
+
+ne(var(N),          D) :- lt(N, D).
+ne(o(C),            _) :- id(C, _).
+ne(t(F),            _) :- def(F, _).
+ne(app(F, A),       D) :- ne(F, D), nf(A, D).
+ne(switch(P, T, El), D) :-
+    nf_pat(P),
+    fresh_count(P, K),
+    nat_sum(D, K, D2),
+    nf(T, D2),
+    nf_el(El, D).
