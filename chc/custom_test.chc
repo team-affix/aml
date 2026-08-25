@@ -1,13 +1,13 @@
 % custom_test.chc — tests for custom.chc
 %
 % Run all positive tests:
-%   cat chc/custom.chc chc/custom_test.chc | atlas basic /dev/stdin -g "main"
+%   cat chc/custom.chc chc/custom_delta.chc chc/custom_test.chc | atlas basic /dev/stdin -g "main"
 %
 % Run all conflict tests (all branches should refute):
-%   cat chc/custom.chc chc/custom_test.chc | atlas basic /dev/stdin -g "conflict_main"
+%   cat chc/custom.chc chc/custom_delta.chc chc/custom_test.chc | atlas basic /dev/stdin -g "conflict_main"
 %
 % Run a single test:
-%   cat chc/custom.chc chc/custom_test.chc | atlas basic /dev/stdin -g "test_name"
+%   cat chc/custom.chc chc/custom_delta.chc chc/custom_test.chc | atlas basic /dev/stdin -g "test_name"
 
 % ── id/2, id_neq/2, eq/2, neq/2 ───────────────────────────────
 

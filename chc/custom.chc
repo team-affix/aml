@@ -36,31 +36,20 @@
 % switch/3 is ternary to allow nesting:
 %   switch(P1, T1, switch(P2, T2, fail))
 %
-% map =
-%   lam(lam(switch(
-%       o(nil), o(nil),
-%       switch(
-%           app(app(o(cons), fresh), fresh),
-%           app(app(o(cons), app(var(suc(suc(zero))), var(suc(zero)))),
-%                           app(app(t(map), var(suc(suc(zero)))), var(zero))),
-%           fail
-%       )
-%   )))
+% Domain (constructors and named functions) lives in custom_delta.chc:
+%   id(C, Tag)  — one clause per constructor; Tag is a Peano nat
+%   def(F, Body) — Body is a term (lam / switch / ...)
+% Load with:
+%   cat chc/custom.chc chc/custom_delta.chc | atlas basic /dev/stdin -g "..."
+% ============================================================
+
+% ============================================================
+% Constructor identity
 %
-% Outer lam binds F (de Bruijn index suc(suc(zero)) inside the body).
-% The switch matches L: nil -> nil; cons H T -> cons (F H) (map F T).
+% eq/neq compare constructor heads without Prolog unification.
+% Each domain constructor must supply an id/2 clause mapping the
+% name to a unique Peano tag. id_neq/2 is on those tags.
 % ============================================================
-
-% ============================================================
-% Constructor identity — used by pm and pm_fail to compare
-% constructor heads without relying on Prolog unification.
-% Add one id/2 clause per constructor in the domain.
-% ============================================================
-
-id(zero, zero).
-id(suc,  suc(zero)).
-id(nil,  suc(suc(zero))).
-id(cons, suc(suc(suc(zero)))).
 
 id_neq(zero,   suc(_)).
 id_neq(suc(_), zero).
@@ -167,30 +156,3 @@ level_to_idx(L,    suc(N), suc(I)) :- level_to_idx(L, N, I).
 % ============================================================
 
 normalize(T, R) :- eval(T, nil, V), reify(V, zero, R).
-
-% ============================================================
-% Domain: named functions
-%
-% def(Name, Body) — Body is a term (chain of lam / switch).
-% eval(t(Name), _, V) evaluates Body in the empty environment.
-% ============================================================
-
-% map : (A -> B) -> List A -> List B
-%
-% One lam binds F. switch is itself arity-1 and binds L implicitly.
-% Inside the then-branch of the cons case, after eval_with pushes
-% the two fresh bindings onto the env:
-%   var(zero)         = T  (tail, rightmost fresh)
-%   var(suc(zero))    = H  (head, leftmost fresh)
-%   var(suc(suc(zero))) = F  (from the outer env)
-def(map,
-    lam(switch(
-        o(nil),
-        o(nil),
-        switch(
-            app(app(o(cons), fresh), fresh),
-            app(app(o(cons), app(var(suc(suc(zero))), var(suc(zero)))),
-                             app(app(t(map), var(suc(suc(zero)))), var(zero))),
-            fail
-        )
-    ))).

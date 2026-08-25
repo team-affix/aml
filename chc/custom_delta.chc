@@ -1,0 +1,245 @@
+% ============================================================
+% custom_delta.chc — domain for custom.chc
+%
+% Constructors (id/2) and named functions (def/2).
+%
+% Load with:
+%   cat chc/custom.chc chc/custom_synth.chc chc/custom_delta.chc \
+%       | atlas basic /dev/stdin -g "..."
+% ============================================================
+
+% ============================================================
+% Constructors — unique Peano tags for eq/neq
+% ============================================================
+
+id(zero,  zero).
+id(suc,   suc(zero)).
+id(nil,   suc(suc(zero))).
+id(cons,  suc(suc(suc(zero)))).
+id(true,  suc(suc(suc(suc(zero))))).
+id(false, suc(suc(suc(suc(suc(zero)))))).
+
+% ============================================================
+% map : (A -> B) -> List A -> List B
+%
+% One lam binds F. switch takes the list implicitly.
+% Inside the cons arm, after eval_with pushes the two fresh
+% bindings onto the env:
+%   var(zero)           = T
+%   var(suc(zero))      = H
+%   var(suc(suc(zero))) = F
+% ============================================================
+
+def(map,
+    lam(switch(
+        o(nil),
+        o(nil),
+        switch(
+            app(app(o(cons), fresh), fresh),
+            app(app(o(cons), app(var(suc(suc(zero))), var(suc(zero)))),
+                             app(app(t(map), var(suc(suc(zero)))), var(zero))),
+            fail
+        )
+    ))).
+
+% ============================================================
+% succ_wrap — applies suc to its argument
+%
+%   succ_wrap(x) = suc(x)
+% ============================================================
+
+def(succ_wrap, o(suc)).
+
+% ============================================================
+% flip — swaps nil and zero (boolean not: nil=true, zero=false)
+%
+%   flip(nil)  = zero
+%   flip(zero) = nil
+%   flip(?)    = conflict
+% ============================================================
+
+def(flip,
+    switch(o(nil), o(zero),
+        switch(o(zero), o(nil), fail))).
+
+% ============================================================
+% pred — predecessor
+%
+%   pred(zero)   = zero
+%   pred(suc(n)) = n
+%   pred(?)      = conflict
+%
+% Inside the suc arm: fresh binds n, so var(zero) = n.
+% ============================================================
+
+def(pred,
+    switch(o(zero), o(zero),
+        switch(app(o(suc), fresh), var(zero), fail))).
+
+% ============================================================
+% plus — Peano addition
+%
+%   plus(zero,   m) = m
+%   plus(suc(n), m) = suc(plus(n, m))
+%
+% Switch on the first argument; each branch is a lam over m.
+% Inside the suc arm, after that lam fires:
+%   var(zero)      = m
+%   var(suc(zero)) = n
+% ============================================================
+
+def(plus,
+    switch(o(zero), lam(var(zero)),
+        switch(app(o(suc), fresh),
+            lam(app(o(suc), app(app(t(plus), var(suc(zero))), var(zero)))),
+            fail))).
+
+% ============================================================
+% mult — Peano multiplication
+%
+%   mult(zero,   m) = zero
+%   mult(suc(n), m) = plus(m, mult(n, m))
+%
+% Switch on the first argument; each branch is a lam over m.
+% Inside the suc arm, after that lam fires:
+%   var(zero)      = m
+%   var(suc(zero)) = n
+% ============================================================
+
+def(mult,
+    switch(o(zero), lam(o(zero)),
+        switch(app(o(suc), fresh),
+            lam(app(app(t(plus), var(zero)),
+                    app(app(t(mult), var(suc(zero))), var(zero)))),
+            fail))).
+
+% ============================================================
+% pow — exponentiation  (n ^ k)
+%
+%   pow(zero,   zero)   = suc(zero)
+%   pow(zero,   suc(k)) = zero
+%   pow(suc(n), zero)   = suc(zero)
+%   pow(suc(n), suc(k)) = mult(suc(n), pow(suc(n), k))
+%
+% Outer switch on n; each branch is a switch on k.
+% Inside the suc/suc arm: fresh binds k, so
+%   var(zero)      = k
+%   var(suc(zero)) = n
+% ============================================================
+
+def(pow,
+    switch(o(zero),
+        switch(o(zero), app(o(suc), o(zero)),
+            switch(app(o(suc), fresh), o(zero), fail)),
+        switch(app(o(suc), fresh),
+            switch(o(zero), app(o(suc), o(zero)),
+                switch(app(o(suc), fresh),
+                    app(app(t(mult), app(o(suc), var(suc(zero)))),
+                        app(app(t(pow), app(o(suc), var(suc(zero)))), var(zero))),
+                    fail)),
+            fail))).
+
+% ============================================================
+% length — length of a list
+%
+%   length(nil)        = zero
+%   length(cons(h, t)) = suc(length(t))
+%
+% Switch on the list. Inside the cons arm: fresh×2 binds [h, t], so
+%   var(zero)      = t
+%   var(suc(zero)) = h
+% ============================================================
+
+def(length,
+    switch(o(nil), o(zero),
+        switch(app(app(o(cons), fresh), fresh),
+            app(o(suc), app(t(length), var(zero))),
+            fail))).
+
+% ============================================================
+% append — list concatenation
+%
+%   append(nil,        ys) = ys
+%   append(cons(h, t), ys) = cons(h, append(t, ys))
+%
+% Switch on the first argument; each branch is a lam over ys.
+% Inside the cons arm, after that lam fires:
+%   var(zero)           = ys
+%   var(suc(zero))      = t
+%   var(suc(suc(zero))) = h
+% ============================================================
+
+def(append,
+    switch(o(nil), lam(var(zero)),
+        switch(app(app(o(cons), fresh), fresh),
+            lam(app(app(o(cons), var(suc(suc(zero)))),
+                    app(app(t(append), var(suc(zero))), var(zero)))),
+            fail))).
+
+% ============================================================
+% not — boolean negation
+%
+%   not(true)  = false
+%   not(false) = true
+% ============================================================
+
+def(not,
+    switch(o(true), o(false),
+        switch(o(false), o(true), fail))).
+
+% ============================================================
+% or — boolean or (short-circuit on first argument)
+%
+%   or(true,  y) = true
+%   or(false, y) = y
+%
+% Switch on the first argument; each branch is a lam over y.
+% ============================================================
+
+def(or,
+    switch(o(true), lam(o(true)),
+        switch(o(false), lam(var(zero)), fail))).
+
+% ============================================================
+% if — boolean conditional  if(c, t, e)
+%
+%   if(true,  t, e) = t
+%   if(false, t, e) = e
+%
+% Switch on c; each branch is lam(lam(...)) over t then e.
+% ============================================================
+
+def(if,
+    switch(o(true), lam(lam(var(suc(zero)))),
+        switch(o(false), lam(lam(var(zero))), fail))).
+
+% ============================================================
+% foldr — right fold
+%
+%   foldr(f, z, nil)        = z
+%   foldr(f, z, cons(h, t)) = f(h, foldr(f, z, t))
+%
+% f and z are not constructors, so two lams then a switch on the list.
+% Inside the cons arm: fresh×2 binds [h, t], so
+%   var(zero)                = t
+%   var(suc(zero))           = h
+%   var(suc(suc(zero)))      = z
+%   var(suc(suc(suc(zero)))) = f
+% ============================================================
+
+def(foldr,
+    lam(lam(
+        switch(o(nil), var(zero),
+            switch(app(app(o(cons), fresh), fresh),
+                app(app(var(suc(suc(suc(zero)))), var(suc(zero))),
+                    app(app(app(t(foldr), var(suc(suc(suc(zero))))),
+                            var(suc(suc(zero)))),
+                        var(zero))),
+                fail))))).
+
+% ============================================================
+% twice — twice(f) = λx. f (f x)
+% ============================================================
+
+def(twice,
+    lam(lam(app(var(suc(zero)), app(var(suc(zero)), var(zero)))))).

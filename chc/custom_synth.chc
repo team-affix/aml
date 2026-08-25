@@ -2,13 +2,14 @@
 % custom_synth.chc — synthesis helpers for custom.chc
 %
 % Load by concatenating with the kernel:
-%   cat chc/custom.chc chc/custom_synth.chc | atlas basic /dev/stdin -g "..."
+%   cat chc/custom.chc chc/custom_delta.chc chc/custom_synth.chc | atlas basic /dev/stdin -g "..."
 %
 % Predicates:
 %   le/2            Peano <=
 %   lt/2            Peano <
 %   nat_sum/3       Peano addition
 %   size/2          syntax-tree node count
+%   depth/2         longest lam/app/switch path
 %   fits/3          evaluate candidate against input/output rows
 %   rows/3          helper: apply candidate value to each row
 %   saturate/3      helper: apply a value to a list of arguments
@@ -32,6 +33,10 @@ lt(suc(I), suc(D)) :- lt(I, D).
 nat_sum(zero,   N, N).
 nat_sum(suc(M), N, suc(R)) :- nat_sum(M, N, R).
 
+nat_max(zero,   N,       N).
+nat_max(suc(M), zero,    suc(M)).
+nat_max(suc(M), suc(N),  suc(R)) :- nat_max(M, N, R).
+
 % ============================================================
 % size/2 — count every node in the syntax tree
 %
@@ -51,6 +56,23 @@ size(lam(B),           suc(N))   :- size(B, N).
 size(app(F, A),        suc(N))   :- size(F, NF), size(A, NA), nat_sum(NF, NA, N).
 size(switch(P, T, El), suc(N))   :- size(P, NP), size(T, NT), size(El, NEl),
                                      nat_sum(NP, NT, N1), nat_sum(N1, NEl, N).
+
+% ============================================================
+% depth/2 — longest root-to-leaf path of lam / app / switch
+%
+% Leaves (var, o, t, fresh, fail) contribute 0, matching spine's
+% prog_depth so --bound depth is comparable.
+% ============================================================
+
+depth(var(_),           zero).
+depth(o(_),             zero).
+depth(t(_),             zero).
+depth(fresh,            zero).
+depth(fail,             zero).
+depth(lam(B),           suc(N)) :- depth(B, N).
+depth(app(F, A),        suc(N)) :- depth(F, NF), depth(A, NA), nat_max(NF, NA, N).
+depth(switch(P, T, El), suc(N)) :- depth(P, NP), depth(T, NT), depth(El, NEl),
+                                     nat_max(NP, NT, N1), nat_max(N1, NEl, N).
 
 % ============================================================
 % fits/3 — check a candidate term M against input/output rows
