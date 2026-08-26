@@ -28,6 +28,11 @@ eval(false, [], false).
 eval(zero, [], zero).
 eval(suc(X), [], suc(X)) :- nat(X).
 
+eval(fold, [_, A, []], A).
+eval(fold, [F, A, [H|T]], R) :-
+    eval(F, [A,H], C),
+    eval(fold, [F, C, T], R).
+
 eval(composition(F, Gs), Args, R) :-
     eval_all(Gs, Args, GRs),
     eval(F, GRs, R).
@@ -37,11 +42,13 @@ eval_all([H|T], Args, [HR|TR]) :-
     eval(H,Args,HR),
     eval_all(T,Args,TR).
 
-eval(nullary(Body), _, R) :-
-    eval(Body, [], R).
+%eval(nullary(Body), _, R) :-
+%    eval(Body, [], R).
 
 eval(var(X), Args, R) :-
     lookup(Args, X, R).
+
+eval(quote(X), _, X).
 
 lookup([V|Rest],zero,V).
 lookup([_|Rest],suc(X),Y) :- lookup(Rest,X,Y).
