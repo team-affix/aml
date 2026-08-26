@@ -9,6 +9,11 @@ eval(or, [false, X], X) :- bool(X).
 eval(and, [true, X], X) :- bool(X).
 eval(and, [false, X], false) :- bool(X).
 
+eval(xor, [true, true], false).
+eval(xor, [true, false], true).
+eval(xor, [false, true], true).
+eval(xor, [false, false], false).
+
 eval(pred, [suc(X)], X).
 
 bool(true).
