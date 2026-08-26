@@ -23,21 +23,20 @@ eval(false, [], false).
 eval(zero, [], zero).
 eval(suc(X), [], suc(X)) :- nat(X).
 
-norm(E, intro(Exp,Arg), R) :-
-    norm(E, Arg, NArg),
-    norm([NArg|E], Exp, R).
+eval(composition(F, Gs), Args, R) :-
+    eval_all(Gs, Args, GRs),
+    eval(F, GRs, R).
 
-norm(E, var(X), R) :-
-    lookup(E, X, R).
+eval_all([], _, []).
+eval_all([H|T], Args, [HR|TR]) :-
+    eval(H,Args,HR),
+    eval_all(T,Args,TR).
 
-norm(E, compose(F,Args), R) :-
-    norm_all(E, Args, NArgs),
-    eval(F, NArgs, R).
+eval(nullary(Body), _, R) :-
+    eval(Body, [], R).
+
+eval(var(X), Args, R) :-
+    lookup(Args, X, R).
 
 lookup([V|Rest],zero,V).
 lookup([_|Rest],suc(X),Y) :- lookup(Rest,X,Y).
-
-norm_all(_, [], []).
-norm_all(E, [H|T], [NH|NT]) :-
-    norm(E, H, NH),
-    norm_all(E, T, NT).
