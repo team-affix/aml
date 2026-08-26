@@ -1,37 +1,3 @@
-eval(id, [X], X).
-
-eval(not, [true], false).
-eval(not, [false], true).
-
-eval(or, [true, X], true) :- bool(X).
-eval(or, [false, X], X) :- bool(X).
-
-eval(and, [true, X], X) :- bool(X).
-eval(and, [false, X], false) :- bool(X).
-
-eval(xor, [true, true], false).
-eval(xor, [true, false], true).
-eval(xor, [false, true], true).
-eval(xor, [false, false], false).
-
-eval(pred, [suc(X)], X) :- nat(X).
-
-bool(true).
-bool(false).
-
-nat(zero).
-nat(suc(X)) :- nat(X).
-
-eval(fold, [_, A, []], A).
-eval(fold, [F, A, [H|T]], R) :-
-    eval(F, [A,H], C),
-    eval(fold, [F, C, T], R).
-
-eval(map, [_, []], []).
-eval(map, [F, [H|T]], [HR|TR]) :-
-    eval(F, [H], HR),
-    eval(map, [F, T], TR).
-
 eval(composition(F, Gs), Args, R) :-
     eval_all(Gs, Args, GRs),
     eval(F, GRs, R).
@@ -40,9 +6,6 @@ eval_all([], _, []).
 eval_all([H|T], Args, [HR|TR]) :-
     eval(H,Args,HR),
     eval_all(T,Args,TR).
-
-%eval(nullary(Body), _, R) :-
-%    eval(Body, [], R).
 
 eval(var(X), Args, R) :-
     lookup(Args, X, R).
