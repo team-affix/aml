@@ -14,19 +14,13 @@ eval(xor, [true, false], true).
 eval(xor, [false, true], true).
 eval(xor, [false, false], false).
 
-eval(pred, [suc(X)], X).
+eval(pred, [suc(X)], X) :- nat(X).
 
 bool(true).
 bool(false).
 
 nat(zero).
 nat(suc(X)) :- nat(X).
-
-eval(true, [], true).
-eval(false, [], false).
-
-eval(zero, [], zero).
-eval(suc(X), [], suc(X)) :- nat(X).
 
 eval(fold, [_, A, []], A).
 eval(fold, [F, A, [H|T]], R) :-
