@@ -27,6 +27,11 @@ eval(fold, [F, A, [H|T]], R) :-
     eval(F, [A,H], C),
     eval(fold, [F, C, T], R).
 
+eval(map, [_, []], []).
+eval(map, [F, [H|T]], [HR|TR]) :-
+    eval(F, [H], HR),
+    eval(map, [F, T], TR).
+
 eval(composition(F, Gs), Args, R) :-
     eval_all(Gs, Args, GRs),
     eval(F, GRs, R).
