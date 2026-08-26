@@ -1,23 +1,15 @@
-append([], L, L).
-append([X|Rest], L, [X|T]) :-
-    append(Rest, L, T).
+eval(id, [X], X).
 
-eval(E, intro(F,Args), List, R) :-
-    append(List, E, EApp),
-    eval(EApp, F, Args, R).
+eval(not, [true], false).
+eval(not, [false], true).
 
-eval(_, id, [X], X).
+eval(or, [true, X], true) :- bool(X).
+eval(or, [false, X], X) :- bool(X).
 
-eval(_, not, [true], false).
-eval(_, not, [false], true).
+eval(and, [true, X], X) :- bool(X).
+eval(and, [false, X], false) :- bool(X).
 
-eval(_, or, [true, X], true) :- bool(X).
-eval(_, or, [false, X], X) :- bool(X).
-
-eval(_, and, [true, X], X) :- bool(X).
-eval(_, and, [false, X], false) :- bool(X).
-
-eval(_, pred, [suc(X)], X).
+eval(pred, [suc(X)], X).
 
 bool(true).
 bool(false).
@@ -25,21 +17,25 @@ bool(false).
 nat(zero).
 nat(suc(X)) :- nat(X).
 
-eval(_, true, [], true).
-eval(_, false, [], false).
+eval(true, [], true).
+eval(false, [], false).
 
-eval(_, zero, [], zero).
-eval(_, suc(X), [], suc(X)) :- nat(X).
+eval(zero, [], zero).
+eval(suc(X), [], suc(X)) :- nat(X).
 
-eval(E, var(X), [], R) :-
+norm(E, intro(Exp,Arg), R) :-
+    norm(E, Arg, NArg),
+    norm([NArg|E], Exp, R).
+
+norm(E, var(X), R) :-
     lookup(E, X, R).
-
-lookup([V|Rest],zero,V).
-lookup([_|Rest],suc(X),Y) :- lookup(Rest,X,Y).
 
 norm(E, compose(F,Args), R) :-
     norm_all(E, Args, NArgs),
-    eval(E, F, NArgs, R).
+    eval(F, NArgs, R).
+
+lookup([V|Rest],zero,V).
+lookup([_|Rest],suc(X),Y) :- lookup(Rest,X,Y).
 
 norm_all(_, [], []).
 norm_all(E, [H|T], [NH|NT]) :-
