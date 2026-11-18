@@ -5,7 +5,7 @@
 #include <cstdint>
 
 struct razor_options {
-    size_t max_synthesis_depth;
+    size_t max_applications;
     size_t max_constant_size;
     double exploration_constant;
     uint32_t seed;

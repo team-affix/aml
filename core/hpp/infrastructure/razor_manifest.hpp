@@ -5,7 +5,9 @@
 #include <unordered_map>
 #include <vector>
 #include "infrastructure/app_candidate_finder.hpp"
-#include "infrastructure/argument_tuple_enumerator.hpp"
+#include "infrastructure/application_log.hpp"
+#include "infrastructure/argument_chooser.hpp"
+#include "infrastructure/argument_option_finder.hpp"
 #include "infrastructure/best_model_tracker.hpp"
 #include "infrastructure/bin_splitter.hpp"
 #include "infrastructure/cheapest_feature_index.hpp"
@@ -20,8 +22,8 @@
 #include "infrastructure/feature_synthesizer.hpp"
 #include "infrastructure/in_rollout_flag.hpp"
 #include "infrastructure/leaf_detector.hpp"
-#include "infrastructure/mcts_candidate_chooser.hpp"
 #include "infrastructure/mcts_episode.hpp"
+#include "infrastructure/mcts_option_chooser.hpp"
 #include "infrastructure/model_builder.hpp"
 #include "infrastructure/model_episode.hpp"
 #include "infrastructure/model_evaluator.hpp"
@@ -29,8 +31,10 @@
 #include "infrastructure/model_sizer.hpp"
 #include "infrastructure/primitive.hpp"
 #include "infrastructure/primitive_dispatcher.hpp"
+#include "infrastructure/primitive_option_finder.hpp"
 #include "infrastructure/random_rollout.hpp"
 #include "infrastructure/schema.hpp"
+#include "infrastructure/synthesis_starter.hpp"
 #include "infrastructure/tree_walker.hpp"
 #include "infrastructure/ucb1.hpp"
 #include "infrastructure/uct_backprop_path.hpp"
@@ -48,6 +52,7 @@
 #include "infrastructure/value_table.hpp"
 #include "infrastructure/variable_candidate_finder.hpp"
 #include "infrastructure/visits_table.hpp"
+#include "infrastructure/witness_detector.hpp"
 #include "value_objects/mcts_choice.hpp"
 #include "value_objects/mcts_tree_node_id.hpp"
 #include "value_objects/razor_options.hpp"
@@ -114,6 +119,10 @@ struct razor_manifest {
             monte_carlo::in_rollout_flag>::uct_terminator;
     };
 
+    struct option_chooser_t : mcts_option_chooser<mcts_chooser_t> {
+        using mcts_option_chooser<mcts_chooser_t>::mcts_option_chooser;
+    };
+
     struct feature_sizer_t : feature_sizer<value_sizer> {
         using feature_sizer<value_sizer>::feature_sizer;
     };
@@ -144,14 +153,37 @@ struct razor_manifest {
         using app_candidate_finder<
             column_applier_t, uniform_value_finder, feature_pool, feature_sizer_t>::app_candidate_finder;
     };
+    struct witness_detector_t : witness_detector<cheapest_feature_index, cheapest_feature_index, application_log> {
+        using witness_detector<cheapest_feature_index, cheapest_feature_index, application_log>::witness_detector;
+    };
+    struct primitive_option_finder_t
+        : primitive_option_finder<primitive_dispatcher_t, primitive_dispatcher_t, witness_detector_t> {
+        using primitive_option_finder<
+            primitive_dispatcher_t, primitive_dispatcher_t, witness_detector_t>::primitive_option_finder;
+    };
+    struct argument_option_finder_t
+        : argument_option_finder<cheapest_feature_index, cheapest_feature_index, witness_detector_t> {
+        using argument_option_finder<
+            cheapest_feature_index, cheapest_feature_index, witness_detector_t>::argument_option_finder;
+    };
+    struct argument_chooser_t : argument_chooser<argument_option_finder_t, option_chooser_t> {
+        using argument_chooser<argument_option_finder_t, option_chooser_t>::argument_chooser;
+    };
+    struct synthesis_starter_t : synthesis_starter<
+        cheapest_feature_index, cheapest_feature_index, application_log, constant_candidate_finder_t,
+        cheapest_feature_index, variable_candidate_finder_t, cheapest_feature_index> {
+        using synthesis_starter<
+            cheapest_feature_index, cheapest_feature_index, application_log, constant_candidate_finder_t,
+            cheapest_feature_index, variable_candidate_finder_t, cheapest_feature_index>::synthesis_starter;
+    };
     struct feature_synthesizer_t : feature_synthesizer<
-        cheapest_feature_index, cheapest_feature_index, cheapest_feature_index, variable_candidate_finder_t,
-        constant_candidate_finder_t, primitive_dispatcher_t, primitive_dispatcher_t, argument_tuple_enumerator,
-        app_candidate_finder_t> {
+        synthesis_starter_t, application_log, primitive_option_finder_t, option_chooser_t,
+        primitive_dispatcher_t, argument_chooser_t, application_log, cheapest_feature_index, cheapest_feature_index,
+        app_candidate_finder_t, cheapest_feature_index> {
         using feature_synthesizer<
-            cheapest_feature_index, cheapest_feature_index, cheapest_feature_index, variable_candidate_finder_t,
-            constant_candidate_finder_t, primitive_dispatcher_t, primitive_dispatcher_t, argument_tuple_enumerator,
-            app_candidate_finder_t>::feature_synthesizer;
+            synthesis_starter_t, application_log, primitive_option_finder_t, option_chooser_t,
+            primitive_dispatcher_t, argument_chooser_t, application_log, cheapest_feature_index, cheapest_feature_index,
+            app_candidate_finder_t, cheapest_feature_index>::feature_synthesizer;
     };
     struct leaf_detector_t : leaf_detector<uniform_value_finder> {
         using leaf_detector<uniform_value_finder>::leaf_detector;
@@ -159,16 +191,12 @@ struct razor_manifest {
     struct bin_splitter_t : bin_splitter<schema, schema> {
         using bin_splitter<schema, schema>::bin_splitter;
     };
-    struct candidate_chooser_t : mcts_candidate_chooser<mcts_chooser_t> {
-        using mcts_candidate_chooser<mcts_chooser_t>::mcts_candidate_chooser;
-    };
     struct model_builder_t : model_builder<
-        leaf_detector_t, feature_synthesizer_t, candidate_chooser_t, bin_splitter_t,
-        variable_candidate_finder_t, candidate_chooser_t, model_node_pool, model_node_pool, model_node_pool> {
+        leaf_detector_t, feature_synthesizer_t, option_chooser_t, bin_splitter_t, variable_candidate_finder_t,
+        option_chooser_t, model_node_pool, model_node_pool, model_node_pool> {
         using model_builder<
-            leaf_detector_t, feature_synthesizer_t, candidate_chooser_t, bin_splitter_t,
-            variable_candidate_finder_t, candidate_chooser_t, model_node_pool, model_node_pool,
-            model_node_pool>::model_builder;
+            leaf_detector_t, feature_synthesizer_t, option_chooser_t, bin_splitter_t, variable_candidate_finder_t,
+            option_chooser_t, model_node_pool, model_node_pool, model_node_pool>::model_builder;
     };
     struct model_episode_t : model_episode<model_builder_t, model_sizer_t, best_model_tracker> {
         using model_episode<model_builder_t, model_sizer_t, best_model_tracker>::model_episode;
@@ -191,22 +219,23 @@ struct razor_manifest {
     feature_pool                 features_;
     model_node_pool              nodes_;
     constant_store               constants_;
-    cheapest_feature_index       candidate_index_;
+    cheapest_feature_index       constant_candidates_;
+    cheapest_feature_index       feature_candidates_;
+    application_log              applications_;
     uniform_value_finder         uniform_value_finder_;
     value_sizer                  value_sizer_;
     feature_sizer_t              feature_sizer_;
     model_sizer_t                model_sizer_;
     primitive_dispatcher_t       primitive_dispatcher_;
     column_applier_t             column_applier_;
-    argument_tuple_enumerator    argument_tuple_enumerator_;
     variable_candidate_finder_t  variable_candidate_finder_;
     constant_enumerator_t        constant_enumerator_;
     constant_seeder_t            constant_seeder_;
     constant_candidate_finder_t  constant_candidate_finder_;
     app_candidate_finder_t       app_candidate_finder_;
-    feature_synthesizer_t        feature_synthesizer_;
-    leaf_detector_t              leaf_detector_;
-    bin_splitter_t               bin_splitter_;
+    witness_detector_t           witness_detector_;
+    primitive_option_finder_t    primitive_option_finder_;
+    argument_option_finder_t     argument_option_finder_;
     visits_table_t               visits_;
     value_table_t                rewards_;
     std::mt19937                 random_;
@@ -223,7 +252,12 @@ struct razor_manifest {
     monte_carlo::in_rollout_flag in_rollout_;
     mcts_chooser_t               mcts_chooser_;
     terminator_t                 terminator_;
-    candidate_chooser_t          candidate_chooser_;
+    option_chooser_t             option_chooser_;
+    argument_chooser_t           argument_chooser_;
+    synthesis_starter_t          synthesis_starter_;
+    feature_synthesizer_t        feature_synthesizer_;
+    leaf_detector_t              leaf_detector_;
+    bin_splitter_t               bin_splitter_;
     model_builder_t              model_builder_;
     best_model_tracker           best_model_tracker_;
     model_episode_t              model_episode_;

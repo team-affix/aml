@@ -40,7 +40,7 @@ RazorIntegrationTest::RazorIntegrationTest()
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
     , bool_equality(values, boolean, boolean_encoding{.type = boolean, .false_ctor = false_ctor, .true_ctor = true_ctor})
-    , options{.max_synthesis_depth = 1, .max_constant_size = 1, .exploration_constant = 5.0, .seed = 7} {}
+    , options{.max_applications = 2, .max_constant_size = 1, .exploration_constant = 5.0, .seed = 7} {}
 
 void RazorIntegrationTest::expect_fit(const razor_runtime& runtime, const bin& training) {
     for (size_t row = 0; row < training.labels.size(); ++row) {
@@ -93,7 +93,7 @@ TEST_F(RazorIntegrationTest, EveryEpisodesModelFitsTheTrainingData) {
 TEST_F(RazorIntegrationTest, RazorFindsAModelNoCostlierThanScouts) {
     const bin training = is_even_training(6);
     scout_runtime scout(types, values, {}, training,
-                        scout_options{.max_synthesis_depth = 1, .max_constant_size = 1});
+                        scout_options{.max_applications = 1, .max_constant_size = 1});
     scout.next();
     razor_runtime runtime(types, values, {}, training, options);
     for (size_t episode = 0; episode < 300; ++episode)

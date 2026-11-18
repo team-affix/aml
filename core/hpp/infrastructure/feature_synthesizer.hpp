@@ -6,111 +6,117 @@
 #include <vector>
 #include "value_objects/bin.hpp"
 #include "value_objects/candidate.hpp"
+#include "value_objects/prim_application.hpp"
 #include "value_objects/prim_id.hpp"
 #include "value_objects/primitive_signature.hpp"
 
-// Synthesizes the heterogeneous features of a bin bottom-up. Layer zero is the heterogeneous variables. Each later
-// layer applies every primitive to argument tuples drawn from the constants and the features found so far, using at
-// least one feature found by the previous layer, so every argument tuple holds a heterogeneous feature. Applications
-// that are homogeneous over the bin are dropped; the index keeps the cheapest feature per column.
+// Synthesizes heterogeneous features of a bin in one session of at most `max_applications` primitive applications.
+// Each step chooses to stop or to apply one of the primitives that has an application witness; then the arguments
+// are chosen, the application is logged, and a heterogeneous result joins the features, cheapest per column. The
+// session stops when the stop option is chosen, the cap is reached, or no primitive has a witness. Option 0 is stop.
 template<
-    typename IClearCandidates,
-    typename ITryInsertCandidate,
-    typename IGetCandidates,
-    typename IFindVariableCandidates,
-    typename IFindConstantCandidates,
-    typename IGetPrimitiveCount,
+    typename IStartSession,
+    typename ICountApplications,
+    typename IFindPrimitiveOptions,
+    typename IChooseStep,
     typename IGetPrimitiveSignature,
-    typename IEnumerateArgumentTuples,
-    typename IFindAppCandidate>
+    typename IChooseArguments,
+    typename IRecordApplication,
+    typename IGetConstantCandidates,
+    typename IGetFeatureCandidates,
+    typename IFindAppCandidate,
+    typename ITryInsertFeatureCandidate>
 struct feature_synthesizer {
     feature_synthesizer(
-        IClearCandidates& clear_candidates,
-        ITryInsertCandidate& try_insert_candidate,
-        IGetCandidates& get_candidates,
-        IFindVariableCandidates& find_variable_candidates,
-        IFindConstantCandidates& find_constant_candidates,
-        IGetPrimitiveCount& get_primitive_count,
+        IStartSession& start_session,
+        ICountApplications& count_applications,
+        IFindPrimitiveOptions& find_primitive_options,
+        IChooseStep& choose_step,
         IGetPrimitiveSignature& get_primitive_signature,
-        IEnumerateArgumentTuples& enumerate_argument_tuples,
+        IChooseArguments& choose_arguments,
+        IRecordApplication& record_application,
+        IGetConstantCandidates& get_constant_candidates,
+        IGetFeatureCandidates& get_feature_candidates,
         IFindAppCandidate& find_app_candidate,
-        size_t max_depth);
+        ITryInsertFeatureCandidate& try_insert_feature_candidate,
+        size_t max_applications);
     std::vector<candidate> synthesize(const bin& data);
 private:
-    IClearCandidates& clear_candidates_;
-    ITryInsertCandidate& try_insert_candidate_;
-    IGetCandidates& get_candidates_;
-    IFindVariableCandidates& find_variable_candidates_;
-    IFindConstantCandidates& find_constant_candidates_;
-    IGetPrimitiveCount& get_primitive_count_;
+    IStartSession& start_session_;
+    ICountApplications& count_applications_;
+    IFindPrimitiveOptions& find_primitive_options_;
+    IChooseStep& choose_step_;
     IGetPrimitiveSignature& get_primitive_signature_;
-    IEnumerateArgumentTuples& enumerate_argument_tuples_;
+    IChooseArguments& choose_arguments_;
+    IRecordApplication& record_application_;
+    IGetConstantCandidates& get_constant_candidates_;
+    IGetFeatureCandidates& get_feature_candidates_;
     IFindAppCandidate& find_app_candidate_;
-    size_t max_depth_;
+    ITryInsertFeatureCandidate& try_insert_feature_candidate_;
+    size_t max_applications_;
 };
 
 #define FEATURE_SYNTHESIZER_TEMPLATE                                                                              \
-    template<typename ICC, typename ITIC, typename IGC, typename IFVC, typename IFCC, typename IGPC, typename IGPS, \
-             typename IEAT, typename IFAC>
-#define FEATURE_SYNTHESIZER feature_synthesizer<ICC, ITIC, IGC, IFVC, IFCC, IGPC, IGPS, IEAT, IFAC>
+    template<typename ISS, typename ICA, typename IFPO, typename ICS, typename IGPS, typename ICAr, typename IRA, \
+             typename IGCC, typename IGFC, typename IFAC, typename ITIFC>
+#define FEATURE_SYNTHESIZER feature_synthesizer<ISS, ICA, IFPO, ICS, IGPS, ICAr, IRA, IGCC, IGFC, IFAC, ITIFC>
 
 FEATURE_SYNTHESIZER_TEMPLATE
 FEATURE_SYNTHESIZER::feature_synthesizer(
-    ICC& clear_candidates,
-    ITIC& try_insert_candidate,
-    IGC& get_candidates,
-    IFVC& find_variable_candidates,
-    IFCC& find_constant_candidates,
-    IGPC& get_primitive_count,
+    ISS& start_session,
+    ICA& count_applications,
+    IFPO& find_primitive_options,
+    ICS& choose_step,
     IGPS& get_primitive_signature,
-    IEAT& enumerate_argument_tuples,
+    ICAr& choose_arguments,
+    IRA& record_application,
+    IGCC& get_constant_candidates,
+    IGFC& get_feature_candidates,
     IFAC& find_app_candidate,
-    size_t max_depth)
-    : clear_candidates_(clear_candidates)
-    , try_insert_candidate_(try_insert_candidate)
-    , get_candidates_(get_candidates)
-    , find_variable_candidates_(find_variable_candidates)
-    , find_constant_candidates_(find_constant_candidates)
-    , get_primitive_count_(get_primitive_count)
+    ITIFC& try_insert_feature_candidate,
+    size_t max_applications)
+    : start_session_(start_session)
+    , count_applications_(count_applications)
+    , find_primitive_options_(find_primitive_options)
+    , choose_step_(choose_step)
     , get_primitive_signature_(get_primitive_signature)
-    , enumerate_argument_tuples_(enumerate_argument_tuples)
+    , choose_arguments_(choose_arguments)
+    , record_application_(record_application)
+    , get_constant_candidates_(get_constant_candidates)
+    , get_feature_candidates_(get_feature_candidates)
     , find_app_candidate_(find_app_candidate)
-    , max_depth_(max_depth) {}
+    , try_insert_feature_candidate_(try_insert_feature_candidate)
+    , max_applications_(max_applications) {}
 
 FEATURE_SYNTHESIZER_TEMPLATE
 std::vector<candidate> FEATURE_SYNTHESIZER::synthesize(const bin& data) {
-    clear_candidates_.clear();
-    for (const candidate& variable : find_variable_candidates_.find(data, 0))
-        try_insert_candidate_.try_insert(variable);
-    const std::vector<candidate> constants = find_constant_candidates_.find(data);
-
-    size_t frontier_begin = 0;
-    for (size_t depth = 0; depth < max_depth_; ++depth) {
-        const std::vector<candidate> found = get_candidates_.candidates();
-        const size_t frontier_end = found.size();
-        if (frontier_begin == frontier_end)
+    start_session_.start(data);
+    while (count_applications_.count() < max_applications_) {
+        const std::vector<prim_id> options = find_primitive_options_.find();
+        if (options.empty())
             break;
-        std::vector<candidate> operands = constants;
-        operands.insert(operands.end(), found.begin(), found.end());
+        const size_t step = choose_step_.choose(options.size() + 1);
+        if (step == 0)
+            break;
+        const prim_id prim = options.at(step - 1);
+        const primitive_signature signature = get_primitive_signature_.signature(prim);
+        const std::vector<size_t> args = choose_arguments_.choose(prim, signature.arg_types);
+        record_application_.record(prim_application{.prim = prim, .args = args});
 
-        for (prim_id prim = 0; prim < get_primitive_count_.count(); ++prim) {
-            const primitive_signature signature = get_primitive_signature_.signature(prim);
-            const std::vector<std::vector<size_t>> tuples = enumerate_argument_tuples_.enumerate(
-                signature.arg_types, operands, constants.size() + frontier_begin, constants.size() + frontier_end);
-            for (const std::vector<size_t>& tuple : tuples) {
-                std::vector<const candidate*> args;
-                for (const size_t operand : tuple)
-                    args.push_back(&operands[operand]);
-                const std::optional<candidate> application =
-                    find_app_candidate_.find(prim, signature.result_type, args);
-                if (!application.has_value())
-                    continue;
-                try_insert_candidate_.try_insert(application.value());
-            }
+        const std::vector<candidate>& constants = get_constant_candidates_.candidates();
+        const std::vector<candidate>& features = get_feature_candidates_.candidates();
+        std::vector<const candidate*> operands;
+        for (const size_t arg : args) {
+            const bool is_constant = arg < constants.size();
+            operands.push_back(is_constant ? &constants[arg] : &features[arg - constants.size()]);
         }
-        frontier_begin = frontier_end;
+        const std::optional<candidate> application =
+            find_app_candidate_.find(prim, signature.result_type, operands);
+        if (!application.has_value())
+            continue;
+        try_insert_feature_candidate_.try_insert(application.value());
     }
-    return get_candidates_.candidates();
+    return get_feature_candidates_.candidates();
 }
 
 #undef FEATURE_SYNTHESIZER

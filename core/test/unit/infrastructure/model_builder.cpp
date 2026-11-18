@@ -20,7 +20,7 @@ struct MockSynthesizeCandidates {
 };
 
 struct MockChooseFeature {
-    MOCK_METHOD(size_t, choose, (const std::vector<candidate>&));
+    MOCK_METHOD(size_t, choose, (size_t));
 };
 
 struct MockSplitBin {
@@ -32,7 +32,7 @@ struct MockFindVariableCandidates {
 };
 
 struct MockChooseField {
-    MOCK_METHOD(size_t, choose, (const std::vector<candidate>&));
+    MOCK_METHOD(size_t, choose, (size_t));
 };
 
 struct MockMakeEmpty {
@@ -137,7 +137,7 @@ TEST_F(ModelBuilderTest, ABinWhoseLabelsAgreeBecomesALeaf) {
 }
 
 TEST_F(ModelBuilderTest, AHeterogeneousBinMatchesOnTheChosenFeatureAndBuildsEachChild) {
-    EXPECT_CALL(choose_feature, choose(std::vector<candidate>{first_candidate, second_candidate})).WillOnce(Return(1));
+    EXPECT_CALL(choose_feature, choose(2)).WillOnce(Return(1));
     EXPECT_CALL(split_bin, split(root, second_candidate.observed))
         .WillOnce(Return(std::vector<bin>{true_child, false_child}));
     EXPECT_CALL(make_match, make_match(&second_feature, std::vector<const model_node*>{&true_leaf, &false_leaf}))
@@ -151,8 +151,7 @@ TEST_F(ModelBuilderTest, AMatchWhoseRowsShareOneConstructorFunnelsIntoAChosenBou
         .WillOnce(Return(std::vector<bin>{no_rows_child, funnel_child}));
     EXPECT_CALL(find_variable_candidates, find(funnel_child, 1))
         .WillOnce(Return(std::vector<candidate>{first_field_candidate, second_field_candidate}));
-    EXPECT_CALL(choose_field, choose(std::vector<candidate>{first_field_candidate, second_field_candidate}))
-        .WillOnce(Return(1));
+    EXPECT_CALL(choose_field, choose(2)).WillOnce(Return(1));
     EXPECT_CALL(split_bin, split(funnel_child, second_field_candidate.observed))
         .WillOnce(Return(std::vector<bin>{false_child, true_child}));
     EXPECT_CALL(make_match, make_match(&second_field, std::vector<const model_node*>{&false_leaf, &true_leaf}))

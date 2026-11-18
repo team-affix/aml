@@ -12,8 +12,13 @@ and are minimal in symbolic description length. Fit comes first; among models th
 - **Model:** three node types (`model_node`): `match` (an exhaustive one-layer case on a feature; each branch sees
   its constructor's fields bound as the next variables), `leaf` (a constant label), `empty` (no data; infers nothing).
 - **Learning (`model_builder`):** an empty bin becomes `empty`, a bin whose labels agree becomes a `leaf`, and any
-  other bin is partitioned: synthesize its heterogeneous features bottom-up, choose one, match on it; while every
-  row falls into one constructor, funnel into a chosen heterogeneous field that constructor just bound.
+  other bin is partitioned: run a synthesis session, choose one of its heterogeneous features, match on it; while
+  every row falls into one constructor, funnel into a chosen heterogeneous field that constructor just bound.
+- **Synthesis session (`feature_synthesizer`):** nothing is enumerated exhaustively. Operands are the bin's constants
+  then its heterogeneous features (the variables first). Each step chooses stop (option 0) or a primitive with an
+  application witness (an untried, type-correct operand tuple holding at least one heterogeneous feature), then its
+  arguments one at a time, each keeping a witness. A heterogeneous result joins the features. The cap is
+  `max_applications` per session; the session also ends when no primitive has a witness.
 - **Cost:** a match costs 1 + its scrutinee's size, a leaf its label's size, empty 0. A feature's size is 1 per
   variable and per primitive application, and a constant's own size.
 - Design doc: "Partition Model: Structure" (Claude Doc, https://claude.ai/artifact/H1DWSUimtzBz38G4nrhi7e).
@@ -48,7 +53,7 @@ docs/                                      design notes (see docs/continuous-doc
 - When you add a solver, add a new manifest + runtime instead of changing an existing one. Duplicate wiring
   across manifests if needed.
 - Solvers so far:
-  - **Scout** (`scout_*`): one episode, the first candidate at every choice.
+  - **Scout** (`scout_*`): one episode, the first option at every choice (so synthesis stops at once).
   - **Razor** (`razor_*`): UCT over every choice, its parts from the `mcts` submodule wired one by one in
     `razor_manifest`; each episode builds a fresh model and is rewarded with its negated cost.
 
@@ -60,12 +65,14 @@ equivalence keeps the cheapest feature per column (`cheapest_feature_index`). Ra
 
 ### Components (one mechanism each)
 
-- Stores: `schema`, `value_pool`, `feature_pool`, `model_node_pool`, `constant_store`, `cheapest_feature_index`,
-  `best_model_tracker`, `tree_walker`.
-- Synthesis: `variable_candidate_finder`, `constant_candidate_finder`, `app_candidate_finder`, `constant_enumerator` +
-  `constant_seeder`, `primitive_dispatcher`, `column_applier`, `argument_tuple_enumerator`, `feature_synthesizer`.
+- Stores: `schema`, `value_pool`, `feature_pool`, `model_node_pool`, `constant_store`, `cheapest_feature_index`
+  (one instance for a session's constants, one for its features), `application_log`, `best_model_tracker`,
+  `tree_walker`.
+- Synthesis: `constant_enumerator` + `constant_seeder`, `synthesis_starter`, `variable_candidate_finder`,
+  `constant_candidate_finder`, `witness_detector`, `primitive_option_finder`, `argument_option_finder`,
+  `argument_chooser`, `primitive_dispatcher`, `column_applier`, `app_candidate_finder`, `feature_synthesizer`.
 - Partition: `leaf_detector`, `uniform_value_finder`, `bin_splitter`, `model_builder`.
-- Choices: `first_candidate_chooser`, `mcts_candidate_chooser`.
+- Choices: `first_option_chooser`, `mcts_option_chooser`; each chooses an index among `option_count` options.
 - Cost and inference: `value_sizer`, `feature_sizer`, `model_sizer`, `feature_evaluator`, `model_evaluator`.
 - Episodes: `model_episode`, `mcts_episode`.
 - Primitives: `bool_not`, `bool_and`, `bool_or`, `value_equality`, `nat_add`; `primitive` is the variant of

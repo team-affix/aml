@@ -7,29 +7,37 @@ scout_manifest::scout_manifest(
     , features_()
     , nodes_()
     , constants_()
-    , candidate_index_()
+    , constant_candidates_()
+    , feature_candidates_()
+    , applications_()
     , uniform_value_finder_()
     , value_sizer_()
     , feature_sizer_(value_sizer_)
     , model_sizer_(feature_sizer_, value_sizer_)
     , primitive_dispatcher_(primitives)
     , column_applier_(primitive_dispatcher_)
-    , argument_tuple_enumerator_()
     , variable_candidate_finder_(features_, feature_sizer_, uniform_value_finder_)
     , constant_enumerator_(schema_, schema_, values_)
     , constant_seeder_(schema_, constant_enumerator_, features_, constants_)
     , constant_candidate_finder_(constants_, feature_sizer_)
     , app_candidate_finder_(column_applier_, uniform_value_finder_, features_, feature_sizer_)
+    , witness_detector_(constant_candidates_, feature_candidates_, applications_)
+    , primitive_option_finder_(primitive_dispatcher_, primitive_dispatcher_, witness_detector_)
+    , argument_option_finder_(constant_candidates_, feature_candidates_, witness_detector_)
+    , option_chooser_()
+    , argument_chooser_(argument_option_finder_, option_chooser_)
+    , synthesis_starter_(
+          constant_candidates_, feature_candidates_, applications_, constant_candidate_finder_, constant_candidates_,
+          variable_candidate_finder_, feature_candidates_)
     , feature_synthesizer_(
-          candidate_index_, candidate_index_, candidate_index_, variable_candidate_finder_, constant_candidate_finder_,
-          primitive_dispatcher_, primitive_dispatcher_, argument_tuple_enumerator_, app_candidate_finder_,
-          options.max_synthesis_depth)
+          synthesis_starter_, applications_, primitive_option_finder_, option_chooser_, primitive_dispatcher_,
+          argument_chooser_, applications_, constant_candidates_, feature_candidates_, app_candidate_finder_,
+          feature_candidates_, options.max_applications)
     , leaf_detector_(uniform_value_finder_)
     , bin_splitter_(schema_, schema_)
-    , candidate_chooser_()
     , model_builder_(
-          leaf_detector_, feature_synthesizer_, candidate_chooser_, bin_splitter_, variable_candidate_finder_,
-          candidate_chooser_, nodes_, nodes_, nodes_)
+          leaf_detector_, feature_synthesizer_, option_chooser_, bin_splitter_, variable_candidate_finder_,
+          option_chooser_, nodes_, nodes_, nodes_)
     , best_model_tracker_()
     , model_episode_(model_builder_, model_sizer_, best_model_tracker_)
     , feature_evaluator_(primitive_dispatcher_)

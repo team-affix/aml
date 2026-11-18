@@ -36,7 +36,7 @@ ScoutIntegrationTest::ScoutIntegrationTest()
     , suc_ctor(types.declare_ctor(nat, {nat}))
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
-    , options{.max_synthesis_depth = 1, .max_constant_size = 2} {}
+    , options{.max_applications = 1, .max_constant_size = 2} {}
 
 void ScoutIntegrationTest::expect_fit(const scout_runtime& runtime, const bin& training) {
     for (size_t row = 0; row < training.labels.size(); ++row) {

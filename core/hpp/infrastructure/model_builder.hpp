@@ -86,7 +86,7 @@ const model_node* MODEL_BUILDER::build(const bin& data) {
         return make_leaf_.make_leaf(label.value());
     const std::vector<candidate> candidates = synthesize_candidates_.synthesize(data);
     DEBUG_ASSERT(!candidates.empty());
-    return build_match(data, candidates.at(choose_feature_.choose(candidates)));
+    return build_match(data, candidates.at(choose_feature_.choose(candidates.size())));
 }
 
 MODEL_BUILDER_TEMPLATE
@@ -110,7 +110,7 @@ const model_node* MODEL_BUILDER::build_match(const bin& data, const candidate& s
         const var_id first_field = static_cast<var_id>(data.scope.size());
         const std::vector<candidate> fields = find_variable_candidates_.find(child, first_field);
         DEBUG_ASSERT(!fields.empty());
-        branches.push_back(build_match(child, fields.at(choose_field_.choose(fields))));
+        branches.push_back(build_match(child, fields.at(choose_field_.choose(fields.size()))));
     }
     return make_match_.make_match(scrutinee.expression, branches);
 }
