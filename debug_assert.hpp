@@ -3,7 +3,11 @@
 
 #ifdef DEBUG
 #include <stdexcept>
-#define DEBUG_ASSERT(cond) if (!(cond)) throw std::logic_error(#cond)
+#define DEBUG_ASSERT(cond)                                                                 \
+    do {                                                                                   \
+        if (!(cond))                                                                       \
+            throw std::logic_error(#cond);                                                 \
+    } while (0)
 #else
 #define DEBUG_ASSERT(cond) ((void)0)
 #endif
