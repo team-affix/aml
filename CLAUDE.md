@@ -16,7 +16,7 @@ and are minimal in symbolic description length. Fit comes first; among models th
   every row falls into one constructor, funnel into a chosen heterogeneous field that constructor just bound.
 - **Synthesis session (`feature_synthesizer`):** nothing is enumerated exhaustively. Operands are the constants (read
   from `constant_store` by reference, never laid out as columns) then the session's heterogeneous features (the
-  variables first), indexed in that order. Each step chooses stop (option 0) or a primitive with an
+  variables first). `operand_table` alone knows that numbering; both stores also list their positions by type. Each step chooses stop (option 0) or a primitive with an
   application witness (an untried, type-correct operand tuple holding at least one heterogeneous feature), then its
   arguments one at a time, each keeping a witness. A heterogeneous result joins the features. The cap is
   `max_applications` per session; the session also ends when no primitive has a witness.
@@ -67,10 +67,11 @@ equivalence keeps the cheapest feature per column (`cheapest_feature_index`). Ra
 ### Components (one mechanism each)
 
 - Stores: `schema`, `value_pool`, `feature_pool`, `model_node_pool`, `constant_store`, `cheapest_feature_index`
-  (a session's features), `application_log`, `best_model_tracker`, `tree_walker`.
+  (a session's features), `application_log`, `best_model_tracker`, `tree_walker`; `operand_table` is a read-only
+  view over the constant and feature stores.
 - Synthesis: `constant_enumerator` + `constant_seeder`, `synthesis_starter`, `variable_candidate_finder`,
   `witness_detector`, `primitive_option_finder`, `argument_option_finder`, `argument_chooser`,
-  `primitive_dispatcher`, `operand_applier`, `app_candidate_finder`, `feature_synthesizer`.
+  `primitive_dispatcher`, `operand_applier`, `app_candidate_finder`, `primitive_applier`, `feature_synthesizer`.
 - Partition: `leaf_detector`, `uniform_value_finder`, `bin_splitter`, `model_builder`.
 - Choices: `first_option_chooser`, `mcts_option_chooser`; each chooses an index among `option_count` options.
   MCTS sees them as an `option_range` (a count, not a vector).

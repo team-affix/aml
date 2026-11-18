@@ -68,7 +68,8 @@ ConstantSeederTest::ConstantSeederTest()
 
 TEST_F(ConstantSeederTest, EveryEnumeratedValueOfEveryTypeIsInsertedAsAConstant) {
     InSequence order;
-    EXPECT_CALL(insert_constant, insert(constant_operand{.expression = &false_feature, .literal = &falsity, .type = 0}));
+    EXPECT_CALL(insert_constant,
+                insert(constant_operand{.expression = &false_feature, .literal = &falsity, .type = 0}));
     EXPECT_CALL(insert_constant, insert(constant_operand{.expression = &true_feature, .literal = &truth, .type = 0}));
     EXPECT_CALL(insert_constant, insert(constant_operand{.expression = &zero_feature, .literal = &zero, .type = 1}));
     seeder.seed(4);

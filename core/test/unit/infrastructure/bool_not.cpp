@@ -17,7 +17,8 @@ struct BoolNotTest : public ::testing::Test {
     value falsity;
     value truth;
     NiceMock<MockMakeValue> make_value;
-    bool_not<NiceMock<MockMakeValue>> primitive{make_value, boolean_encoding{.type = 5, .false_ctor = 0, .true_ctor = 1}};
+    bool_not<NiceMock<MockMakeValue>> primitive{
+        make_value, boolean_encoding{.type = 5, .false_ctor = 0, .true_ctor = 1}};
 
     void SetUp() override {
         ON_CALL(make_value, make(0, std::vector<const value*>{})).WillByDefault(Return(&falsity));

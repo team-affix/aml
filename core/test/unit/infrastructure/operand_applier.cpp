@@ -7,73 +7,51 @@ using ::testing::_;
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
-using ::testing::ReturnRef;
 
 namespace {
 
-struct MockGetConstants {
-    MOCK_METHOD(const std::vector<constant_operand>&, constants, (), (const));
-};
-
-struct MockGetFeatureCandidates {
-    MOCK_METHOD(const std::vector<candidate>&, candidates, (), (const));
+struct MockGetOperandCell {
+    MOCK_METHOD(const value*, cell, (size_t, size_t), (const));
 };
 
 struct MockApplyPrimitive {
     MOCK_METHOD(const value*, apply, (prim_id, const std::vector<const value*>&), (const));
 };
 
-// Operands: the constant true (0), then features x0 (1) and x1 (2) over three rows.
+// Operand 4 is false then true; operand 7 is true then false.
 struct OperandApplierTest : public ::testing::Test {
     OperandApplierTest();
     value falsity;
     value truth;
-    std::vector<constant_operand> constants;
-    std::vector<candidate> features;
-    NiceMock<MockGetConstants> get_constants;
-    NiceMock<MockGetFeatureCandidates> get_feature_candidates;
+    NiceMock<MockGetOperandCell> get_operand_cell;
     NiceMock<MockApplyPrimitive> apply_primitive;
-    operand_applier<NiceMock<MockGetConstants>, NiceMock<MockGetFeatureCandidates>, NiceMock<MockApplyPrimitive>>
-        applier{get_constants, get_feature_candidates, apply_primitive};
+    operand_applier<NiceMock<MockGetOperandCell>, NiceMock<MockApplyPrimitive>> applier{
+        get_operand_cell, apply_primitive};
 
     void SetUp() override {
-        ON_CALL(get_constants, constants()).WillByDefault(ReturnRef(constants));
-        ON_CALL(get_feature_candidates, candidates()).WillByDefault(ReturnRef(features));
-        ON_CALL(apply_primitive, apply(_, _)).WillByDefault(Return(&falsity));
+        ON_CALL(get_operand_cell, cell(4, 0)).WillByDefault(Return(&falsity));
+        ON_CALL(get_operand_cell, cell(4, 1)).WillByDefault(Return(&truth));
+        ON_CALL(get_operand_cell, cell(7, 0)).WillByDefault(Return(&truth));
+        ON_CALL(get_operand_cell, cell(7, 1)).WillByDefault(Return(&falsity));
     }
 };
 
 OperandApplierTest::OperandApplierTest()
     : falsity{.ctor = 0, .fields = {}}
     , truth{.ctor = 1, .fields = {}}
-    , constants{constant_operand{.expression = nullptr, .literal = &truth, .type = 0}}
-    , features{
-          candidate{.expression = nullptr, .cost = 1,
-                    .observed = typed_column{.type = 0, .cells = {&falsity, &truth, &truth}}},
-          candidate{.expression = nullptr, .cost = 1,
-                    .observed = typed_column{.type = 0, .cells = {&truth, &truth, &falsity}}}}
-    , get_constants()
-    , get_feature_candidates()
+    , get_operand_cell()
     , apply_primitive() {}
 
 }
 
-TEST_F(OperandApplierTest, ThePrimitiveIsAppliedToEachRowsFeatureValues) {
+TEST_F(OperandApplierTest, ThePrimitiveIsAppliedToEachRowsOperandCells) {
     InSequence order;
     EXPECT_CALL(apply_primitive, apply(2, std::vector<const value*>{&falsity, &truth})).WillOnce(Return(&falsity));
-    EXPECT_CALL(apply_primitive, apply(2, std::vector<const value*>{&truth, &truth})).WillOnce(Return(&truth));
-    EXPECT_CALL(apply_primitive, apply(2, std::vector<const value*>{&truth, &falsity})).WillOnce(Return(&falsity));
-    EXPECT_EQ(applier.apply(2, {1, 2}, 3), (column{&falsity, &truth, &falsity}));
-}
-
-TEST_F(OperandApplierTest, AConstantGivesItsLiteralOnEveryRow) {
-    InSequence order;
-    EXPECT_CALL(apply_primitive, apply(2, std::vector<const value*>{&truth, &falsity}));
-    EXPECT_CALL(apply_primitive, apply(2, std::vector<const value*>{&truth, &truth}));
-    EXPECT_CALL(apply_primitive, apply(2, std::vector<const value*>{&truth, &truth}));
-    applier.apply(2, {0, 1}, 3);
+    EXPECT_CALL(apply_primitive, apply(2, std::vector<const value*>{&truth, &falsity})).WillOnce(Return(&truth));
+    EXPECT_EQ(applier.apply(2, {4, 7}, 2), (column{&falsity, &truth}));
 }
 
 TEST_F(OperandApplierTest, NoRowsGiveAnEmptyColumn) {
-    EXPECT_TRUE(applier.apply(0, {1}, 0).empty());
+    EXPECT_CALL(apply_primitive, apply(_, _)).Times(0);
+    EXPECT_TRUE(applier.apply(0, {4}, 0).empty());
 }

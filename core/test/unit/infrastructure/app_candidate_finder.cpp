@@ -7,7 +7,6 @@
 using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::Return;
-using ::testing::ReturnRef;
 
 namespace {
 
@@ -19,12 +18,8 @@ struct MockFindUniformValue {
     MOCK_METHOD(std::optional<const value*>, find, (const column&), (const));
 };
 
-struct MockGetConstants {
-    MOCK_METHOD(const std::vector<constant_operand>&, constants, (), (const));
-};
-
-struct MockGetFeatureCandidates {
-    MOCK_METHOD(const std::vector<candidate>&, candidates, (), (const));
+struct MockGetOperandExpression {
+    MOCK_METHOD(const feature*, expression, (size_t), (const));
 };
 
 struct MockMakeAppFeature {
@@ -38,12 +33,11 @@ struct MockSizeFeature {
 using finder_t = app_candidate_finder<
     NiceMock<MockApplyPrimitiveToOperands>,
     NiceMock<MockFindUniformValue>,
-    NiceMock<MockGetConstants>,
-    NiceMock<MockGetFeatureCandidates>,
+    NiceMock<MockGetOperandExpression>,
     NiceMock<MockMakeAppFeature>,
     NiceMock<MockSizeFeature>>;
 
-// Operands: the constant true (0), then the feature x0 (1). Primitive 2 applied to them over two rows gives a
+// Operand 0 is the constant true and operand 1 the variable x0. Primitive 2 applied to them over two rows gives a
 // heterogeneous result of type 5.
 struct AppCandidateFinderTest : public ::testing::Test {
     AppCandidateFinderTest();
@@ -52,24 +46,20 @@ struct AppCandidateFinderTest : public ::testing::Test {
     feature true_constant;
     feature variable;
     feature application;
-    std::vector<constant_operand> constants;
-    std::vector<candidate> features;
     column result;
     NiceMock<MockApplyPrimitiveToOperands> apply_primitive_to_operands;
     NiceMock<MockFindUniformValue> find_uniform_value;
-    NiceMock<MockGetConstants> get_constants;
-    NiceMock<MockGetFeatureCandidates> get_feature_candidates;
+    NiceMock<MockGetOperandExpression> get_operand_expression;
     NiceMock<MockMakeAppFeature> make_app_feature;
     NiceMock<MockSizeFeature> size_feature;
     finder_t finder{
-        apply_primitive_to_operands, find_uniform_value, get_constants, get_feature_candidates, make_app_feature,
-        size_feature};
+        apply_primitive_to_operands, find_uniform_value, get_operand_expression, make_app_feature, size_feature};
 
     void SetUp() override {
         ON_CALL(apply_primitive_to_operands, apply(2, _, _)).WillByDefault(Return(result));
         ON_CALL(find_uniform_value, find(_)).WillByDefault(Return(std::nullopt));
-        ON_CALL(get_constants, constants()).WillByDefault(ReturnRef(constants));
-        ON_CALL(get_feature_candidates, candidates()).WillByDefault(ReturnRef(features));
+        ON_CALL(get_operand_expression, expression(0)).WillByDefault(Return(&true_constant));
+        ON_CALL(get_operand_expression, expression(1)).WillByDefault(Return(&variable));
         ON_CALL(make_app_feature, make_app(2, std::vector<const feature*>{&true_constant, &variable}))
             .WillByDefault(Return(&application));
         ON_CALL(size_feature, size(&application)).WillByDefault(Return(3));
@@ -82,14 +72,10 @@ AppCandidateFinderTest::AppCandidateFinderTest()
     , true_constant{feature::constant{.literal = &truth}}
     , variable{feature::var{.index = 0}}
     , application{feature::app{.prim = 2, .args = {&true_constant, &variable}}}
-    , constants{constant_operand{.expression = &true_constant, .literal = &truth, .type = 0}}
-    , features{candidate{
-          .expression = &variable, .cost = 1, .observed = typed_column{.type = 0, .cells = {&falsity, &truth}}}}
     , result{&falsity, &truth}
     , apply_primitive_to_operands()
     , find_uniform_value()
-    , get_constants()
-    , get_feature_candidates()
+    , get_operand_expression()
     , make_app_feature()
     , size_feature() {}
 

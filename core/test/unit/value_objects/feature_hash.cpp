@@ -35,5 +35,6 @@ TEST_F(FeatureHashTest, AVariableAndAConstantHashApart) {
 
 TEST_F(FeatureHashTest, DifferentConstantsHashApart) {
     const value one{.ctor = 1, .fields = {&zero}};
-    EXPECT_NE(hasher(feature{feature::constant{.literal = &zero}}), hasher(feature{feature::constant{.literal = &one}}));
+    EXPECT_NE(hasher(feature{feature::constant{.literal = &zero}}),
+              hasher(feature{feature::constant{.literal = &one}}));
 }

@@ -23,12 +23,12 @@ razor_manifest::razor_manifest(
     , variable_candidate_finder_(features_, feature_sizer_, uniform_value_finder_)
     , constant_enumerator_(schema_, schema_, values_)
     , constant_seeder_(schema_, constant_enumerator_, features_, constants_)
-    , operand_applier_(constants_, feature_candidates_, primitive_dispatcher_)
-    , app_candidate_finder_(
-          operand_applier_, uniform_value_finder_, constants_, feature_candidates_, features_, feature_sizer_)
-    , witness_detector_(constants_, feature_candidates_, applications_)
+    , operand_table_(constants_, constants_, feature_candidates_, feature_candidates_)
+    , operand_applier_(operand_table_, primitive_dispatcher_)
+    , app_candidate_finder_(operand_applier_, uniform_value_finder_, operand_table_, features_, feature_sizer_)
+    , witness_detector_(operand_table_, operand_table_, operand_table_, applications_)
     , primitive_option_finder_(primitive_dispatcher_, primitive_dispatcher_, witness_detector_)
-    , argument_option_finder_(constants_, feature_candidates_, witness_detector_)
+    , argument_option_finder_(operand_table_, operand_table_, witness_detector_)
     , visits_()
     , rewards_()
     , random_(options.seed)
@@ -48,11 +48,12 @@ razor_manifest::razor_manifest(
     , terminator_(backprop_path_, value_creditor_, backprop_path_, backprop_path_, cursor_, in_rollout_, k_root)
     , option_chooser_(mcts_chooser_)
     , argument_chooser_(argument_option_finder_, option_chooser_)
+    , primitive_applier_(
+          primitive_dispatcher_, argument_chooser_, applications_, app_candidate_finder_, feature_candidates_)
     , synthesis_starter_(feature_candidates_, applications_, variable_candidate_finder_, feature_candidates_)
     , feature_synthesizer_(
-          synthesis_starter_, applications_, primitive_option_finder_, option_chooser_, primitive_dispatcher_,
-          argument_chooser_, applications_, feature_candidates_, app_candidate_finder_, feature_candidates_,
-          options.max_applications)
+          synthesis_starter_, applications_, primitive_option_finder_, option_chooser_, primitive_applier_,
+          feature_candidates_, options.max_applications)
     , leaf_detector_(uniform_value_finder_)
     , bin_splitter_(schema_, schema_)
     , model_builder_(

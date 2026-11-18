@@ -3,66 +3,56 @@
 
 #include <cstddef>
 #include <vector>
-#include "value_objects/candidate.hpp"
-#include "value_objects/constant_operand.hpp"
 #include "value_objects/prim_id.hpp"
 #include "value_objects/type_id.hpp"
 #include "debug_assert.hpp"
 
-// Detects an application witness: an argument tuple for a primitive that extends a prefix of operand indices,
-// type-checks, holds at least one heterogeneous feature, and has not been tried. Operands are the session's constants
-// followed by its features; every feature is heterogeneous and every constant is not. Tuples are counted, not listed.
-template<typename IGetConstants, typename IGetFeatureCandidates, typename ICountTriedApplications>
+// Detects an application witness: an argument tuple for a primitive that extends a prefix of operands, type-checks,
+// holds at least one feature (so is heterogeneous), and has not been tried. Tuples are counted per argument type,
+// never listed.
+template<
+    typename ICheckFeature,
+    typename ICountOperandsOfType,
+    typename ICountConstantsOfType,
+    typename ICountTriedApplications>
 struct witness_detector {
     witness_detector(
-        IGetConstants& get_constants,
-        IGetFeatureCandidates& get_feature_candidates,
+        ICheckFeature& check_feature,
+        ICountOperandsOfType& count_operands_of_type,
+        ICountConstantsOfType& count_constants_of_type,
         ICountTriedApplications& count_tried_applications);
     bool detect(prim_id prim, const std::vector<type_id>& arg_types, const std::vector<size_t>& prefix) const;
 private:
-    IGetConstants& get_constants_;
-    IGetFeatureCandidates& get_feature_candidates_;
+    ICheckFeature& check_feature_;
+    ICountOperandsOfType& count_operands_of_type_;
+    ICountConstantsOfType& count_constants_of_type_;
     ICountTriedApplications& count_tried_applications_;
 };
 
-#define WITNESS_DETECTOR_TEMPLATE template<typename IGC, typename IGFC, typename ICTA>
-#define WITNESS_DETECTOR          witness_detector<IGC, IGFC, ICTA>
+#define WITNESS_DETECTOR_TEMPLATE template<typename ICF, typename ICOT, typename ICCT, typename ICTA>
+#define WITNESS_DETECTOR          witness_detector<ICF, ICOT, ICCT, ICTA>
 
 WITNESS_DETECTOR_TEMPLATE
 WITNESS_DETECTOR::witness_detector(
-    IGC& get_constants, IGFC& get_feature_candidates, ICTA& count_tried_applications)
-    : get_constants_(get_constants)
-    , get_feature_candidates_(get_feature_candidates)
+    ICF& check_feature, ICOT& count_operands_of_type, ICCT& count_constants_of_type, ICTA& count_tried_applications)
+    : check_feature_(check_feature)
+    , count_operands_of_type_(count_operands_of_type)
+    , count_constants_of_type_(count_constants_of_type)
     , count_tried_applications_(count_tried_applications) {}
 
 WITNESS_DETECTOR_TEMPLATE
 bool WITNESS_DETECTOR::detect(
     prim_id prim, const std::vector<type_id>& arg_types, const std::vector<size_t>& prefix) const {
     DEBUG_ASSERT(prefix.size() <= arg_types.size());
-    const std::vector<constant_operand>& constants = get_constants_.constants();
-    const std::vector<candidate>& features = get_feature_candidates_.candidates();
-
     bool prefix_heterogeneous = false;
     for (const size_t operand : prefix)
-        prefix_heterogeneous = prefix_heterogeneous || operand >= constants.size();
+        prefix_heterogeneous = prefix_heterogeneous || check_feature_.is_feature(operand);
 
     size_t completions = 1;
     size_t constant_completions = 1;
     for (size_t position = prefix.size(); position < arg_types.size(); ++position) {
-        size_t constant_count = 0;
-        for (const constant_operand& constant : constants) {
-            if (constant.type != arg_types[position])
-                continue;
-            ++constant_count;
-        }
-        size_t feature_count = 0;
-        for (const candidate& held : features) {
-            if (held.observed.type != arg_types[position])
-                continue;
-            ++feature_count;
-        }
-        completions *= constant_count + feature_count;
-        constant_completions *= constant_count;
+        completions *= count_operands_of_type_.count_of_type(arg_types[position]);
+        constant_completions *= count_constants_of_type_.constant_count_of_type(arg_types[position]);
     }
 
     const size_t useful = prefix_heterogeneous ? completions : completions - constant_completions;

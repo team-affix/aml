@@ -6,6 +6,7 @@ namespace {
 struct CheapestFeatureIndexTest : public ::testing::Test {
     CheapestFeatureIndexTest();
     candidate make(const feature* expression, size_t cost, const column& cells);
+    candidate make_typed(const feature* expression, type_id type, const column& cells);
     value falsity;
     value truth;
     feature first;
@@ -22,6 +23,10 @@ CheapestFeatureIndexTest::CheapestFeatureIndexTest()
 
 candidate CheapestFeatureIndexTest::make(const feature* expression, size_t cost, const column& cells) {
     return candidate{.expression = expression, .cost = cost, .observed = typed_column{.type = 0, .cells = cells}};
+}
+
+candidate CheapestFeatureIndexTest::make_typed(const feature* expression, type_id type, const column& cells) {
+    return candidate{.expression = expression, .cost = 1, .observed = typed_column{.type = type, .cells = cells}};
 }
 
 }
@@ -52,4 +57,25 @@ TEST_F(CheapestFeatureIndexTest, ClearForgetsEveryCandidate) {
     index.clear();
     index.try_insert(make(&second, 5, {&falsity, &truth}));
     EXPECT_EQ(index.candidates(), (std::vector<candidate>{make(&second, 5, {&falsity, &truth})}));
+}
+
+TEST_F(CheapestFeatureIndexTest, EachTypeListsItsCandidatesPositionsInOrder) {
+    index.try_insert(make_typed(&first, 2, {&falsity, &truth}));
+    index.try_insert(make_typed(&second, 0, {&truth, &falsity}));
+    index.try_insert(make_typed(&first, 2, {&truth, &truth}));
+    EXPECT_EQ(index.features_of_type(0), (std::vector<size_t>{1}));
+    EXPECT_EQ(index.features_of_type(2), (std::vector<size_t>{0, 2}));
+    EXPECT_TRUE(index.features_of_type(1).empty());
+}
+
+TEST_F(CheapestFeatureIndexTest, AReplacementKeepsItsPositionUnderItsType) {
+    index.try_insert(make(&first, 3, {&falsity, &truth}));
+    index.try_insert(make(&second, 1, {&falsity, &truth}));
+    EXPECT_EQ(index.features_of_type(0), (std::vector<size_t>{0}));
+}
+
+TEST_F(CheapestFeatureIndexTest, ClearForgetsEveryTypesPositions) {
+    index.try_insert(make(&first, 3, {&falsity, &truth}));
+    index.clear();
+    EXPECT_TRUE(index.features_of_type(0).empty());
 }

@@ -14,8 +14,10 @@
 #include "infrastructure/feature_sizer.hpp"
 #include "infrastructure/feature_synthesizer.hpp"
 #include "infrastructure/operand_applier.hpp"
+#include "infrastructure/operand_table.hpp"
 #include "infrastructure/primitive.hpp"
 #include "infrastructure/primitive_dispatcher.hpp"
+#include "infrastructure/primitive_applier.hpp"
 #include "infrastructure/primitive_option_finder.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/synthesis_starter.hpp"
@@ -49,20 +51,24 @@ using primitive_dispatcher_t = primitive_dispatcher<primitive>;
 using variable_candidate_finder_t = variable_candidate_finder<feature_pool, feature_sizer_t, uniform_value_finder>;
 using constant_enumerator_t = constant_enumerator<schema, schema, value_pool>;
 using constant_seeder_t = constant_seeder<schema, constant_enumerator_t, feature_pool, constant_store>;
-using operand_applier_t = operand_applier<constant_store, cheapest_feature_index, primitive_dispatcher_t>;
-using app_candidate_finder_t = app_candidate_finder<
-    operand_applier_t, uniform_value_finder, constant_store, cheapest_feature_index, feature_pool, feature_sizer_t>;
-using witness_detector_t = witness_detector<constant_store, cheapest_feature_index, application_log>;
+using operand_table_t =
+    operand_table<constant_store, constant_store, cheapest_feature_index, cheapest_feature_index>;
+using operand_applier_t = operand_applier<operand_table_t, primitive_dispatcher_t>;
+using app_candidate_finder_t =
+    app_candidate_finder<operand_applier_t, uniform_value_finder, operand_table_t, feature_pool, feature_sizer_t>;
+using witness_detector_t = witness_detector<operand_table_t, operand_table_t, operand_table_t, application_log>;
 using primitive_option_finder_t =
     primitive_option_finder<primitive_dispatcher_t, primitive_dispatcher_t, witness_detector_t>;
 using argument_option_finder_t =
-    argument_option_finder<constant_store, cheapest_feature_index, witness_detector_t>;
+    argument_option_finder<operand_table_t, operand_table_t, witness_detector_t>;
 using argument_chooser_t = argument_chooser<argument_option_finder_t, chooser_t>;
+using primitive_applier_t = primitive_applier<
+    primitive_dispatcher_t, argument_chooser_t, application_log, app_candidate_finder_t, cheapest_feature_index>;
 using synthesis_starter_t =
     synthesis_starter<cheapest_feature_index, application_log, variable_candidate_finder_t, cheapest_feature_index>;
 using feature_synthesizer_t = feature_synthesizer<
-    synthesis_starter_t, application_log, primitive_option_finder_t, chooser_t, primitive_dispatcher_t,
-    argument_chooser_t, application_log, cheapest_feature_index, app_candidate_finder_t, cheapest_feature_index>;
+    synthesis_starter_t, application_log, primitive_option_finder_t, chooser_t, primitive_applier_t,
+    cheapest_feature_index>;
 
 // XOR over two boolean inputs, with boolean equality as the only primitive and false and true as the constants. The
 // operands are false (0), true (1), x0 (2) and x1 (3) until something is derived.
@@ -89,6 +95,7 @@ struct FeatureSynthesisIntegrationTest : public ::testing::Test {
     variable_candidate_finder_t variable_candidate_finder;
     constant_enumerator_t constant_enumerator;
     constant_seeder_t constant_seeder;
+    operand_table_t operand_table;
     operand_applier_t operand_applier;
     app_candidate_finder_t app_candidate_finder;
     witness_detector_t witness_detector;
@@ -96,6 +103,7 @@ struct FeatureSynthesisIntegrationTest : public ::testing::Test {
     argument_option_finder_t argument_option_finder;
     chooser_t chooser;
     argument_chooser_t argument_chooser;
+    primitive_applier_t primitive_applier;
     synthesis_starter_t synthesis_starter;
 };
 
@@ -123,21 +131,23 @@ FeatureSynthesisIntegrationTest::FeatureSynthesisIntegrationTest()
     , variable_candidate_finder(features, feature_sizes, uniform_values)
     , constant_enumerator(types, types, values)
     , constant_seeder(types, constant_enumerator, features, constants)
-    , operand_applier(constants, feature_candidates, primitives)
-    , app_candidate_finder(operand_applier, uniform_values, constants, feature_candidates, features, feature_sizes)
-    , witness_detector(constants, feature_candidates, applications)
+    , operand_table(constants, constants, feature_candidates, feature_candidates)
+    , operand_applier(operand_table, primitives)
+    , app_candidate_finder(operand_applier, uniform_values, operand_table, features, feature_sizes)
+    , witness_detector(operand_table, operand_table, operand_table, applications)
     , primitive_option_finder(primitives, primitives, witness_detector)
-    , argument_option_finder(constants, feature_candidates, witness_detector)
+    , argument_option_finder(operand_table, operand_table, witness_detector)
     , chooser()
     , argument_chooser(argument_option_finder, chooser)
+    , primitive_applier(primitives, argument_chooser, applications, app_candidate_finder, feature_candidates)
     , synthesis_starter(feature_candidates, applications, variable_candidate_finder, feature_candidates) {
     constant_seeder.seed(1);
 }
 
 feature_synthesizer_t FeatureSynthesisIntegrationTest::make(size_t max_applications) {
     return feature_synthesizer_t{
-        synthesis_starter, applications, primitive_option_finder, chooser, primitives, argument_chooser,
-        applications, feature_candidates, app_candidate_finder, feature_candidates, max_applications};
+        synthesis_starter, applications, primitive_option_finder, chooser, primitive_applier, feature_candidates,
+        max_applications};
 }
 
 }

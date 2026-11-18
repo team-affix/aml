@@ -24,8 +24,10 @@
 #include "infrastructure/model_node_pool.hpp"
 #include "infrastructure/model_sizer.hpp"
 #include "infrastructure/operand_applier.hpp"
+#include "infrastructure/operand_table.hpp"
 #include "infrastructure/primitive.hpp"
 #include "infrastructure/primitive_dispatcher.hpp"
+#include "infrastructure/primitive_applier.hpp"
 #include "infrastructure/primitive_option_finder.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/synthesis_starter.hpp"
@@ -57,18 +59,23 @@ struct scout_manifest {
     struct constant_seeder_t : constant_seeder<schema, constant_enumerator_t, feature_pool, constant_store> {
         using constant_seeder<schema, constant_enumerator_t, feature_pool, constant_store>::constant_seeder;
     };
-    struct operand_applier_t : operand_applier<constant_store, cheapest_feature_index, primitive_dispatcher_t> {
-        using operand_applier<constant_store, cheapest_feature_index, primitive_dispatcher_t>::operand_applier;
+    struct operand_table_t
+        : operand_table<constant_store, constant_store, cheapest_feature_index, cheapest_feature_index> {
+        using operand_table<
+            constant_store, constant_store, cheapest_feature_index, cheapest_feature_index>::operand_table;
+    };
+    struct operand_applier_t : operand_applier<operand_table_t, primitive_dispatcher_t> {
+        using operand_applier<operand_table_t, primitive_dispatcher_t>::operand_applier;
     };
     struct app_candidate_finder_t : app_candidate_finder<
-        operand_applier_t, uniform_value_finder, constant_store, cheapest_feature_index, feature_pool,
-        feature_sizer_t> {
+        operand_applier_t, uniform_value_finder, operand_table_t, feature_pool, feature_sizer_t> {
         using app_candidate_finder<
-            operand_applier_t, uniform_value_finder, constant_store, cheapest_feature_index, feature_pool,
+            operand_applier_t, uniform_value_finder, operand_table_t, feature_pool,
             feature_sizer_t>::app_candidate_finder;
     };
-    struct witness_detector_t : witness_detector<constant_store, cheapest_feature_index, application_log> {
-        using witness_detector<constant_store, cheapest_feature_index, application_log>::witness_detector;
+    struct witness_detector_t
+        : witness_detector<operand_table_t, operand_table_t, operand_table_t, application_log> {
+        using witness_detector<operand_table_t, operand_table_t, operand_table_t, application_log>::witness_detector;
     };
     struct primitive_option_finder_t
         : primitive_option_finder<primitive_dispatcher_t, primitive_dispatcher_t, witness_detector_t> {
@@ -76,12 +83,17 @@ struct scout_manifest {
             primitive_dispatcher_t, primitive_dispatcher_t, witness_detector_t>::primitive_option_finder;
     };
     struct argument_option_finder_t
-        : argument_option_finder<constant_store, cheapest_feature_index, witness_detector_t> {
-        using argument_option_finder<
-            constant_store, cheapest_feature_index, witness_detector_t>::argument_option_finder;
+        : argument_option_finder<operand_table_t, operand_table_t, witness_detector_t> {
+        using argument_option_finder<operand_table_t, operand_table_t, witness_detector_t>::argument_option_finder;
     };
     struct argument_chooser_t : argument_chooser<argument_option_finder_t, first_option_chooser> {
         using argument_chooser<argument_option_finder_t, first_option_chooser>::argument_chooser;
+    };
+    struct primitive_applier_t : primitive_applier<
+        primitive_dispatcher_t, argument_chooser_t, application_log, app_candidate_finder_t, cheapest_feature_index> {
+        using primitive_applier<
+            primitive_dispatcher_t, argument_chooser_t, application_log, app_candidate_finder_t,
+            cheapest_feature_index>::primitive_applier;
     };
     struct synthesis_starter_t : synthesis_starter<
         cheapest_feature_index, application_log, variable_candidate_finder_t, cheapest_feature_index> {
@@ -90,13 +102,11 @@ struct scout_manifest {
             cheapest_feature_index>::synthesis_starter;
     };
     struct feature_synthesizer_t : feature_synthesizer<
-        synthesis_starter_t, application_log, primitive_option_finder_t, first_option_chooser,
-        primitive_dispatcher_t, argument_chooser_t, application_log, cheapest_feature_index, app_candidate_finder_t,
+        synthesis_starter_t, application_log, primitive_option_finder_t, first_option_chooser, primitive_applier_t,
         cheapest_feature_index> {
         using feature_synthesizer<
-            synthesis_starter_t, application_log, primitive_option_finder_t, first_option_chooser,
-            primitive_dispatcher_t, argument_chooser_t, application_log, cheapest_feature_index,
-            app_candidate_finder_t, cheapest_feature_index>::feature_synthesizer;
+            synthesis_starter_t, application_log, primitive_option_finder_t, first_option_chooser, primitive_applier_t,
+            cheapest_feature_index>::feature_synthesizer;
     };
     struct leaf_detector_t : leaf_detector<uniform_value_finder> {
         using leaf_detector<uniform_value_finder>::leaf_detector;
@@ -139,6 +149,7 @@ struct scout_manifest {
     variable_candidate_finder_t variable_candidate_finder_;
     constant_enumerator_t       constant_enumerator_;
     constant_seeder_t           constant_seeder_;
+    operand_table_t             operand_table_;
     operand_applier_t           operand_applier_;
     app_candidate_finder_t      app_candidate_finder_;
     witness_detector_t          witness_detector_;
@@ -146,6 +157,7 @@ struct scout_manifest {
     argument_option_finder_t    argument_option_finder_;
     first_option_chooser        option_chooser_;
     argument_chooser_t          argument_chooser_;
+    primitive_applier_t         primitive_applier_;
     synthesis_starter_t         synthesis_starter_;
     feature_synthesizer_t       feature_synthesizer_;
     leaf_detector_t             leaf_detector_;

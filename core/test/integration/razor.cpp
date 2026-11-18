@@ -39,7 +39,8 @@ RazorIntegrationTest::RazorIntegrationTest()
     , suc_ctor(types.declare_ctor(nat, {nat}))
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
-    , bool_equality(values, boolean, boolean_encoding{.type = boolean, .false_ctor = false_ctor, .true_ctor = true_ctor})
+    , bool_equality(
+          values, boolean, boolean_encoding{.type = boolean, .false_ctor = false_ctor, .true_ctor = true_ctor})
     , options{.max_applications = 2, .max_constant_size = 1, .exploration_constant = 5.0, .seed = 7} {}
 
 void RazorIntegrationTest::expect_fit(const razor_runtime& runtime, const bin& training) {
