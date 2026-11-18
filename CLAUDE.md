@@ -1,0 +1,112 @@
+# AML — project memory for Claude Code
+
+## What this is
+
+AML (abstractive machine learning) learns models of noiseless, functional data that fit every data point exactly
+and are minimal in symbolic description length. Fit comes first; among models that fit, cheaper is better.
+
+- **Data:** each data point is an input tuple (bound to variables x0..xn-1) and a label. Types are monomorphic
+  algebraic data types; values are interned constructor terms.
+- **Features:** a variable, a primitive application, or a constant. Primitives are native C++ structs with a fixed
+  signature, and they are total. A feature is heterogeneous over a bin when its values there are not all equal.
+- **Model:** three node types (`model_node`): `match` (an exhaustive one-layer case on a feature; each branch sees
+  its constructor's fields bound as the next variables), `leaf` (a constant label), `empty` (no data; infers nothing).
+- **Learning (`model_builder`):** an empty bin becomes `empty`, a bin whose labels agree becomes a `leaf`, and any
+  other bin is partitioned: synthesize its heterogeneous features bottom-up, choose one, match on it; while every
+  row falls into one constructor, funnel into a chosen heterogeneous field that constructor just bound.
+- **Cost:** a match costs 1 + its scrutinee's size, a leaf its label's size, empty 0. A feature's size is 1 per
+  variable and per primitive application, and a constant's own size.
+- Design doc: "Partition Model: Structure" (Claude Doc, https://claude.ai/artifact/H1DWSUimtzBz38G4nrhi7e).
+
+Only `core/` exists. There is no CLI or parser yet; tests build their data in C++.
+
+## Layout
+
+```
+core/hpp/{infrastructure,value_objects}   headers   (behavior types | plain data)
+core/cpp/{infrastructure,value_objects}   .cpp for non-templated types
+core/test/{unit,integration}, main.cpp    GTest/GMock
+mcts/ googletest/                          git submodules, not ours to edit
+debug_assert.hpp                           DEBUG_ASSERT(cond): throws std::logic_error under -DDEBUG
+docs/                                      design notes (see docs/continuous-documentation.md)
+```
+
+## Architecture
+
+### Layering
+
+```
+<solver>_runtime        core/: non-templated facade (.hpp/.cpp): next(), best_model(), best_cost(), infer().
+                        Owns exactly one manifest_.
+  <solver>_manifest     composition root: names the component types, owns every component by value,
+                        wires them through constructor refs
+    components          small templated infra types; each depends only on the capabilities it calls
+```
+
+- Manifests and runtimes are named after their solver, never after the project. Solver names are short, one word,
+  and don't describe the mechanism.
+- When you add a solver, add a new manifest + runtime instead of changing an existing one. Duplicate wiring
+  across manifests if needed.
+- Solvers so far:
+  - **Scout** (`scout_*`): one episode, the first candidate at every choice.
+  - **Razor** (`razor_*`): MCTS (`monte_carlo::uct_value_manifest` from the `mcts` submodule) over every choice;
+    each episode builds a fresh model and is rewarded with its negated cost.
+
+### Per-bin columns
+
+A `bin` is columns aligned by row: `scope[v]` is variable v's column (inputs first, then fields bound by the
+matches above), and `labels`. Synthesis applies primitives row-wise to columns (`column_applier`); observational
+equivalence keeps the cheapest feature per column (`cheapest_feature_index`). Raw data points are never re-read.
+
+### Components (one mechanism each)
+
+- Stores: `schema`, `value_pool`, `feature_pool`, `model_node_pool`, `constant_store`, `cheapest_feature_index`,
+  `best_model_tracker`, `tree_walker`.
+- Synthesis: `variable_candidate_finder`, `constant_enumerator` + `constant_seeder`, `primitive_dispatcher`,
+  `column_applier`, `argument_tuple_enumerator`, `feature_synthesizer`.
+- Partition: `leaf_detector`, `uniform_value_finder`, `bin_splitter`, `model_builder`.
+- Choices: `first_candidate_chooser`, `mcts_candidate_chooser`.
+- Cost and inference: `value_sizer`, `feature_sizer`, `model_sizer`, `feature_evaluator`, `model_evaluator`.
+- Episodes: `model_episode`, `mcts_episode`.
+- Primitives: `bool_not`, `bool_and`, `bool_or`, `value_equality`, `nat_add`; `primitive` is the variant of
+  pointers to them that solvers take.
+
+## Build & test
+
+- Iterate with `make core_debug_fast && ./build/core_debug_fast` (`-DDEBUG -O3`). Use `--gtest_filter=...`.
+- The makefile `find`s every `.cpp` under `core/cpp`, `core/test` and `mcts/core/cpp`.
+  **A new file is picked up automatically, so don't edit the makefile to register it.**
+- CI (`.github/workflows/ci.yml`) builds and runs `core_debug_fast`.
+
+## Code style — the rules
+
+The detailed rules live in `.claude/rules/*.md` (copied from Atlas) and load automatically every session.
+
+Core of it in one breath: simplest thing that works. `struct` only. Collaborators are injected **by reference as
+template params named per invoked capability**. The only inheritance is the manifest naming trick. No lambdas
+(except a genuinely generic `std::visit`) or `std::function`, no overloads, no default args, no default member
+initializers. Every infrastructure struct supports one mechanism: a store, or one job; extra behavior goes into
+another struct.
+
+## Conventions observed in the code
+
+- Out-of-line template definitions use a `X_TEMPLATE` / `X` macro pair, `#undef`'d at the end of the header.
+- Manifests name their component types as nested structs that inherit the instantiation
+  (`struct leaf_detector_t : leaf_detector<...> { using leaf_detector<...>::leaf_detector; };`).
+- Constructor init lists put the comma first. Value objects use `auto operator<=>(const T&) const = default;` and
+  tests build them with designated initializers. Ids are aliases in their own headers (`type_id`, `ctor_id`, ...).
+- `std::optional` is checked with `.has_value()` and read with `.value()`. Locals are `const` wherever possible.
+- Tests: mocks and the fixture go in an anonymous namespace; NiceMock by default. Once a method has any
+  `EXPECT_CALL`, add a catch-all `EXPECT_CALL(..., method(_)).Times(AnyNumber())` before the specific ones.
+- Keep lines to about 120 columns.
+
+## Working agreements
+
+- **Don't create files unless asked.** Use the scratchpad for notes.
+- When asked only to write tests, **don't touch non-test source**. Never weaken or delete a test to make it pass.
+- New public behavior needs a unit test (one real SUT, everything else mocked). Add an integration test only when
+  correctness depends on real components interacting.
+- Docs: follow `docs/continuous-documentation.md`. Write down only what was stated, and ask instead of guessing.
+- Be terse.
+- Git: commit messages are short, lowercase, past tense. Branches use `feature/`, `enhancement/`, `bug-fix/`
+  prefixes. Default branch is `master`.
