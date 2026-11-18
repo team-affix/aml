@@ -4,11 +4,13 @@
 #include <random>
 #include <unordered_map>
 #include <vector>
+#include "infrastructure/app_candidate_finder.hpp"
 #include "infrastructure/argument_tuple_enumerator.hpp"
 #include "infrastructure/best_model_tracker.hpp"
 #include "infrastructure/bin_splitter.hpp"
 #include "infrastructure/cheapest_feature_index.hpp"
 #include "infrastructure/column_applier.hpp"
+#include "infrastructure/constant_candidate_finder.hpp"
 #include "infrastructure/constant_enumerator.hpp"
 #include "infrastructure/constant_seeder.hpp"
 #include "infrastructure/constant_store.hpp"
@@ -134,14 +136,22 @@ struct razor_manifest {
     struct constant_seeder_t : constant_seeder<schema, constant_enumerator_t, feature_pool, constant_store> {
         using constant_seeder<schema, constant_enumerator_t, feature_pool, constant_store>::constant_seeder;
     };
+    struct constant_candidate_finder_t : constant_candidate_finder<constant_store, feature_sizer_t> {
+        using constant_candidate_finder<constant_store, feature_sizer_t>::constant_candidate_finder;
+    };
+    struct app_candidate_finder_t
+        : app_candidate_finder<column_applier_t, uniform_value_finder, feature_pool, feature_sizer_t> {
+        using app_candidate_finder<
+            column_applier_t, uniform_value_finder, feature_pool, feature_sizer_t>::app_candidate_finder;
+    };
     struct feature_synthesizer_t : feature_synthesizer<
         cheapest_feature_index, cheapest_feature_index, cheapest_feature_index, variable_candidate_finder_t,
-        constant_store, primitive_dispatcher_t, primitive_dispatcher_t, argument_tuple_enumerator, column_applier_t,
-        uniform_value_finder, feature_pool, feature_sizer_t> {
+        constant_candidate_finder_t, primitive_dispatcher_t, primitive_dispatcher_t, argument_tuple_enumerator,
+        app_candidate_finder_t> {
         using feature_synthesizer<
             cheapest_feature_index, cheapest_feature_index, cheapest_feature_index, variable_candidate_finder_t,
-            constant_store, primitive_dispatcher_t, primitive_dispatcher_t, argument_tuple_enumerator,
-            column_applier_t, uniform_value_finder, feature_pool, feature_sizer_t>::feature_synthesizer;
+            constant_candidate_finder_t, primitive_dispatcher_t, primitive_dispatcher_t, argument_tuple_enumerator,
+            app_candidate_finder_t>::feature_synthesizer;
     };
     struct leaf_detector_t : leaf_detector<uniform_value_finder> {
         using leaf_detector<uniform_value_finder>::leaf_detector;
@@ -192,6 +202,8 @@ struct razor_manifest {
     variable_candidate_finder_t  variable_candidate_finder_;
     constant_enumerator_t        constant_enumerator_;
     constant_seeder_t            constant_seeder_;
+    constant_candidate_finder_t  constant_candidate_finder_;
+    app_candidate_finder_t       app_candidate_finder_;
     feature_synthesizer_t        feature_synthesizer_;
     leaf_detector_t              leaf_detector_;
     bin_splitter_t               bin_splitter_;

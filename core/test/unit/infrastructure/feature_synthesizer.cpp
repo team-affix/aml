@@ -31,8 +31,8 @@ struct MockFindVariableCandidates {
     MOCK_METHOD(std::vector<candidate>, find, (const bin&, var_id), (const));
 };
 
-struct MockGetConstants {
-    MOCK_METHOD(const std::vector<constant_operand>&, constants, (), (const));
+struct MockFindConstantCandidates {
+    MOCK_METHOD(std::vector<candidate>, find, (const bin&), (const));
 };
 
 struct MockGetPrimitiveCount {
@@ -51,20 +51,8 @@ struct MockEnumerateArgumentTuples {
         (const));
 };
 
-struct MockApplyPrimitiveToColumns {
-    MOCK_METHOD(column, apply, (prim_id, const std::vector<const column*>&), (const));
-};
-
-struct MockFindUniformValue {
-    MOCK_METHOD(std::optional<const value*>, find, (const column&), (const));
-};
-
-struct MockMakeAppFeature {
-    MOCK_METHOD(const feature*, make_app, (prim_id, const std::vector<const feature*>&));
-};
-
-struct MockSizeFeature {
-    MOCK_METHOD(size_t, size, (const feature*), (const));
+struct MockFindAppCandidate {
+    MOCK_METHOD(std::optional<candidate>, find, (prim_id, type_id, const std::vector<const candidate*>&));
 };
 
 using synthesizer_t = feature_synthesizer<
@@ -72,16 +60,13 @@ using synthesizer_t = feature_synthesizer<
     NiceMock<MockTryInsertCandidate>,
     NiceMock<MockGetCandidates>,
     NiceMock<MockFindVariableCandidates>,
-    NiceMock<MockGetConstants>,
+    NiceMock<MockFindConstantCandidates>,
     NiceMock<MockGetPrimitiveCount>,
     NiceMock<MockGetPrimitiveSignature>,
     NiceMock<MockEnumerateArgumentTuples>,
-    NiceMock<MockApplyPrimitiveToColumns>,
-    NiceMock<MockFindUniformValue>,
-    NiceMock<MockMakeAppFeature>,
-    NiceMock<MockSizeFeature>>;
+    NiceMock<MockFindAppCandidate>>;
 
-// One boolean input x0 over two rows, the constant true, and one unary boolean primitive.
+// One boolean input x0 over two rows, the constant true, and one unary boolean primitive of result type 4.
 struct FeatureSynthesizerTest : public ::testing::Test {
     FeatureSynthesizerTest();
     synthesizer_t make(size_t max_depth);
@@ -95,36 +80,28 @@ struct FeatureSynthesizerTest : public ::testing::Test {
     candidate constant_candidate;
     candidate application_candidate;
     std::vector<candidate> found;
-    std::vector<constant_operand> constants;
     primitive_signature signature;
     NiceMock<MockClearCandidates> clear_candidates;
     NiceMock<MockTryInsertCandidate> try_insert_candidate;
     NiceMock<MockGetCandidates> get_candidates;
     NiceMock<MockFindVariableCandidates> find_variable_candidates;
-    NiceMock<MockGetConstants> get_constants;
+    NiceMock<MockFindConstantCandidates> find_constant_candidates;
     NiceMock<MockGetPrimitiveCount> get_primitive_count;
     NiceMock<MockGetPrimitiveSignature> get_primitive_signature;
     NiceMock<MockEnumerateArgumentTuples> enumerate_argument_tuples;
-    NiceMock<MockApplyPrimitiveToColumns> apply_primitive_to_columns;
-    NiceMock<MockFindUniformValue> find_uniform_value;
-    NiceMock<MockMakeAppFeature> make_app_feature;
-    NiceMock<MockSizeFeature> size_feature;
+    NiceMock<MockFindAppCandidate> find_app_candidate;
 
     void SetUp() override {
         ON_CALL(get_candidates, candidates()).WillByDefault(ReturnRef(found));
         ON_CALL(find_variable_candidates, find(data, 0))
             .WillByDefault(Return(std::vector<candidate>{variable_candidate}));
-        ON_CALL(get_constants, constants()).WillByDefault(ReturnRef(constants));
+        ON_CALL(find_constant_candidates, find(data))
+            .WillByDefault(Return(std::vector<candidate>{constant_candidate}));
         ON_CALL(get_primitive_count, count()).WillByDefault(Return(1));
         ON_CALL(get_primitive_signature, signature(0)).WillByDefault(Return(signature));
         ON_CALL(enumerate_argument_tuples, enumerate(_, _, _, _))
             .WillByDefault(Return(std::vector<std::vector<size_t>>{{1}}));
-        ON_CALL(apply_primitive_to_columns, apply(0, _)).WillByDefault(Return(column{&truth, &falsity}));
-        ON_CALL(find_uniform_value, find(_)).WillByDefault(Return(std::nullopt));
-        ON_CALL(make_app_feature, make_app(0, std::vector<const feature*>{&variable}))
-            .WillByDefault(Return(&application));
-        ON_CALL(size_feature, size(&true_constant)).WillByDefault(Return(1));
-        ON_CALL(size_feature, size(&application)).WillByDefault(Return(2));
+        ON_CALL(find_app_candidate, find(0, 4, _)).WillByDefault(Return(application_candidate));
     }
 };
 
@@ -139,16 +116,14 @@ FeatureSynthesizerTest::FeatureSynthesizerTest()
     , constant_candidate{
           .expression = &true_constant, .cost = 1, .observed = typed_column{.type = 0, .cells = {&truth, &truth}}}
     , application_candidate{
-          .expression = &application, .cost = 2, .observed = typed_column{.type = 0, .cells = {&truth, &falsity}}}
+          .expression = &application, .cost = 2, .observed = typed_column{.type = 4, .cells = {&truth, &falsity}}}
     , found{variable_candidate}
-    , constants{constant_operand{.expression = &true_constant, .literal = &truth, .type = 0}}
-    , signature{.arg_types = {0}, .result_type = 0} {}
+    , signature{.arg_types = {0}, .result_type = 4} {}
 
 synthesizer_t FeatureSynthesizerTest::make(size_t max_depth) {
     return synthesizer_t{
-        clear_candidates, try_insert_candidate, get_candidates, find_variable_candidates, get_constants,
-        get_primitive_count, get_primitive_signature, enumerate_argument_tuples, apply_primitive_to_columns,
-        find_uniform_value, make_app_feature, size_feature, max_depth};
+        clear_candidates, try_insert_candidate, get_candidates, find_variable_candidates, find_constant_candidates,
+        get_primitive_count, get_primitive_signature, enumerate_argument_tuples, find_app_candidate, max_depth};
 }
 
 }
@@ -163,7 +138,7 @@ TEST_F(FeatureSynthesizerTest, TheIndexIsClearedThenSeededWithTheHeterogeneousVa
 
 TEST_F(FeatureSynthesizerTest, AZeroDepthAppliesNoPrimitive) {
     synthesizer_t synthesizer = make(0);
-    EXPECT_CALL(apply_primitive_to_columns, apply(_, _)).Times(0);
+    EXPECT_CALL(find_app_candidate, find(_, _, _)).Times(0);
     synthesizer.synthesize(data);
 }
 
@@ -174,23 +149,23 @@ TEST_F(FeatureSynthesizerTest, ConstantsPrecedeTheFoundFeaturesAndOnlyTheLastLay
     synthesizer.synthesize(data);
 }
 
-TEST_F(FeatureSynthesizerTest, ThePrimitiveIsAppliedToTheTuplesColumns) {
+TEST_F(FeatureSynthesizerTest, EachTuplesOperandsAreOfferedWithThePrimitiveAndItsResultType) {
     synthesizer_t synthesizer = make(1);
-    EXPECT_CALL(apply_primitive_to_columns, apply(0, ElementsAre(Pointee(data.scope[0].cells))));
+    EXPECT_CALL(find_app_candidate, find(0, 4, ElementsAre(Pointee(variable_candidate))))
+        .WillOnce(Return(application_candidate));
     synthesizer.synthesize(data);
 }
 
-TEST_F(FeatureSynthesizerTest, AHeterogeneousApplicationIsInsertedWithItsCostAndResultType) {
+TEST_F(FeatureSynthesizerTest, AFoundApplicationIsInserted) {
     synthesizer_t synthesizer = make(1);
     EXPECT_CALL(try_insert_candidate, try_insert(variable_candidate));
     EXPECT_CALL(try_insert_candidate, try_insert(application_candidate));
     synthesizer.synthesize(data);
 }
 
-TEST_F(FeatureSynthesizerTest, AHomogeneousApplicationIsDropped) {
+TEST_F(FeatureSynthesizerTest, AnApplicationThatIsNotFoundIsNotInserted) {
     synthesizer_t synthesizer = make(1);
-    ON_CALL(find_uniform_value, find(application_candidate.observed.cells)).WillByDefault(Return(&truth));
-    EXPECT_CALL(make_app_feature, make_app(_, _)).Times(0);
+    ON_CALL(find_app_candidate, find(_, _, _)).WillByDefault(Return(std::nullopt));
     EXPECT_CALL(try_insert_candidate, try_insert(_)).Times(AnyNumber());
     EXPECT_CALL(try_insert_candidate, try_insert(application_candidate)).Times(0);
     synthesizer.synthesize(data);

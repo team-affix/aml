@@ -62,8 +62,8 @@ equivalence keeps the cheapest feature per column (`cheapest_feature_index`). Ra
 
 - Stores: `schema`, `value_pool`, `feature_pool`, `model_node_pool`, `constant_store`, `cheapest_feature_index`,
   `best_model_tracker`, `tree_walker`.
-- Synthesis: `variable_candidate_finder`, `constant_enumerator` + `constant_seeder`, `primitive_dispatcher`,
-  `column_applier`, `argument_tuple_enumerator`, `feature_synthesizer`.
+- Synthesis: `variable_candidate_finder`, `constant_candidate_finder`, `app_candidate_finder`, `constant_enumerator` +
+  `constant_seeder`, `primitive_dispatcher`, `column_applier`, `argument_tuple_enumerator`, `feature_synthesizer`.
 - Partition: `leaf_detector`, `uniform_value_finder`, `bin_splitter`, `model_builder`.
 - Choices: `first_candidate_chooser`, `mcts_candidate_chooser`.
 - Cost and inference: `value_sizer`, `feature_sizer`, `model_sizer`, `feature_evaluator`, `model_evaluator`.

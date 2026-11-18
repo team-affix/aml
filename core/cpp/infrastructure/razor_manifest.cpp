@@ -24,10 +24,12 @@ razor_manifest::razor_manifest(
     , variable_candidate_finder_(features_, feature_sizer_, uniform_value_finder_)
     , constant_enumerator_(schema_, schema_, values_)
     , constant_seeder_(schema_, constant_enumerator_, features_, constants_)
+    , constant_candidate_finder_(constants_, feature_sizer_)
+    , app_candidate_finder_(column_applier_, uniform_value_finder_, features_, feature_sizer_)
     , feature_synthesizer_(
-          candidate_index_, candidate_index_, candidate_index_, variable_candidate_finder_, constants_,
-          primitive_dispatcher_, primitive_dispatcher_, argument_tuple_enumerator_, column_applier_,
-          uniform_value_finder_, features_, feature_sizer_, options.max_synthesis_depth)
+          candidate_index_, candidate_index_, candidate_index_, variable_candidate_finder_, constant_candidate_finder_,
+          primitive_dispatcher_, primitive_dispatcher_, argument_tuple_enumerator_, app_candidate_finder_,
+          options.max_synthesis_depth)
     , leaf_detector_(uniform_value_finder_)
     , bin_splitter_(schema_, schema_)
     , visits_()
