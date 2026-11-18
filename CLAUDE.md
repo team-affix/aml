@@ -12,8 +12,9 @@ and are minimal in symbolic description length. Fit comes first; among models th
 - **Model:** three node types (`model_node`): `match` (an exhaustive one-layer case on a feature; each branch sees
   its constructor's fields bound as the next variables), `leaf` (a constant label), `empty` (no data; infers nothing).
 - **Learning (`model_builder`):** an empty bin becomes `empty`, a bin whose labels agree becomes a `leaf`, and any
-  other bin is partitioned: run a synthesis session, choose one of its heterogeneous features, match on it; while
-  every row falls into one constructor, funnel into a chosen heterogeneous field that constructor just bound.
+  other bin is partitioned: `scrutinee_chooser` runs a synthesis session and returns one of its features as its own
+  value, and the bin is matched on it; while every row falls into one constructor, `field_chooser` picks a
+  heterogeneous field that constructor just bound to funnel into.
 - **Synthesis session (`feature_synthesizer`):** nothing is enumerated exhaustively. Operands are the constants (read
   from `constant_store` by reference, never laid out as columns) then the session's heterogeneous features (the
   variables first). `operand_table` alone knows that numbering; both stores also list their positions by type. Each step chooses stop (option 0) or a primitive with an
@@ -72,7 +73,8 @@ equivalence keeps the cheapest feature per column (`cheapest_feature_index`). Ra
 - Synthesis: `constant_enumerator` + `constant_seeder`, `synthesis_starter`, `variable_candidate_finder`,
   `witness_detector`, `primitive_option_finder`, `argument_option_finder`, `argument_chooser`,
   `primitive_dispatcher`, `operand_applier`, `app_candidate_finder`, `primitive_applier`, `feature_synthesizer`.
-- Partition: `leaf_detector`, `uniform_value_finder`, `bin_splitter`, `model_builder`.
+- Partition: `leaf_detector`, `uniform_value_finder`, `scrutinee_chooser`, `field_chooser`, `bin_splitter`,
+  `model_builder`.
 - Choices: `first_option_chooser`, `mcts_option_chooser`; each chooses an index among `option_count` options.
   MCTS sees them as an `option_range` (a count, not a vector).
 - Cost and inference: `value_sizer`, `feature_sizer`, `model_sizer`, `feature_evaluator`, `model_evaluator`.

@@ -16,6 +16,7 @@
 #include "infrastructure/feature_pool.hpp"
 #include "infrastructure/feature_sizer.hpp"
 #include "infrastructure/feature_synthesizer.hpp"
+#include "infrastructure/field_chooser.hpp"
 #include "infrastructure/first_option_chooser.hpp"
 #include "infrastructure/leaf_detector.hpp"
 #include "infrastructure/model_builder.hpp"
@@ -26,10 +27,11 @@
 #include "infrastructure/operand_applier.hpp"
 #include "infrastructure/operand_table.hpp"
 #include "infrastructure/primitive.hpp"
-#include "infrastructure/primitive_dispatcher.hpp"
 #include "infrastructure/primitive_applier.hpp"
+#include "infrastructure/primitive_dispatcher.hpp"
 #include "infrastructure/primitive_option_finder.hpp"
 #include "infrastructure/schema.hpp"
+#include "infrastructure/scrutinee_chooser.hpp"
 #include "infrastructure/synthesis_starter.hpp"
 #include "infrastructure/uniform_value_finder.hpp"
 #include "infrastructure/value_pool.hpp"
@@ -114,12 +116,18 @@ struct scout_manifest {
     struct bin_splitter_t : bin_splitter<schema, schema> {
         using bin_splitter<schema, schema>::bin_splitter;
     };
+    struct scrutinee_chooser_t : scrutinee_chooser<feature_synthesizer_t, first_option_chooser> {
+        using scrutinee_chooser<feature_synthesizer_t, first_option_chooser>::scrutinee_chooser;
+    };
+    struct field_chooser_t : field_chooser<variable_candidate_finder_t, first_option_chooser> {
+        using field_chooser<variable_candidate_finder_t, first_option_chooser>::field_chooser;
+    };
     struct model_builder_t : model_builder<
-        leaf_detector_t, feature_synthesizer_t, first_option_chooser, bin_splitter_t, variable_candidate_finder_t,
-        first_option_chooser, model_node_pool, model_node_pool, model_node_pool> {
+        leaf_detector_t, scrutinee_chooser_t, field_chooser_t, bin_splitter_t, model_node_pool, model_node_pool,
+        model_node_pool> {
         using model_builder<
-            leaf_detector_t, feature_synthesizer_t, first_option_chooser, bin_splitter_t, variable_candidate_finder_t,
-            first_option_chooser, model_node_pool, model_node_pool, model_node_pool>::model_builder;
+            leaf_detector_t, scrutinee_chooser_t, field_chooser_t, bin_splitter_t, model_node_pool, model_node_pool,
+            model_node_pool>::model_builder;
     };
     struct model_episode_t : model_episode<model_builder_t, model_sizer_t, best_model_tracker> {
         using model_episode<model_builder_t, model_sizer_t, best_model_tracker>::model_episode;
@@ -162,6 +170,8 @@ struct scout_manifest {
     feature_synthesizer_t       feature_synthesizer_;
     leaf_detector_t             leaf_detector_;
     bin_splitter_t              bin_splitter_;
+    scrutinee_chooser_t         scrutinee_chooser_;
+    field_chooser_t             field_chooser_;
     model_builder_t             model_builder_;
     best_model_tracker          best_model_tracker_;
     model_episode_t             model_episode_;

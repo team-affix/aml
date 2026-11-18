@@ -8,7 +8,6 @@ using ::testing::AnyNumber;
 using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::Return;
-using ::testing::ReturnRef;
 
 namespace {
 
@@ -16,24 +15,16 @@ struct MockDetectLeaf {
     MOCK_METHOD(std::optional<const value*>, detect, (const bin&), (const));
 };
 
-struct MockSynthesizeCandidates {
-    MOCK_METHOD(const std::vector<candidate>&, synthesize, (const bin&));
+struct MockChooseScrutinee {
+    MOCK_METHOD(candidate, choose, (const bin&));
 };
 
-struct MockChooseFeature {
-    MOCK_METHOD(size_t, choose, (size_t));
+struct MockChooseField {
+    MOCK_METHOD(candidate, choose, (const bin&, var_id));
 };
 
 struct MockSplitBin {
     MOCK_METHOD(std::vector<bin>, split, (const bin&, const typed_column&), (const));
-};
-
-struct MockFindVariableCandidates {
-    MOCK_METHOD(std::vector<candidate>, find, (const bin&, var_id), (const));
-};
-
-struct MockChooseField {
-    MOCK_METHOD(size_t, choose, (size_t));
 };
 
 struct MockMakeEmpty {
@@ -71,31 +62,24 @@ struct ModelBuilderTest : public ::testing::Test {
     candidate second_candidate;
     candidate first_field_candidate;
     candidate second_field_candidate;
-    std::vector<candidate> root_candidates;
-    std::vector<candidate> no_candidates;
     NiceMock<MockDetectLeaf> detect_leaf;
-    NiceMock<MockSynthesizeCandidates> synthesize_candidates;
-    NiceMock<MockChooseFeature> choose_feature;
-    NiceMock<MockSplitBin> split_bin;
-    NiceMock<MockFindVariableCandidates> find_variable_candidates;
+    NiceMock<MockChooseScrutinee> choose_scrutinee;
     NiceMock<MockChooseField> choose_field;
+    NiceMock<MockSplitBin> split_bin;
     NiceMock<MockMakeEmpty> make_empty;
     NiceMock<MockMakeLeaf> make_leaf;
     NiceMock<MockMakeMatch> make_match;
     model_builder<
-        NiceMock<MockDetectLeaf>, NiceMock<MockSynthesizeCandidates>, NiceMock<MockChooseFeature>,
-        NiceMock<MockSplitBin>, NiceMock<MockFindVariableCandidates>, NiceMock<MockChooseField>,
+        NiceMock<MockDetectLeaf>, NiceMock<MockChooseScrutinee>, NiceMock<MockChooseField>, NiceMock<MockSplitBin>,
         NiceMock<MockMakeEmpty>, NiceMock<MockMakeLeaf>, NiceMock<MockMakeMatch>>
-        builder{detect_leaf, synthesize_candidates, choose_feature, split_bin, find_variable_candidates,
-                choose_field, make_empty, make_leaf, make_match};
+        builder{detect_leaf, choose_scrutinee, choose_field, split_bin, make_empty, make_leaf, make_match};
 
     void SetUp() override {
         ON_CALL(detect_leaf, detect(root)).WillByDefault(Return(std::nullopt));
         ON_CALL(detect_leaf, detect(funnel_child)).WillByDefault(Return(std::nullopt));
         ON_CALL(detect_leaf, detect(false_child)).WillByDefault(Return(&falsity));
         ON_CALL(detect_leaf, detect(true_child)).WillByDefault(Return(&truth));
-        ON_CALL(synthesize_candidates, synthesize(_)).WillByDefault(ReturnRef(no_candidates));
-        ON_CALL(synthesize_candidates, synthesize(root)).WillByDefault(ReturnRef(root_candidates));
+        ON_CALL(choose_scrutinee, choose(root)).WillByDefault(Return(first_candidate));
         ON_CALL(make_empty, make_empty()).WillByDefault(Return(&empty_node));
         ON_CALL(make_leaf, make_leaf(&falsity)).WillByDefault(Return(&false_leaf));
         ON_CALL(make_leaf, make_leaf(&truth)).WillByDefault(Return(&true_leaf));
@@ -127,9 +111,7 @@ ModelBuilderTest::ModelBuilderTest()
     , second_candidate{
           .expression = &second_feature, .cost = 2, .observed = typed_column{.type = 0, .cells = {&truth, &falsity}}}
     , first_field_candidate{.expression = &first_field, .cost = 1, .observed = funnel_child.scope[1]}
-    , second_field_candidate{.expression = &second_field, .cost = 1, .observed = funnel_child.scope[2]}
-    , root_candidates{first_candidate, second_candidate}
-    , no_candidates() {}
+    , second_field_candidate{.expression = &second_field, .cost = 1, .observed = funnel_child.scope[2]} {}
 
 }
 
@@ -141,8 +123,8 @@ TEST_F(ModelBuilderTest, ABinWhoseLabelsAgreeBecomesALeaf) {
     EXPECT_EQ(builder.build(true_child), &true_leaf);
 }
 
-TEST_F(ModelBuilderTest, AHeterogeneousBinMatchesOnTheChosenFeatureAndBuildsEachChild) {
-    EXPECT_CALL(choose_feature, choose(2)).WillOnce(Return(1));
+TEST_F(ModelBuilderTest, AHeterogeneousBinMatchesOnTheChosenScrutineeAndBuildsEachChild) {
+    EXPECT_CALL(choose_scrutinee, choose(root)).WillOnce(Return(second_candidate));
     EXPECT_CALL(split_bin, split(root, second_candidate.observed))
         .WillOnce(Return(std::vector<bin>{true_child, false_child}));
     EXPECT_CALL(make_match, make_match(&second_feature, std::vector<const model_node*>{&true_leaf, &false_leaf}))
@@ -151,12 +133,9 @@ TEST_F(ModelBuilderTest, AHeterogeneousBinMatchesOnTheChosenFeatureAndBuildsEach
 }
 
 TEST_F(ModelBuilderTest, AMatchWhoseRowsShareOneConstructorFunnelsIntoAChosenBoundField) {
-    ON_CALL(choose_feature, choose(_)).WillByDefault(Return(0));
     EXPECT_CALL(split_bin, split(root, first_candidate.observed))
         .WillOnce(Return(std::vector<bin>{no_rows_child, funnel_child}));
-    EXPECT_CALL(find_variable_candidates, find(funnel_child, 1))
-        .WillOnce(Return(std::vector<candidate>{first_field_candidate, second_field_candidate}));
-    EXPECT_CALL(choose_field, choose(2)).WillOnce(Return(1));
+    EXPECT_CALL(choose_field, choose(funnel_child, 1)).WillOnce(Return(second_field_candidate));
     EXPECT_CALL(split_bin, split(funnel_child, second_field_candidate.observed))
         .WillOnce(Return(std::vector<bin>{false_child, true_child}));
     EXPECT_CALL(make_match, make_match(&second_field, std::vector<const model_node*>{&false_leaf, &true_leaf}))
@@ -166,15 +145,19 @@ TEST_F(ModelBuilderTest, AMatchWhoseRowsShareOneConstructorFunnelsIntoAChosenBou
     EXPECT_EQ(builder.build(root), &outer_match);
 }
 
-TEST_F(ModelBuilderTest, AFunnelledBinIsNotSynthesizedAgain) {
-    ON_CALL(choose_feature, choose(_)).WillByDefault(Return(0));
+TEST_F(ModelBuilderTest, AFunnelledBinChoosesAFieldNotANewScrutinee) {
     ON_CALL(split_bin, split(root, first_candidate.observed))
         .WillByDefault(Return(std::vector<bin>{no_rows_child, funnel_child}));
-    ON_CALL(find_variable_candidates, find(funnel_child, 1))
-        .WillByDefault(Return(std::vector<candidate>{first_field_candidate}));
+    ON_CALL(choose_field, choose(funnel_child, 1)).WillByDefault(Return(first_field_candidate));
     ON_CALL(split_bin, split(funnel_child, first_field_candidate.observed))
         .WillByDefault(Return(std::vector<bin>{false_child, true_child}));
-    EXPECT_CALL(synthesize_candidates, synthesize(_)).Times(AnyNumber());
-    EXPECT_CALL(synthesize_candidates, synthesize(funnel_child)).Times(0);
+    EXPECT_CALL(choose_scrutinee, choose(_)).Times(AnyNumber());
+    EXPECT_CALL(choose_scrutinee, choose(funnel_child)).Times(0);
     builder.build(root);
+}
+
+TEST_F(ModelBuilderTest, NoScrutineeIsChosenForAnEmptyOrAgreeingBin) {
+    EXPECT_CALL(choose_scrutinee, choose(_)).Times(0);
+    builder.build(no_rows_child);
+    builder.build(true_child);
 }
