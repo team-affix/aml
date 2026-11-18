@@ -2,8 +2,7 @@
 #define MCTS_OPTION_CHOOSER_HPP
 
 #include <cstddef>
-#include <vector>
-#include "value_objects/mcts_choice.hpp"
+#include "infrastructure/option_range.hpp"
 #include "debug_assert.hpp"
 
 // Chooses an option by asking MCTS to choose among the options' indices.
@@ -25,10 +24,8 @@ MCTS_OPTION_CHOOSER::mcts_option_chooser(IChooseChoice& choose_choice)
 MCTS_OPTION_CHOOSER_TEMPLATE
 size_t MCTS_OPTION_CHOOSER::choose(size_t option_count) {
     DEBUG_ASSERT(option_count > 0);
-    std::vector<mcts_choice> choices;
-    for (mcts_choice index = 0; index < option_count; ++index)
-        choices.push_back(index);
-    return choose_choice_.choose(choices, choices);
+    const option_range options(option_count);
+    return choose_choice_.choose(options, options);
 }
 
 #undef MCTS_OPTION_CHOOSER

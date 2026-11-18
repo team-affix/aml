@@ -10,8 +10,8 @@ using ::testing::ReturnRef;
 
 namespace {
 
-struct MockGetConstantCandidates {
-    MOCK_METHOD(const std::vector<candidate>&, candidates, (), (const));
+struct MockGetConstants {
+    MOCK_METHOD(const std::vector<constant_operand>&, constants, (), (const));
 };
 
 struct MockGetFeatureCandidates {
@@ -26,29 +26,33 @@ candidate typed(type_id type) {
     return candidate{.expression = nullptr, .cost = 1, .observed = typed_column{.type = type, .cells = {}}};
 }
 
+constant_operand constant_of(type_id type) {
+    return constant_operand{.expression = nullptr, .literal = nullptr, .type = type};
+}
+
 // Constants: [0] type 0, [1] type 0. Features: [2] type 0, [3] type 1.
 struct WitnessDetectorTest : public ::testing::Test {
     WitnessDetectorTest();
-    std::vector<candidate> constants;
+    std::vector<constant_operand> constants;
     std::vector<candidate> features;
-    NiceMock<MockGetConstantCandidates> get_constant_candidates;
+    NiceMock<MockGetConstants> get_constants;
     NiceMock<MockGetFeatureCandidates> get_feature_candidates;
     NiceMock<MockCountTriedApplications> count_tried_applications;
     witness_detector<
-        NiceMock<MockGetConstantCandidates>, NiceMock<MockGetFeatureCandidates>, NiceMock<MockCountTriedApplications>>
-        detector{get_constant_candidates, get_feature_candidates, count_tried_applications};
+        NiceMock<MockGetConstants>, NiceMock<MockGetFeatureCandidates>, NiceMock<MockCountTriedApplications>>
+        detector{get_constants, get_feature_candidates, count_tried_applications};
 
     void SetUp() override {
-        ON_CALL(get_constant_candidates, candidates()).WillByDefault(ReturnRef(constants));
+        ON_CALL(get_constants, constants()).WillByDefault(ReturnRef(constants));
         ON_CALL(get_feature_candidates, candidates()).WillByDefault(ReturnRef(features));
         ON_CALL(count_tried_applications, count_with_prefix(_, _)).WillByDefault(Return(0));
     }
 };
 
 WitnessDetectorTest::WitnessDetectorTest()
-    : constants{typed(0), typed(0)}
+    : constants{constant_of(0), constant_of(0)}
     , features{typed(0), typed(1)}
-    , get_constant_candidates()
+    , get_constants()
     , get_feature_candidates()
     , count_tried_applications() {}
 

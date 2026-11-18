@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <vector>
 #include "value_objects/candidate.hpp"
+#include "value_objects/constant_operand.hpp"
 #include "value_objects/prim_id.hpp"
 #include "value_objects/type_id.hpp"
 #include "debug_assert.hpp"
@@ -11,26 +12,26 @@
 // Detects an application witness: an argument tuple for a primitive that extends a prefix of operand indices,
 // type-checks, holds at least one heterogeneous feature, and has not been tried. Operands are the session's constants
 // followed by its features; every feature is heterogeneous and every constant is not. Tuples are counted, not listed.
-template<typename IGetConstantCandidates, typename IGetFeatureCandidates, typename ICountTriedApplications>
+template<typename IGetConstants, typename IGetFeatureCandidates, typename ICountTriedApplications>
 struct witness_detector {
     witness_detector(
-        IGetConstantCandidates& get_constant_candidates,
+        IGetConstants& get_constants,
         IGetFeatureCandidates& get_feature_candidates,
         ICountTriedApplications& count_tried_applications);
     bool detect(prim_id prim, const std::vector<type_id>& arg_types, const std::vector<size_t>& prefix) const;
 private:
-    IGetConstantCandidates& get_constant_candidates_;
+    IGetConstants& get_constants_;
     IGetFeatureCandidates& get_feature_candidates_;
     ICountTriedApplications& count_tried_applications_;
 };
 
-#define WITNESS_DETECTOR_TEMPLATE template<typename IGCC, typename IGFC, typename ICTA>
-#define WITNESS_DETECTOR          witness_detector<IGCC, IGFC, ICTA>
+#define WITNESS_DETECTOR_TEMPLATE template<typename IGC, typename IGFC, typename ICTA>
+#define WITNESS_DETECTOR          witness_detector<IGC, IGFC, ICTA>
 
 WITNESS_DETECTOR_TEMPLATE
 WITNESS_DETECTOR::witness_detector(
-    IGCC& get_constant_candidates, IGFC& get_feature_candidates, ICTA& count_tried_applications)
-    : get_constant_candidates_(get_constant_candidates)
+    IGC& get_constants, IGFC& get_feature_candidates, ICTA& count_tried_applications)
+    : get_constants_(get_constants)
     , get_feature_candidates_(get_feature_candidates)
     , count_tried_applications_(count_tried_applications) {}
 
@@ -38,7 +39,7 @@ WITNESS_DETECTOR_TEMPLATE
 bool WITNESS_DETECTOR::detect(
     prim_id prim, const std::vector<type_id>& arg_types, const std::vector<size_t>& prefix) const {
     DEBUG_ASSERT(prefix.size() <= arg_types.size());
-    const std::vector<candidate>& constants = get_constant_candidates_.candidates();
+    const std::vector<constant_operand>& constants = get_constants_.constants();
     const std::vector<candidate>& features = get_feature_candidates_.candidates();
 
     bool prefix_heterogeneous = false;
@@ -49,8 +50,8 @@ bool WITNESS_DETECTOR::detect(
     size_t constant_completions = 1;
     for (size_t position = prefix.size(); position < arg_types.size(); ++position) {
         size_t constant_count = 0;
-        for (const candidate& constant : constants) {
-            if (constant.observed.type != arg_types[position])
+        for (const constant_operand& constant : constants) {
+            if (constant.type != arg_types[position])
                 continue;
             ++constant_count;
         }

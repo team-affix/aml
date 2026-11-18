@@ -7,10 +7,8 @@
 using ::testing::AnyNumber;
 using ::testing::AtLeast;
 using ::testing::_;
-using ::testing::ElementsAre;
 using ::testing::InSequence;
 using ::testing::NiceMock;
-using ::testing::Pointee;
 using ::testing::Return;
 using ::testing::ReturnRef;
 
@@ -44,20 +42,16 @@ struct MockRecordApplication {
     MOCK_METHOD(void, record, (const prim_application&));
 };
 
-struct MockGetConstantCandidates {
-    MOCK_METHOD(const std::vector<candidate>&, candidates, (), (const));
-};
-
 struct MockGetFeatureCandidates {
     MOCK_METHOD(const std::vector<candidate>&, candidates, (), (const));
 };
 
 struct MockFindAppCandidate {
-    MOCK_METHOD(std::optional<candidate>, find, (prim_id, type_id, const std::vector<const candidate*>&));
+    MOCK_METHOD(std::optional<candidate>, find, (prim_id, type_id, const std::vector<size_t>&, size_t));
 };
 
 struct MockTryInsertFeatureCandidate {
-    MOCK_METHOD(void, try_insert, (const candidate&));
+    MOCK_METHOD(void, try_insert, (candidate));
 };
 
 using synthesizer_t = feature_synthesizer<
@@ -68,14 +62,13 @@ using synthesizer_t = feature_synthesizer<
     NiceMock<MockGetPrimitiveSignature>,
     NiceMock<MockChooseArguments>,
     NiceMock<MockRecordApplication>,
-    NiceMock<MockGetConstantCandidates>,
     NiceMock<MockGetFeatureCandidates>,
     NiceMock<MockFindAppCandidate>,
     NiceMock<MockTryInsertFeatureCandidate>>;
 
-// One constant and one feature; primitives 2 and 5 have witnesses. Primitive 5 is binary with result type 4. By
+// One feature; primitives 2 and 5 have witnesses. Primitive 5 is binary with result type 4. By
 // default nothing has been applied yet, the step chooses primitive 5 (option 2) once and then stops, and the
-// arguments are the constant then the feature.
+// arguments are operands 0 and 1.
 struct FeatureSynthesizerTest : public ::testing::Test {
     FeatureSynthesizerTest();
     synthesizer_t make(size_t max_applications);
@@ -85,10 +78,8 @@ struct FeatureSynthesizerTest : public ::testing::Test {
     feature true_constant;
     feature application;
     bin data;
-    candidate constant_candidate;
     candidate variable_candidate;
     candidate application_candidate;
-    std::vector<candidate> constants;
     std::vector<candidate> features;
     primitive_signature signature;
     NiceMock<MockStartSession> start_session;
@@ -98,7 +89,6 @@ struct FeatureSynthesizerTest : public ::testing::Test {
     NiceMock<MockGetPrimitiveSignature> get_primitive_signature;
     NiceMock<MockChooseArguments> choose_arguments;
     NiceMock<MockRecordApplication> record_application;
-    NiceMock<MockGetConstantCandidates> get_constant_candidates;
     NiceMock<MockGetFeatureCandidates> get_feature_candidates;
     NiceMock<MockFindAppCandidate> find_app_candidate;
     NiceMock<MockTryInsertFeatureCandidate> try_insert_feature_candidate;
@@ -109,9 +99,8 @@ struct FeatureSynthesizerTest : public ::testing::Test {
         EXPECT_CALL(choose_step, choose(_)).Times(AnyNumber()).WillOnce(Return(2)).WillRepeatedly(Return(0));
         ON_CALL(get_primitive_signature, signature(5)).WillByDefault(Return(signature));
         ON_CALL(choose_arguments, choose(5, signature.arg_types)).WillByDefault(Return(std::vector<size_t>{0, 1}));
-        ON_CALL(get_constant_candidates, candidates()).WillByDefault(ReturnRef(constants));
         ON_CALL(get_feature_candidates, candidates()).WillByDefault(ReturnRef(features));
-        ON_CALL(find_app_candidate, find(5, 4, _)).WillByDefault(Return(application_candidate));
+        ON_CALL(find_app_candidate, find(5, 4, _, _)).WillByDefault(Return(application_candidate));
     }
 };
 
@@ -122,20 +111,17 @@ FeatureSynthesizerTest::FeatureSynthesizerTest()
     , true_constant{feature::constant{.literal = &truth}}
     , application{feature::app{.prim = 5, .args = {&true_constant, &variable}}}
     , data{.scope = {typed_column{.type = 0, .cells = {&falsity, &truth}}}, .labels = {&falsity, &truth}}
-    , constant_candidate{
-          .expression = &true_constant, .cost = 1, .observed = typed_column{.type = 0, .cells = {&truth, &truth}}}
     , variable_candidate{.expression = &variable, .cost = 1, .observed = data.scope[0]}
     , application_candidate{
           .expression = &application, .cost = 3, .observed = typed_column{.type = 4, .cells = {&truth, &falsity}}}
-    , constants{constant_candidate}
     , features{variable_candidate}
     , signature{.arg_types = {0, 0}, .result_type = 4} {}
 
 synthesizer_t FeatureSynthesizerTest::make(size_t max_applications) {
     return synthesizer_t{
         start_session, count_applications, find_primitive_options, choose_step, get_primitive_signature,
-        choose_arguments, record_application, get_constant_candidates, get_feature_candidates, find_app_candidate,
-        try_insert_feature_candidate, max_applications};
+        choose_arguments, record_application, get_feature_candidates, find_app_candidate, try_insert_feature_candidate,
+        max_applications};
 }
 
 }
@@ -158,7 +144,7 @@ TEST_F(FeatureSynthesizerTest, ChoosingStopFirstAppliesNothing) {
     synthesizer_t synthesizer = make(3);
     EXPECT_CALL(choose_step, choose(_)).WillOnce(Return(0));
     EXPECT_CALL(record_application, record(_)).Times(0);
-    EXPECT_CALL(find_app_candidate, find(_, _, _)).Times(0);
+    EXPECT_CALL(find_app_candidate, find(_, _, _, _)).Times(0);
     synthesizer.synthesize(data);
 }
 
@@ -169,10 +155,9 @@ TEST_F(FeatureSynthesizerTest, TheChosenPrimitivesArgumentsAreChosenForItsSignat
     synthesizer.synthesize(data);
 }
 
-TEST_F(FeatureSynthesizerTest, ArgumentIndicesNameTheConstantsThenTheFeatures) {
+TEST_F(FeatureSynthesizerTest, TheChosenArgumentsAreAppliedOverTheBinsRows) {
     synthesizer_t synthesizer = make(3);
-    EXPECT_CALL(find_app_candidate, find(5, 4, ElementsAre(Pointee(constant_candidate), Pointee(variable_candidate))))
-        .WillOnce(Return(application_candidate));
+    EXPECT_CALL(find_app_candidate, find(5, 4, std::vector<size_t>{0, 1}, 2)).WillOnce(Return(application_candidate));
     synthesizer.synthesize(data);
 }
 
@@ -184,7 +169,7 @@ TEST_F(FeatureSynthesizerTest, AFoundApplicationJoinsTheFeatures) {
 
 TEST_F(FeatureSynthesizerTest, AnApplicationThatIsNotFoundDoesNotJoinTheFeatures) {
     synthesizer_t synthesizer = make(3);
-    ON_CALL(find_app_candidate, find(_, _, _)).WillByDefault(Return(std::nullopt));
+    ON_CALL(find_app_candidate, find(_, _, _, _)).WillByDefault(Return(std::nullopt));
     EXPECT_CALL(try_insert_feature_candidate, try_insert(_)).Times(0);
     synthesizer.synthesize(data);
 }
@@ -213,7 +198,7 @@ TEST_F(FeatureSynthesizerTest, TheSessionStopsWithoutAskingWhenNoPrimitiveHasAWi
     synthesizer.synthesize(data);
 }
 
-TEST_F(FeatureSynthesizerTest, TheSessionsFeaturesAreReturned) {
+TEST_F(FeatureSynthesizerTest, TheSessionsOwnFeaturesAreReturned) {
     synthesizer_t synthesizer = make(3);
-    EXPECT_EQ(synthesizer.synthesize(data), features);
+    EXPECT_EQ(&synthesizer.synthesize(data), &features);
 }

@@ -8,6 +8,7 @@ using ::testing::AnyNumber;
 using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::ReturnRef;
 
 namespace {
 
@@ -16,7 +17,7 @@ struct MockDetectLeaf {
 };
 
 struct MockSynthesizeCandidates {
-    MOCK_METHOD(std::vector<candidate>, synthesize, (const bin&));
+    MOCK_METHOD(const std::vector<candidate>&, synthesize, (const bin&));
 };
 
 struct MockChooseFeature {
@@ -70,6 +71,8 @@ struct ModelBuilderTest : public ::testing::Test {
     candidate second_candidate;
     candidate first_field_candidate;
     candidate second_field_candidate;
+    std::vector<candidate> root_candidates;
+    std::vector<candidate> no_candidates;
     NiceMock<MockDetectLeaf> detect_leaf;
     NiceMock<MockSynthesizeCandidates> synthesize_candidates;
     NiceMock<MockChooseFeature> choose_feature;
@@ -91,8 +94,8 @@ struct ModelBuilderTest : public ::testing::Test {
         ON_CALL(detect_leaf, detect(funnel_child)).WillByDefault(Return(std::nullopt));
         ON_CALL(detect_leaf, detect(false_child)).WillByDefault(Return(&falsity));
         ON_CALL(detect_leaf, detect(true_child)).WillByDefault(Return(&truth));
-        ON_CALL(synthesize_candidates, synthesize(root))
-            .WillByDefault(Return(std::vector<candidate>{first_candidate, second_candidate}));
+        ON_CALL(synthesize_candidates, synthesize(_)).WillByDefault(ReturnRef(no_candidates));
+        ON_CALL(synthesize_candidates, synthesize(root)).WillByDefault(ReturnRef(root_candidates));
         ON_CALL(make_empty, make_empty()).WillByDefault(Return(&empty_node));
         ON_CALL(make_leaf, make_leaf(&falsity)).WillByDefault(Return(&false_leaf));
         ON_CALL(make_leaf, make_leaf(&truth)).WillByDefault(Return(&true_leaf));
@@ -124,7 +127,9 @@ ModelBuilderTest::ModelBuilderTest()
     , second_candidate{
           .expression = &second_feature, .cost = 2, .observed = typed_column{.type = 0, .cells = {&truth, &falsity}}}
     , first_field_candidate{.expression = &first_field, .cost = 1, .observed = funnel_child.scope[1]}
-    , second_field_candidate{.expression = &second_field, .cost = 1, .observed = funnel_child.scope[2]} {}
+    , second_field_candidate{.expression = &second_field, .cost = 1, .observed = funnel_child.scope[2]}
+    , root_candidates{first_candidate, second_candidate}
+    , no_candidates() {}
 
 }
 

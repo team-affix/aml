@@ -11,8 +11,8 @@ using ::testing::ReturnRef;
 
 namespace {
 
-struct MockGetConstantCandidates {
-    MOCK_METHOD(const std::vector<candidate>&, candidates, (), (const));
+struct MockGetConstants {
+    MOCK_METHOD(const std::vector<constant_operand>&, constants, (), (const));
 };
 
 struct MockGetFeatureCandidates {
@@ -27,29 +27,33 @@ candidate typed(type_id type) {
     return candidate{.expression = nullptr, .cost = 1, .observed = typed_column{.type = type, .cells = {}}};
 }
 
+constant_operand constant_of(type_id type) {
+    return constant_operand{.expression = nullptr, .literal = nullptr, .type = type};
+}
+
 // Constants: [0] type 0, [1] type 1. Features: [2] type 0, [3] type 0.
 struct ArgumentOptionFinderTest : public ::testing::Test {
     ArgumentOptionFinderTest();
-    std::vector<candidate> constants;
+    std::vector<constant_operand> constants;
     std::vector<candidate> features;
-    NiceMock<MockGetConstantCandidates> get_constant_candidates;
+    NiceMock<MockGetConstants> get_constants;
     NiceMock<MockGetFeatureCandidates> get_feature_candidates;
     NiceMock<MockDetectWitness> detect_witness;
     argument_option_finder<
-        NiceMock<MockGetConstantCandidates>, NiceMock<MockGetFeatureCandidates>, NiceMock<MockDetectWitness>>
-        finder{get_constant_candidates, get_feature_candidates, detect_witness};
+        NiceMock<MockGetConstants>, NiceMock<MockGetFeatureCandidates>, NiceMock<MockDetectWitness>>
+        finder{get_constants, get_feature_candidates, detect_witness};
 
     void SetUp() override {
-        ON_CALL(get_constant_candidates, candidates()).WillByDefault(ReturnRef(constants));
+        ON_CALL(get_constants, constants()).WillByDefault(ReturnRef(constants));
         ON_CALL(get_feature_candidates, candidates()).WillByDefault(ReturnRef(features));
         ON_CALL(detect_witness, detect(_, _, _)).WillByDefault(Return(true));
     }
 };
 
 ArgumentOptionFinderTest::ArgumentOptionFinderTest()
-    : constants{typed(0), typed(1)}
+    : constants{constant_of(0), constant_of(1)}
     , features{typed(0), typed(0)}
-    , get_constant_candidates()
+    , get_constants()
     , get_feature_candidates()
     , detect_witness() {}
 

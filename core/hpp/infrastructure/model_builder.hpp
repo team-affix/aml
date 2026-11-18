@@ -84,13 +84,15 @@ const model_node* MODEL_BUILDER::build(const bin& data) {
     const std::optional<const value*> label = detect_leaf_.detect(data);
     if (label.has_value())
         return make_leaf_.make_leaf(label.value());
-    const std::vector<candidate> candidates = synthesize_candidates_.synthesize(data);
+    const std::vector<candidate>& candidates = synthesize_candidates_.synthesize(data);
     DEBUG_ASSERT(!candidates.empty());
     return build_match(data, candidates.at(choose_feature_.choose(candidates.size())));
 }
 
 MODEL_BUILDER_TEMPLATE
 const model_node* MODEL_BUILDER::build_match(const bin& data, const candidate& scrutinee) {
+    // Building a child starts a new synthesis session, which may drop the scrutinee, so its parts are read first.
+    const feature* expression = scrutinee.expression;
     const std::vector<bin> children = split_bin_.split(data, scrutinee.observed);
     size_t occupied_count = 0;
     for (const bin& child : children) {
@@ -112,7 +114,7 @@ const model_node* MODEL_BUILDER::build_match(const bin& data, const candidate& s
         DEBUG_ASSERT(!fields.empty());
         branches.push_back(build_match(child, fields.at(choose_field_.choose(fields.size()))));
     }
-    return make_match_.make_match(scrutinee.expression, branches);
+    return make_match_.make_match(expression, branches);
 }
 
 #undef MODEL_BUILDER

@@ -7,7 +7,6 @@ scout_manifest::scout_manifest(
     , features_()
     , nodes_()
     , constants_()
-    , constant_candidates_()
     , feature_candidates_()
     , applications_()
     , uniform_value_finder_()
@@ -15,24 +14,22 @@ scout_manifest::scout_manifest(
     , feature_sizer_(value_sizer_)
     , model_sizer_(feature_sizer_, value_sizer_)
     , primitive_dispatcher_(primitives)
-    , column_applier_(primitive_dispatcher_)
     , variable_candidate_finder_(features_, feature_sizer_, uniform_value_finder_)
     , constant_enumerator_(schema_, schema_, values_)
     , constant_seeder_(schema_, constant_enumerator_, features_, constants_)
-    , constant_candidate_finder_(constants_, feature_sizer_)
-    , app_candidate_finder_(column_applier_, uniform_value_finder_, features_, feature_sizer_)
-    , witness_detector_(constant_candidates_, feature_candidates_, applications_)
+    , operand_applier_(constants_, feature_candidates_, primitive_dispatcher_)
+    , app_candidate_finder_(
+          operand_applier_, uniform_value_finder_, constants_, feature_candidates_, features_, feature_sizer_)
+    , witness_detector_(constants_, feature_candidates_, applications_)
     , primitive_option_finder_(primitive_dispatcher_, primitive_dispatcher_, witness_detector_)
-    , argument_option_finder_(constant_candidates_, feature_candidates_, witness_detector_)
+    , argument_option_finder_(constants_, feature_candidates_, witness_detector_)
     , option_chooser_()
     , argument_chooser_(argument_option_finder_, option_chooser_)
-    , synthesis_starter_(
-          constant_candidates_, feature_candidates_, applications_, constant_candidate_finder_, constant_candidates_,
-          variable_candidate_finder_, feature_candidates_)
+    , synthesis_starter_(feature_candidates_, applications_, variable_candidate_finder_, feature_candidates_)
     , feature_synthesizer_(
           synthesis_starter_, applications_, primitive_option_finder_, option_chooser_, primitive_dispatcher_,
-          argument_chooser_, applications_, constant_candidates_, feature_candidates_, app_candidate_finder_,
-          feature_candidates_, options.max_applications)
+          argument_chooser_, applications_, feature_candidates_, app_candidate_finder_, feature_candidates_,
+          options.max_applications)
     , leaf_detector_(uniform_value_finder_)
     , bin_splitter_(schema_, schema_)
     , model_builder_(

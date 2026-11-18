@@ -14,7 +14,7 @@
 struct cheapest_feature_index {
     cheapest_feature_index();
     void clear();
-    void try_insert(const candidate& entry);
+    void try_insert(candidate entry);
     const std::vector<candidate>& candidates() const;
 private:
     std::vector<candidate> candidates_;
