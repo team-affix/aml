@@ -96,3 +96,21 @@ TEST_F(AppCandidateFinderTest, AHomogeneousApplicationGivesNoCandidateAndMakesNo
     EXPECT_CALL(make_app_feature, make_app(_, _)).Times(0);
     EXPECT_FALSE(finder.find(2, 5, {0, 1}, 2).has_value());
 }
+
+TEST_F(AppCandidateFinderTest, TheResultsCostIsItsFeaturesSize) {
+    EXPECT_CALL(size_feature, size(&application)).WillOnce(Return(11));
+    EXPECT_EQ(finder.find(2, 5, {0, 1}, 2).value().cost, 11u);
+}
+
+TEST_F(AppCandidateFinderTest, TheFeatureIsMadeFromTheOperandsExpressionsInOrder) {
+    ON_CALL(get_operand_expression, expression(0)).WillByDefault(Return(&variable));
+    ON_CALL(get_operand_expression, expression(1)).WillByDefault(Return(&true_constant));
+    EXPECT_CALL(make_app_feature, make_app(2, std::vector<const feature*>{&true_constant, &variable}))
+        .WillOnce(Return(&application));
+    finder.find(2, 5, {1, 0}, 2);
+}
+
+TEST_F(AppCandidateFinderTest, HomogeneityIsJudgedOnTheAppliedColumn) {
+    EXPECT_CALL(find_uniform_value, find(result)).WillOnce(Return(std::nullopt));
+    finder.find(2, 5, {0, 1}, 2);
+}

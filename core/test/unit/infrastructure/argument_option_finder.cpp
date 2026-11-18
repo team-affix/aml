@@ -69,3 +69,12 @@ TEST_F(ArgumentOptionFinderTest, OnlyOperandsOfTheNextTypeAreLookedAt) {
     EXPECT_CALL(get_operand_of_type, operand_of_type(0, _)).Times(0);
     finder.find(0, {1, 0}, {});
 }
+
+TEST_F(ArgumentOptionFinderTest, ATypeWithNoOperandsGivesNoOptions) {
+    EXPECT_TRUE(finder.find(0, {6}, {}).empty());
+}
+
+TEST_F(ArgumentOptionFinderTest, NoOptionsWhenNoOperandLeavesAWitness) {
+    ON_CALL(detect_witness, detect(_, _, _)).WillByDefault(Return(false));
+    EXPECT_TRUE(finder.find(0, {0, 0}, {}).empty());
+}

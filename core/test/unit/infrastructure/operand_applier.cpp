@@ -7,6 +7,7 @@ using ::testing::_;
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::AnyNumber;
 
 namespace {
 
@@ -54,4 +55,23 @@ TEST_F(OperandApplierTest, ThePrimitiveIsAppliedToEachRowsOperandCells) {
 TEST_F(OperandApplierTest, NoRowsGiveAnEmptyColumn) {
     EXPECT_CALL(apply_primitive, apply(_, _)).Times(0);
     EXPECT_TRUE(applier.apply(0, {4}, 0).empty());
+}
+
+TEST_F(OperandApplierTest, AUnaryApplicationReadsOneOperandPerRow) {
+    InSequence order;
+    EXPECT_CALL(apply_primitive, apply(1, std::vector<const value*>{&falsity})).WillOnce(Return(&truth));
+    EXPECT_CALL(apply_primitive, apply(1, std::vector<const value*>{&truth})).WillOnce(Return(&falsity));
+    EXPECT_EQ(applier.apply(1, {4}, 2), (column{&truth, &falsity}));
+}
+
+TEST_F(OperandApplierTest, AnOperandMayFillSeveralPositions) {
+    EXPECT_CALL(apply_primitive, apply(3, std::vector<const value*>{&falsity, &falsity}));
+    EXPECT_CALL(apply_primitive, apply(3, std::vector<const value*>{&truth, &truth}));
+    applier.apply(3, {4, 4}, 2);
+}
+
+TEST_F(OperandApplierTest, EachRowsCellIsReadFromTheTable) {
+    EXPECT_CALL(get_operand_cell, cell(_, _)).Times(AnyNumber());
+    EXPECT_CALL(get_operand_cell, cell(7, 1)).WillOnce(Return(&falsity));
+    applier.apply(0, {4, 7}, 2);
 }

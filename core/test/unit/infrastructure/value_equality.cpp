@@ -48,3 +48,17 @@ TEST_F(ValueEqualityTest, TheSameValueIsEqual) {
 TEST_F(ValueEqualityTest, DifferentValuesAreNotEqual) {
     EXPECT_EQ(primitive.apply({&one, &zero}), &falsity);
 }
+
+TEST_F(ValueEqualityTest, EqualityIsByIdentityOfInternedValues) {
+    const value copy_of_one{.ctor = 3, .fields = {&zero}};
+    EXPECT_EQ(primitive.apply({&one, &copy_of_one}), &falsity);
+}
+
+TEST_F(ValueEqualityTest, EqualityIsSymmetric) {
+    EXPECT_EQ(primitive.apply({&zero, &one}), primitive.apply({&one, &zero}));
+}
+
+TEST_F(ValueEqualityTest, ResultsAreMadeThroughTheValuePool) {
+    EXPECT_CALL(make_value, make(1, std::vector<const value*>{})).WillOnce(Return(&truth));
+    primitive.apply({&zero, &zero});
+}

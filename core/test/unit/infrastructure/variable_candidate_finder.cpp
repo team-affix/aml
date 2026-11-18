@@ -79,3 +79,16 @@ TEST_F(VariableCandidateFinderTest, ACandidateCostsItsFeaturesSize) {
     EXPECT_CALL(size_feature, size(&third)).WillOnce(Return(7));
     EXPECT_EQ(finder.find(data, 2).front().cost, 7u);
 }
+
+TEST_F(VariableCandidateFinderTest, AFirstVariablePastTheScopeFindsNothing) {
+    EXPECT_TRUE(finder.find(data, 3).empty());
+}
+
+TEST_F(VariableCandidateFinderTest, ACandidateKeepsItsVariablesType) {
+    EXPECT_EQ(finder.find(data, 2).front().observed.type, 3u);
+}
+
+TEST_F(VariableCandidateFinderTest, AnEmptyScopeFindsNothing) {
+    const bin no_variables{.scope = {}, .labels = {&falsity, &truth}};
+    EXPECT_TRUE(finder.find(no_variables, 0).empty());
+}

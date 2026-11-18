@@ -90,3 +90,13 @@ TEST_F(PrimitiveApplierTest, AnApplicationThatIsNotFoundIsStillLoggedButDoesNotJ
     EXPECT_CALL(try_insert_feature, try_insert(_)).Times(0);
     applier.apply(5, 2);
 }
+
+TEST_F(PrimitiveApplierTest, TheSignatureOfTheChosenPrimitiveIsUsed) {
+    EXPECT_CALL(get_primitive_signature, signature(5)).WillOnce(Return(signature));
+    applier.apply(5, 2);
+}
+
+TEST_F(PrimitiveApplierTest, EveryApplicationIsLoggedExactlyOnce) {
+    EXPECT_CALL(record_application, record(_)).Times(1);
+    applier.apply(5, 2);
+}

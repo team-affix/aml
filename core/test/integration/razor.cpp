@@ -1,3 +1,4 @@
+#include <variant>
 #include <vector>
 #include <gtest/gtest.h>
 #include "infrastructure/primitive.hpp"
@@ -73,12 +74,14 @@ bin RazorIntegrationTest::is_even_training(size_t count) {
 
 }
 
-TEST_F(RazorIntegrationTest, XorIsFoundAsAMatchOnInputEquality) {
+TEST_F(RazorIntegrationTest, XorIsFoundAsOneSynthesizedOutput) {
     const bin training = xor_training();
     razor_runtime runtime(types, values, {&bool_equality}, training, options);
     for (size_t episode = 0; episode < 200; ++episode)
         runtime.next();
-    EXPECT_EQ(runtime.best_cost(), 6u);
+    // leaf eq(eq(x0, x1), false): 1 + (1 + 1 + 1) + 1
+    EXPECT_EQ(runtime.best_cost(), 5u);
+    EXPECT_TRUE(std::holds_alternative<model_node::leaf>(runtime.best_model()->content));
     expect_fit(runtime, training);
 }
 
@@ -100,4 +103,51 @@ TEST_F(RazorIntegrationTest, RazorFindsAModelNoCostlierThanScouts) {
     for (size_t episode = 0; episode < 300; ++episode)
         runtime.next();
     EXPECT_LE(runtime.best_cost(), scout.best_cost());
+}
+
+TEST_F(RazorIntegrationTest, TheBestCostNeverRises) {
+    const bin training = xor_training();
+    razor_runtime runtime(types, values, {&bool_equality}, training, options);
+    size_t previous = runtime.best_cost();
+    for (size_t episode = 0; episode < 100; ++episode) {
+        runtime.next();
+        EXPECT_LE(runtime.best_cost(), previous);
+        previous = runtime.best_cost();
+    }
+}
+
+TEST_F(RazorIntegrationTest, TheSameSeedFindsTheSameModel) {
+    const bin training = xor_training();
+    razor_runtime first(types, values, {&bool_equality}, training, options);
+    razor_runtime second(types, values, {&bool_equality}, training, options);
+    for (size_t episode = 0; episode < 50; ++episode) {
+        first.next();
+        second.next();
+        EXPECT_EQ(first.best_cost(), second.best_cost());
+    }
+}
+
+TEST_F(RazorIntegrationTest, NoModelExistsBeforeTheFirstEpisode) {
+    razor_runtime runtime(types, values, {}, xor_training(), options);
+    EXPECT_EQ(runtime.best_model(), nullptr);
+}
+
+TEST_F(RazorIntegrationTest, ACapOfZeroNeverAppliesAPrimitive) {
+    const bin training = xor_training();
+    razor_options no_applications = options;
+    no_applications.max_applications = 0;
+    razor_runtime runtime(types, values, {&bool_equality}, training, no_applications);
+    for (size_t episode = 0; episode < 100; ++episode)
+        runtime.next();
+    // Without synthesis XOR needs a match on both inputs: the best is scout's cost 7.
+    EXPECT_EQ(runtime.best_cost(), 7u);
+    expect_fit(runtime, training);
+}
+
+TEST_F(RazorIntegrationTest, AgreeingLabelsNeedNoSearch) {
+    bin training = xor_training();
+    training.labels = {truth, truth, truth, truth};
+    razor_runtime runtime(types, values, {&bool_equality}, training, options);
+    runtime.next();
+    EXPECT_EQ(runtime.best_cost(), 1u);
 }

@@ -30,6 +30,7 @@
 #include "infrastructure/model_sizer.hpp"
 #include "infrastructure/operand_applier.hpp"
 #include "infrastructure/operand_table.hpp"
+#include "infrastructure/output_finder.hpp"
 #include "infrastructure/option_range.hpp"
 #include "infrastructure/primitive.hpp"
 #include "infrastructure/primitive_applier.hpp"
@@ -37,7 +38,6 @@
 #include "infrastructure/primitive_option_finder.hpp"
 #include "infrastructure/random_rollout.hpp"
 #include "infrastructure/schema.hpp"
-#include "infrastructure/scrutinee_chooser.hpp"
 #include "infrastructure/synthesis_starter.hpp"
 #include "infrastructure/tree_walker.hpp"
 #include "infrastructure/ucb1.hpp"
@@ -128,8 +128,8 @@ struct razor_manifest {
     struct feature_sizer_t : feature_sizer<value_sizer> {
         using feature_sizer<value_sizer>::feature_sizer;
     };
-    struct model_sizer_t : model_sizer<feature_sizer_t, value_sizer> {
-        using model_sizer<feature_sizer_t, value_sizer>::model_sizer;
+    struct model_sizer_t : model_sizer<feature_sizer_t> {
+        using model_sizer<feature_sizer_t>::model_sizer;
     };
     struct primitive_dispatcher_t : primitive_dispatcher<primitive> {
         using primitive_dispatcher<primitive>::primitive_dispatcher;
@@ -188,29 +188,26 @@ struct razor_manifest {
     };
     struct feature_synthesizer_t : feature_synthesizer<
         synthesis_starter_t, application_log, primitive_option_finder_t, option_chooser_t, primitive_applier_t,
-        cheapest_feature_index> {
+        cheapest_feature_index, output_finder> {
         using feature_synthesizer<
             synthesis_starter_t, application_log, primitive_option_finder_t, option_chooser_t, primitive_applier_t,
-            cheapest_feature_index>::feature_synthesizer;
+            cheapest_feature_index, output_finder>::feature_synthesizer;
     };
-    struct leaf_detector_t : leaf_detector<uniform_value_finder> {
-        using leaf_detector<uniform_value_finder>::leaf_detector;
+    struct leaf_detector_t : leaf_detector<feature_pool, uniform_value_finder, feature_pool> {
+        using leaf_detector<feature_pool, uniform_value_finder, feature_pool>::leaf_detector;
     };
     struct bin_splitter_t : bin_splitter<schema, schema> {
         using bin_splitter<schema, schema>::bin_splitter;
-    };
-    struct scrutinee_chooser_t : scrutinee_chooser<feature_synthesizer_t, option_chooser_t> {
-        using scrutinee_chooser<feature_synthesizer_t, option_chooser_t>::scrutinee_chooser;
     };
     struct field_chooser_t : field_chooser<variable_candidate_finder_t, option_chooser_t> {
         using field_chooser<variable_candidate_finder_t, option_chooser_t>::field_chooser;
     };
     struct model_builder_t : model_builder<
-        leaf_detector_t, scrutinee_chooser_t, field_chooser_t, bin_splitter_t, model_node_pool, model_node_pool,
-        model_node_pool> {
+        leaf_detector_t, feature_synthesizer_t, output_finder, option_chooser_t, field_chooser_t, bin_splitter_t,
+        model_node_pool, model_node_pool, model_node_pool> {
         using model_builder<
-            leaf_detector_t, scrutinee_chooser_t, field_chooser_t, bin_splitter_t, model_node_pool, model_node_pool,
-            model_node_pool>::model_builder;
+            leaf_detector_t, feature_synthesizer_t, output_finder, option_chooser_t, field_chooser_t, bin_splitter_t,
+            model_node_pool, model_node_pool, model_node_pool>::model_builder;
     };
     struct model_episode_t : model_episode<model_builder_t, model_sizer_t, best_model_tracker> {
         using model_episode<model_builder_t, model_sizer_t, best_model_tracker>::model_episode;
@@ -235,6 +232,7 @@ struct razor_manifest {
     constant_store               constants_;
     cheapest_feature_index       feature_candidates_;
     application_log              applications_;
+    output_finder                output_finder_;
     uniform_value_finder         uniform_value_finder_;
     value_sizer                  value_sizer_;
     feature_sizer_t              feature_sizer_;
@@ -272,7 +270,6 @@ struct razor_manifest {
     feature_synthesizer_t        feature_synthesizer_;
     leaf_detector_t              leaf_detector_;
     bin_splitter_t               bin_splitter_;
-    scrutinee_chooser_t          scrutinee_chooser_;
     field_chooser_t              field_chooser_;
     model_builder_t              model_builder_;
     best_model_tracker           best_model_tracker_;

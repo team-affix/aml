@@ -38,3 +38,16 @@ TEST_F(FeatureHashTest, DifferentConstantsHashApart) {
     EXPECT_NE(hasher(feature{feature::constant{.literal = &zero}}),
               hasher(feature{feature::constant{.literal = &one}}));
 }
+
+TEST_F(FeatureHashTest, DifferentVariablesHashApart) {
+    EXPECT_NE(hasher(first_var), hasher(second_var));
+}
+
+TEST_F(FeatureHashTest, ThePrimitiveChangesTheHash) {
+    EXPECT_NE(hasher(feature{feature::app{.prim = 0, .args = {&first_var}}}),
+              hasher(feature{feature::app{.prim = 1, .args = {&first_var}}}));
+}
+
+TEST_F(FeatureHashTest, AnApplicationAndAVariableHashApart) {
+    EXPECT_NE(hasher(feature{feature::app{.prim = 0, .args = {}}}), hasher(first_var));
+}

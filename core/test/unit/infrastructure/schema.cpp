@@ -42,3 +42,28 @@ TEST_F(SchemaTest, ATypeListsItsConstructorsInTagOrder) {
     EXPECT_EQ(types.ctors(nat), (std::vector<ctor_id>{zero, suc}));
     EXPECT_EQ(types.ctors(boolean), (std::vector<ctor_id>{falsity}));
 }
+
+TEST_F(SchemaTest, ANewSchemaHasNoTypes) {
+    EXPECT_EQ(types.type_count(), 0u);
+}
+
+TEST_F(SchemaTest, ATypeWithoutConstructorsListsNone) {
+    const type_id unit = types.declare_type();
+    EXPECT_TRUE(types.ctors(unit).empty());
+}
+
+TEST_F(SchemaTest, AConstructorKeepsItsFieldTypesInOrder) {
+    const type_id boolean = types.declare_type();
+    const type_id nat = types.declare_type();
+    const type_id pair = types.declare_type();
+    const ctor_id make_pair = types.declare_ctor(pair, {nat, boolean, nat});
+    EXPECT_EQ(types.decl(make_pair).field_types, (std::vector<type_id>{nat, boolean, nat}));
+}
+
+TEST_F(SchemaTest, ATypeMayHoldItselfInAField) {
+    const type_id list = types.declare_type();
+    const type_id element = types.declare_type();
+    types.declare_ctor(list, {});
+    const ctor_id cons = types.declare_ctor(list, {element, list});
+    EXPECT_EQ(types.decl(cons), (ctor_decl{.type = list, .tag = 1, .field_types = {element, list}}));
+}

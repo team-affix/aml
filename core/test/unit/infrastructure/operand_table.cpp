@@ -123,3 +123,21 @@ TEST_F(OperandTableTest, AConstantGivesItsLiteralOnEveryRowAndAFeatureItsCell) {
     EXPECT_EQ(table.cell(3, 0), &falsity);
     EXPECT_EQ(table.cell(3, 1), &truth);
 }
+
+TEST_F(OperandTableTest, WithNoFeaturesEveryOperandIsAConstant) {
+    features.clear();
+    nat_features.clear();
+    boolean_features.clear();
+    EXPECT_EQ(table.count_of_type(0), 2u);
+    EXPECT_FALSE(table.is_feature(2));
+}
+
+TEST_F(OperandTableTest, AFeaturesOperandIsOffsetByEveryConstantNotJustItsTypes) {
+    EXPECT_EQ(table.operand_of_type(1, 1), constants.size() + 1);
+}
+
+TEST_F(OperandTableTest, ATypeWithOnlyFeaturesNumbersThemPastTheConstants) {
+    nat_constants.clear();
+    EXPECT_EQ(table.constant_count_of_type(1), 0u);
+    EXPECT_EQ(table.operand_of_type(1, 0), 4u);
+}

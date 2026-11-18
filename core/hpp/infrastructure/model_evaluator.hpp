@@ -9,7 +9,8 @@
 #include "value_objects/value.hpp"
 
 // Infers a label for one input tuple: each match evaluates its scrutinee, binds the matched constructor's fields
-// and descends into that constructor's branch. A leaf gives its label; an empty node gives nothing.
+// and descends into that constructor's branch. A leaf gives its output evaluated in that scope; an empty node gives
+// nothing.
 template<typename IEvaluateFeature, typename IGetCtorDecl>
 struct model_evaluator {
     model_evaluator(IEvaluateFeature& evaluate_feature, IGetCtorDecl& get_ctor_decl);
@@ -38,7 +39,7 @@ std::optional<const value*> MODEL_EVALUATOR::evaluate(
         node = match->branches.at(get_ctor_decl_.decl(matched->ctor).tag);
     }
     if (const model_node::leaf* leaf = std::get_if<model_node::leaf>(&node->content))
-        return leaf->label;
+        return evaluate_feature_.evaluate(leaf->output, scope);
     return std::nullopt;
 }
 

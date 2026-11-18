@@ -95,3 +95,21 @@ TEST_F(WitnessDetectorTest, TriedApplicationsAreCountedForThatPrimitiveAndPrefix
     EXPECT_CALL(count_tried_applications, count_with_prefix(4, std::vector<size_t>{2})).WillOnce(Return(0));
     detector.detect(4, {0, 0}, {2});
 }
+
+TEST_F(WitnessDetectorTest, ANullaryPrimitiveHasNoWitnessSinceItHoldsNoFeature) {
+    EXPECT_FALSE(detector.detect(0, {}, {}));
+}
+
+TEST_F(WitnessDetectorTest, AUnaryPrimitiveHasOneWitnessPerUntriedFeature) {
+    EXPECT_TRUE(detector.detect(0, {1}, {}));
+    ON_CALL(count_tried_applications, count_with_prefix(0, std::vector<size_t>{})).WillByDefault(Return(1));
+    EXPECT_FALSE(detector.detect(0, {1}, {}));
+}
+
+TEST_F(WitnessDetectorTest, MixedArgumentTypesMultiplyTheirCounts) {
+    // Type 0 then type 1: 3 * 1 = 3 tuples; the type 1 operand is a feature, so all are useful.
+    ON_CALL(count_tried_applications, count_with_prefix(0, std::vector<size_t>{})).WillByDefault(Return(2));
+    EXPECT_TRUE(detector.detect(0, {0, 1}, {}));
+    ON_CALL(count_tried_applications, count_with_prefix(0, std::vector<size_t>{})).WillByDefault(Return(3));
+    EXPECT_FALSE(detector.detect(0, {0, 1}, {}));
+}

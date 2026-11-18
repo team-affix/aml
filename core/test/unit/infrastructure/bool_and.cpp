@@ -43,3 +43,8 @@ TEST_F(BoolAndTest, OnlyTwoTruesGiveTrue) {
     EXPECT_EQ(primitive.apply({&falsity, &truth}), &falsity);
     EXPECT_EQ(primitive.apply({&falsity, &falsity}), &falsity);
 }
+
+TEST_F(BoolAndTest, ResultsAreMadeThroughTheValuePool) {
+    EXPECT_CALL(make_value, make(1, std::vector<const value*>{})).WillOnce(Return(&truth));
+    primitive.apply({&truth, &truth});
+}

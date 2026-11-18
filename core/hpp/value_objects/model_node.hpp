@@ -4,11 +4,11 @@
 #include <variant>
 #include <vector>
 #include "value_objects/feature.hpp"
-#include "value_objects/value.hpp"
 
 // A node of a model. `match` is an exhaustive one-layer case on `scrutinee`: `branches[t]` handles the constructor
-// with tag t and sees that constructor's fields bound as the next variables in scope. `leaf` returns its label.
-// `empty` saw no data and returns nothing.
+// with tag t and sees that constructor's fields bound as the next variables in scope. `leaf` returns its output
+// feature evaluated in scope: a constant label, a variable, or any synthesized feature. `empty` saw no data and
+// returns nothing.
 struct model_node {
     struct match {
         const feature* scrutinee;
@@ -16,7 +16,7 @@ struct model_node {
         auto operator<=>(const match&) const = default;
     };
     struct leaf {
-        const value* label;
+        const feature* output;
         auto operator<=>(const leaf&) const = default;
     };
     struct empty {

@@ -3,6 +3,7 @@
 #include "infrastructure/primitive.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/scout_runtime.hpp"
+#include "infrastructure/value_equality.hpp"
 #include "infrastructure/value_pool.hpp"
 
 namespace {
@@ -82,11 +83,12 @@ TEST_F(ScoutIntegrationTest, AgreeingLabelsGiveASingleLeaf) {
     expect_fit(runtime, training);
 }
 
-TEST_F(ScoutIntegrationTest, XorWithoutPrimitivesMatchesOnBothInputs) {
+TEST_F(ScoutIntegrationTest, XorWithoutPrimitivesMatchesOnBothInputsWhereTheyDifferAndOutputsX1WhereX0IsFalse) {
     const bin training = xor_training();
     scout_runtime runtime(types, values, {}, training, options);
     runtime.next();
-    EXPECT_EQ(runtime.best_cost(), 10u);
+    // match x0 (2) + [x0 false: leaf x1 (1)] + [x0 true: match x1 (2) + two constant leaves (2)]
+    EXPECT_EQ(runtime.best_cost(), 7u);
     expect_fit(runtime, training);
 }
 
@@ -105,4 +107,34 @@ TEST_F(ScoutIntegrationTest, AnInputUnlikeEveryTrainingRowCanReachAnEmptyBranch)
     runtime.next();
     expect_fit(runtime, training);
     EXPECT_FALSE(runtime.infer({values.make(zero_ctor, {})}).has_value());
+}
+
+TEST_F(ScoutIntegrationTest, MoreEpisodesChangeNothing) {
+    const bin training = is_even_training(5);
+    scout_runtime runtime(types, values, {}, training, options);
+    runtime.next();
+    const model_node* model = runtime.best_model();
+    const size_t cost = runtime.best_cost();
+    runtime.next();
+    runtime.next();
+    EXPECT_EQ(runtime.best_model(), model);
+    EXPECT_EQ(runtime.best_cost(), cost);
+}
+
+TEST_F(ScoutIntegrationTest, ScoutStopsSynthesisAtOnceSoPrimitivesDoNotChangeItsModel) {
+    const bin training = xor_training();
+    value_equality<value_pool> equality(
+        values, boolean, boolean_encoding{.type = boolean, .false_ctor = false_ctor, .true_ctor = true_ctor});
+    scout_runtime with_primitive(types, values, {&equality}, training, options);
+    scout_runtime without_primitive(types, values, {}, training, options);
+    with_primitive.next();
+    without_primitive.next();
+    EXPECT_EQ(with_primitive.best_cost(), without_primitive.best_cost());
+}
+
+TEST_F(ScoutIntegrationTest, IsEvenFitsLargerTrainingSets) {
+    const bin training = is_even_training(12);
+    scout_runtime runtime(types, values, {}, training, options);
+    runtime.next();
+    expect_fit(runtime, training);
 }

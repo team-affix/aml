@@ -28,3 +28,11 @@ TEST_F(ColumnHashTest, CellOrderChangesTheHash) {
 TEST_F(ColumnHashTest, LengthChangesTheHash) {
     EXPECT_NE(hasher(column{&falsity}), hasher(column{&falsity, &falsity}));
 }
+
+TEST_F(ColumnHashTest, EmptyColumnsHashEqual) {
+    EXPECT_EQ(hasher(column{}), hasher(column{}));
+}
+
+TEST_F(ColumnHashTest, DifferentValuesHashApart) {
+    EXPECT_NE(hasher(column{&truth}), hasher(column{&falsity}));
+}

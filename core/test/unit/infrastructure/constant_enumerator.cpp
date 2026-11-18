@@ -8,6 +8,7 @@ using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRef;
+using ::testing::InSequence;
 
 namespace {
 
@@ -106,4 +107,23 @@ TEST_F(ConstantEnumeratorTest, EveryCombinationOfFieldsThatFitsTheSizeIsMade) {
 TEST_F(ConstantEnumeratorTest, AValueWhoseFieldsCannotFitIsNotMade) {
     EXPECT_CALL(make_value, make(4, _)).Times(0);
     EXPECT_TRUE(enumerator.enumerate(2, 2).empty());
+}
+
+TEST_F(ConstantEnumeratorTest, ASizeBelowTheSmallestValueEnumeratesNothing) {
+    EXPECT_TRUE(enumerator.enumerate(0, 0).empty());
+}
+
+TEST_F(ConstantEnumeratorTest, ValuesOfOneSizeComeBeforeLargerOnes) {
+    EXPECT_EQ(enumerator.enumerate(1, 2), (std::vector<const value*>{&zero, &one}));
+}
+
+TEST_F(ConstantEnumeratorTest, ASizeLargerThanAFiniteTypeNeedsGivesJustItsValues) {
+    EXPECT_EQ(enumerator.enumerate(0, 5), (std::vector<const value*>{&falsity, &truth}));
+}
+
+TEST_F(ConstantEnumeratorTest, ConstructorsAreTriedInTagOrderWithinASize) {
+    InSequence order;
+    EXPECT_CALL(make_value, make(0, std::vector<const value*>{})).WillOnce(Return(&falsity));
+    EXPECT_CALL(make_value, make(1, std::vector<const value*>{})).WillOnce(Return(&truth));
+    enumerator.enumerate(0, 1);
 }

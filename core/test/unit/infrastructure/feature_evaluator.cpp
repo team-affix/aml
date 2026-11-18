@@ -5,6 +5,7 @@
 
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::_;
 
 namespace {
 
@@ -45,4 +46,22 @@ TEST_F(FeatureEvaluatorTest, AnApplicationAppliesItsPrimitiveToItsEvaluatedArgum
     EXPECT_CALL(apply_primitive, apply(0, std::vector<const value*>{&falsity})).WillOnce(Return(&truth));
     EXPECT_CALL(apply_primitive, apply(1, std::vector<const value*>{&truth, &truth})).WillOnce(Return(&falsity));
     EXPECT_EQ(evaluator.evaluate(&outer, {&truth, &falsity}), &falsity);
+}
+
+TEST_F(FeatureEvaluatorTest, AVariableReadsOnlyItsOwnPositionInScope) {
+    const feature first_var{feature::var{.index = 0}};
+    EXPECT_EQ(evaluator.evaluate(&first_var, {&truth, &falsity}), &truth);
+}
+
+TEST_F(FeatureEvaluatorTest, AConstantIgnoresTheScope) {
+    EXPECT_CALL(apply_primitive, apply(_, _)).Times(0);
+    EXPECT_EQ(evaluator.evaluate(&true_constant, {&falsity, &falsity}), &truth);
+}
+
+TEST_F(FeatureEvaluatorTest, ArgumentsAreEvaluatedInOrder) {
+    const feature first_var{feature::var{.index = 0}};
+    const feature application{feature::app{.prim = 2, .args = {&first_var, &second_var, &true_constant}}};
+    EXPECT_CALL(apply_primitive, apply(2, std::vector<const value*>{&falsity, &truth, &truth}))
+        .WillOnce(Return(&truth));
+    EXPECT_EQ(evaluator.evaluate(&application, {&falsity, &truth}), &truth);
 }

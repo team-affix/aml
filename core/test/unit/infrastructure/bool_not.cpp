@@ -41,3 +41,12 @@ TEST_F(BoolNotTest, TrueBecomesFalseAndFalseBecomesTrue) {
     EXPECT_EQ(primitive.apply({&truth}), &falsity);
     EXPECT_EQ(primitive.apply({&falsity}), &truth);
 }
+
+TEST_F(BoolNotTest, NegatingTwiceGivesTheOriginal) {
+    EXPECT_EQ(primitive.apply({primitive.apply({&truth})}), &truth);
+}
+
+TEST_F(BoolNotTest, ResultsAreMadeThroughTheValuePool) {
+    EXPECT_CALL(make_value, make(0, std::vector<const value*>{})).WillOnce(Return(&falsity));
+    primitive.apply({&truth});
+}

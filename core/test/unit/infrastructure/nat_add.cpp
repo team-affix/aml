@@ -5,6 +5,7 @@
 
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::_;
 
 namespace {
 
@@ -48,4 +49,18 @@ TEST_F(NatAddTest, AddingZeroGivesTheLeftOperand) {
 TEST_F(NatAddTest, EachSuccessorOfTheRightOperandWrapsTheLeftOperand) {
     EXPECT_EQ(primitive.apply({&one, &two}), &three);
     EXPECT_EQ(primitive.apply({&zero, &one}), &one);
+}
+
+TEST_F(NatAddTest, ZeroPlusZeroIsZero) {
+    EXPECT_CALL(make_value, make(_, _)).Times(0);
+    EXPECT_EQ(primitive.apply({&zero, &zero}), &zero);
+}
+
+TEST_F(NatAddTest, AdditionMakesOneSuccessorPerSuccessorOfTheRightOperand) {
+    EXPECT_CALL(make_value, make(1, _)).Times(2).WillOnce(Return(&two)).WillOnce(Return(&three));
+    EXPECT_EQ(primitive.apply({&one, &two}), &three);
+}
+
+TEST_F(NatAddTest, TheRightOperandOnlyCountsSuccessors) {
+    EXPECT_EQ(primitive.apply({&zero, &three}), &three);
 }

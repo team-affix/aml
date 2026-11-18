@@ -79,3 +79,23 @@ TEST_F(CheapestFeatureIndexTest, ClearForgetsEveryTypesPositions) {
     index.clear();
     EXPECT_TRUE(index.features_of_type(0).empty());
 }
+
+TEST_F(CheapestFeatureIndexTest, ANewIndexIsEmpty) {
+    EXPECT_TRUE(index.candidates().empty());
+    EXPECT_TRUE(index.features_of_type(0).empty());
+}
+
+TEST_F(CheapestFeatureIndexTest, ColumnsOfDifferentLengthAreDifferent) {
+    index.try_insert(make(&first, 1, {&falsity}));
+    index.try_insert(make(&second, 1, {&falsity, &falsity}));
+    EXPECT_EQ(index.candidates().size(), 2u);
+}
+
+TEST_F(CheapestFeatureIndexTest, AReplacementDoesNotAddAPosition) {
+    index.try_insert(make(&first, 5, {&falsity, &truth}));
+    index.try_insert(make(&second, 2, {&falsity, &truth}));
+    index.try_insert(make(&first, 1, {&falsity, &truth}));
+    EXPECT_EQ(index.candidates().size(), 1u);
+    EXPECT_EQ(index.features_of_type(0).size(), 1u);
+    EXPECT_EQ(index.candidates()[0].cost, 1u);
+}

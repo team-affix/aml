@@ -6,6 +6,7 @@
 
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::_;
 
 namespace {
 
@@ -47,4 +48,21 @@ TEST_F(PrimitiveDispatcherTest, ASignatureComesFromThePrimitiveAtThatId) {
 TEST_F(PrimitiveDispatcherTest, AnApplicationIsForwardedToThePrimitiveAtThatId) {
     EXPECT_CALL(first, apply(std::vector<const value*>{&zero})).WillOnce(Return(&one));
     EXPECT_EQ(dispatcher.apply(0, {&zero}), &one);
+}
+
+TEST_F(PrimitiveDispatcherTest, NoPrimitivesCountZero) {
+    const primitive_dispatcher<test_primitive> empty(std::vector<test_primitive>{});
+    EXPECT_EQ(empty.count(), 0u);
+}
+
+TEST_F(PrimitiveDispatcherTest, OnlyThePrimitiveAtTheIdIsApplied) {
+    EXPECT_CALL(first, apply(_)).Times(0);
+    EXPECT_CALL(second, apply(std::vector<const value*>{&one})).WillOnce(Return(&zero));
+    EXPECT_EQ(dispatcher.apply(1, {&one}), &zero);
+}
+
+TEST_F(PrimitiveDispatcherTest, ThePrimitivesAreReferredToNotCopied) {
+    const primitive_signature signature{.arg_types = {}, .result_type = 9};
+    ON_CALL(first, signature()).WillByDefault(Return(signature));
+    EXPECT_EQ(dispatcher.signature(0), signature);
 }

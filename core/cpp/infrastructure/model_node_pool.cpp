@@ -8,8 +8,8 @@ const model_node* model_node_pool::make_match(
     return intern(model_node{model_node::match{.scrutinee = scrutinee, .branches = branches}});
 }
 
-const model_node* model_node_pool::make_leaf(const value* label) {
-    return intern(model_node{model_node::leaf{.label = label}});
+const model_node* model_node_pool::make_leaf(const feature* output) {
+    return intern(model_node{model_node::leaf{.output = output}});
 }
 
 const model_node* model_node_pool::make_empty() {

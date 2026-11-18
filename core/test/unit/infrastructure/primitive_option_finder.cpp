@@ -58,3 +58,15 @@ TEST_F(PrimitiveOptionFinderTest, NoPrimitivesGiveNoOptions) {
     ON_CALL(get_primitive_count, count()).WillByDefault(Return(0));
     EXPECT_TRUE(finder.find().empty());
 }
+
+TEST_F(PrimitiveOptionFinderTest, NoWitnessesGiveNoOptions) {
+    ON_CALL(detect_witness, detect(_, _, _)).WillByDefault(Return(false));
+    EXPECT_TRUE(finder.find().empty());
+}
+
+TEST_F(PrimitiveOptionFinderTest, EveryPrimitivesSignatureIsLookedUp) {
+    EXPECT_CALL(get_primitive_signature, signature(0)).WillOnce(Return(primitive_signature{.arg_types = {0}}));
+    EXPECT_CALL(get_primitive_signature, signature(1)).WillOnce(Return(primitive_signature{.arg_types = {0}}));
+    EXPECT_CALL(get_primitive_signature, signature(2)).WillOnce(Return(primitive_signature{.arg_types = {0}}));
+    finder.find();
+}

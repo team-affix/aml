@@ -47,3 +47,25 @@ TEST_F(MctsEpisodeTest, TheNegatedCostRewardsThePathBeforeTheEpisodeEnds) {
     EXPECT_CALL(terminate, terminate());
     EXPECT_EQ(episode.run(training), 7u);
 }
+
+TEST_F(MctsEpisodeTest, AFreeModelIsRewardedWithZero) {
+    ON_CALL(run_episode, run(training)).WillByDefault(Return(0));
+    EXPECT_CALL(set_reward, set_value(0.0));
+    EXPECT_EQ(episode.run(training), 0u);
+}
+
+TEST_F(MctsEpisodeTest, ACostlierModelEarnsALowerReward) {
+    EXPECT_CALL(run_episode, run(training)).WillOnce(Return(3)).WillOnce(Return(9));
+    InSequence order;
+    EXPECT_CALL(set_reward, set_value(-3.0));
+    EXPECT_CALL(set_reward, set_value(-9.0));
+    episode.run(training);
+    episode.run(training);
+}
+
+TEST_F(MctsEpisodeTest, EveryRunEndsItsMctsEpisode) {
+    EXPECT_CALL(terminate, terminate()).Times(3);
+    episode.run(training);
+    episode.run(training);
+    episode.run(training);
+}

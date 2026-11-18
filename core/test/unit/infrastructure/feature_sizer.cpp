@@ -45,3 +45,18 @@ TEST_F(FeatureSizerTest, AnApplicationCostsOnePlusItsArguments) {
     const feature outer{feature::app{.prim = 1, .args = {&inner, &constant}}};
     EXPECT_EQ(sizer.size(&outer), 1u + 2u + 5u);
 }
+
+TEST_F(FeatureSizerTest, AnApplicationWithoutArgumentsCostsOne) {
+    const feature nullary{feature::app{.prim = 0, .args = {}}};
+    EXPECT_EQ(sizer.size(&nullary), 1u);
+}
+
+TEST_F(FeatureSizerTest, ARepeatedArgumentIsCountedEachTime) {
+    const feature twice{feature::app{.prim = 0, .args = {&variable, &variable}}};
+    EXPECT_EQ(sizer.size(&twice), 3u);
+}
+
+TEST_F(FeatureSizerTest, AVariablesIndexDoesNotChangeItsCost) {
+    const feature far{feature::var{.index = 40}};
+    EXPECT_EQ(sizer.size(&far), 1u);
+}

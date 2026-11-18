@@ -1,3 +1,4 @@
+#include <vector>
 #include <gtest/gtest.h>
 #include "infrastructure/value_sizer.hpp"
 
@@ -27,4 +28,18 @@ TEST_F(ValueSizerTest, AValueCountsEveryConstructorInIt) {
     EXPECT_EQ(sizer.size(&two), 3u);
     const value pair{.ctor = 2, .fields = {&two, &one}};
     EXPECT_EQ(sizer.size(&pair), 6u);
+}
+
+TEST_F(ValueSizerTest, ASharedFieldIsCountedEachTimeItAppears) {
+    const value pair{.ctor = 2, .fields = {&one, &one}};
+    EXPECT_EQ(sizer.size(&pair), 5u);
+}
+
+TEST_F(ValueSizerTest, ADeepValueIsSizedFully) {
+    std::vector<value> chain;
+    chain.reserve(50);
+    chain.push_back(value{.ctor = 0, .fields = {}});
+    for (size_t depth = 1; depth < 50; ++depth)
+        chain.push_back(value{.ctor = 1, .fields = {&chain.back()}});
+    EXPECT_EQ(sizer.size(&chain.back()), 50u);
 }

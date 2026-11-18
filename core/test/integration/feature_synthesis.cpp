@@ -10,11 +10,13 @@
 #include "infrastructure/constant_enumerator.hpp"
 #include "infrastructure/constant_seeder.hpp"
 #include "infrastructure/constant_store.hpp"
+#include "infrastructure/feature_evaluator.hpp"
 #include "infrastructure/feature_pool.hpp"
 #include "infrastructure/feature_sizer.hpp"
 #include "infrastructure/feature_synthesizer.hpp"
 #include "infrastructure/operand_applier.hpp"
 #include "infrastructure/operand_table.hpp"
+#include "infrastructure/output_finder.hpp"
 #include "infrastructure/primitive.hpp"
 #include "infrastructure/primitive_dispatcher.hpp"
 #include "infrastructure/primitive_applier.hpp"
@@ -68,10 +70,12 @@ using synthesis_starter_t =
     synthesis_starter<cheapest_feature_index, application_log, variable_candidate_finder_t, cheapest_feature_index>;
 using feature_synthesizer_t = feature_synthesizer<
     synthesis_starter_t, application_log, primitive_option_finder_t, chooser_t, primitive_applier_t,
-    cheapest_feature_index>;
+    cheapest_feature_index, output_finder>;
 
-// XOR over two boolean inputs, with boolean equality as the only primitive and false and true as the constants. The
-// operands are false (0), true (1), x0 (2) and x1 (3) until something is derived.
+// XOR over two boolean inputs, with boolean equality as the only primitive and every value of size one as a constant.
+// Until something is derived, an argument's options are false, true, x0 and x1, in that order. `unreachable` has the
+// same inputs but labels of another type, so no feature can be its output and a session only stops by choice, cap or
+// running out of witnesses.
 struct FeatureSynthesisIntegrationTest : public ::testing::Test {
     FeatureSynthesisIntegrationTest();
     feature_synthesizer_t make(size_t max_applications);
@@ -82,12 +86,17 @@ struct FeatureSynthesisIntegrationTest : public ::testing::Test {
     ctor_id true_ctor;
     const value* falsity;
     const value* truth;
+    type_id colour;
+    const value* red;
+    const value* green;
     value_equality<value_pool> equality;
     bin training;
+    bin unreachable;
     feature_pool features;
     constant_store constants;
     cheapest_feature_index feature_candidates;
     application_log applications;
+    output_finder outputs;
     uniform_value_finder uniform_values;
     value_sizer value_sizes;
     feature_sizer_t feature_sizes;
@@ -105,6 +114,7 @@ struct FeatureSynthesisIntegrationTest : public ::testing::Test {
     argument_chooser_t argument_chooser;
     primitive_applier_t primitive_applier;
     synthesis_starter_t synthesis_starter;
+    feature_evaluator<primitive_dispatcher_t> evaluator;
 };
 
 FeatureSynthesisIntegrationTest::FeatureSynthesisIntegrationTest()
@@ -115,15 +125,20 @@ FeatureSynthesisIntegrationTest::FeatureSynthesisIntegrationTest()
     , true_ctor(types.declare_ctor(boolean, {}))
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
+    , colour(types.declare_type())
+    , red(values.make(types.declare_ctor(colour, {}), {}))
+    , green(values.make(types.declare_ctor(colour, {}), {}))
     , equality(values, boolean, boolean_encoding{.type = boolean, .false_ctor = false_ctor, .true_ctor = true_ctor})
     , training{
           .scope = {typed_column{.type = boolean, .cells = {falsity, falsity, truth, truth}},
                     typed_column{.type = boolean, .cells = {falsity, truth, falsity, truth}}},
           .labels = {falsity, truth, truth, falsity}}
+    , unreachable{.scope = training.scope, .labels = {red, green, green, red}}
     , features()
     , constants()
     , feature_candidates()
     , applications()
+    , outputs()
     , uniform_values()
     , value_sizes()
     , feature_sizes(value_sizes)
@@ -140,14 +155,15 @@ FeatureSynthesisIntegrationTest::FeatureSynthesisIntegrationTest()
     , chooser()
     , argument_chooser(argument_option_finder, chooser)
     , primitive_applier(primitives, argument_chooser, applications, app_candidate_finder, feature_candidates)
-    , synthesis_starter(feature_candidates, applications, variable_candidate_finder, feature_candidates) {
+    , synthesis_starter(feature_candidates, applications, variable_candidate_finder, feature_candidates)
+    , evaluator(primitives) {
     constant_seeder.seed(1);
 }
 
 feature_synthesizer_t FeatureSynthesisIntegrationTest::make(size_t max_applications) {
     return feature_synthesizer_t{
         synthesis_starter, applications, primitive_option_finder, chooser, primitive_applier, feature_candidates,
-        max_applications};
+        outputs, max_applications};
 }
 
 }
@@ -189,9 +205,9 @@ TEST_F(FeatureSynthesisIntegrationTest, ATupleOfConstantsIsNeverOffered) {
 TEST_F(FeatureSynthesisIntegrationTest, ApplyingUntilNoWitnessIsLeftTriesEveryUsefulTupleOnce) {
     feature_synthesizer_t synthesizer = make(1000);
     ON_CALL(chooser, choose(_)).WillByDefault(Invoke(&last_option));
-    const std::vector<candidate>& candidates = synthesizer.synthesize(training);
-    const size_t operand_count = constants.constants().size() + candidates.size();
-    const size_t constant_count = constants.constants().size();
+    const std::vector<candidate>& candidates = synthesizer.synthesize(unreachable);
+    const size_t constant_count = constants.constants_of_type(boolean).size();
+    const size_t operand_count = constant_count + candidates.size();
     EXPECT_EQ(applications.count(), operand_count * operand_count - constant_count * constant_count);
     EXPECT_GT(candidates.size(), 2u);
 }
@@ -199,7 +215,7 @@ TEST_F(FeatureSynthesisIntegrationTest, ApplyingUntilNoWitnessIsLeftTriesEveryUs
 TEST_F(FeatureSynthesisIntegrationTest, TheSessionAppliesNoMoreThanTheCap) {
     feature_synthesizer_t synthesizer = make(5);
     ON_CALL(chooser, choose(_)).WillByDefault(Invoke(&last_option));
-    synthesizer.synthesize(training);
+    synthesizer.synthesize(unreachable);
     EXPECT_EQ(applications.count(), 5u);
 }
 
@@ -207,7 +223,7 @@ TEST_F(FeatureSynthesisIntegrationTest, EveryDerivedFeatureIsHeterogeneousAndHas
     feature_synthesizer_t synthesizer = make(1000);
     ON_CALL(chooser, choose(_)).WillByDefault(Invoke(&last_option));
     std::set<column> columns;
-    for (const candidate& entry : synthesizer.synthesize(training)) {
+    for (const candidate& entry : synthesizer.synthesize(unreachable)) {
         EXPECT_FALSE(uniform_values.find(entry.observed.cells).has_value());
         EXPECT_TRUE(columns.insert(entry.observed.cells).second);
     }
@@ -216,8 +232,50 @@ TEST_F(FeatureSynthesisIntegrationTest, EveryDerivedFeatureIsHeterogeneousAndHas
 TEST_F(FeatureSynthesisIntegrationTest, ANewSessionForgetsTheLastOne) {
     feature_synthesizer_t synthesizer = make(1000);
     ON_CALL(chooser, choose(_)).WillByDefault(Invoke(&last_option));
-    synthesizer.synthesize(training);
+    synthesizer.synthesize(unreachable);
     ON_CALL(chooser, choose(_)).WillByDefault(Return(0));
-    EXPECT_EQ(synthesizer.synthesize(training).size(), 2u);
+    EXPECT_EQ(synthesizer.synthesize(unreachable).size(), 2u);
     EXPECT_EQ(applications.count(), 0u);
+}
+
+TEST_F(FeatureSynthesisIntegrationTest, DerivingTheLabelsEndsTheSessionWithThemAsAFeature) {
+    feature_synthesizer_t synthesizer = make(10);
+    InSequence order;
+    EXPECT_CALL(chooser, choose(2)).WillOnce(Return(1));
+    EXPECT_CALL(chooser, choose(4)).WillOnce(Return(2));
+    EXPECT_CALL(chooser, choose(4)).WillOnce(Return(3));
+    EXPECT_CALL(chooser, choose(2)).WillOnce(Return(1));
+    EXPECT_CALL(chooser, choose(5)).WillOnce(Return(4));
+    EXPECT_CALL(chooser, choose(5)).WillOnce(Return(0));
+    const std::vector<candidate>& candidates = synthesizer.synthesize(training);
+    const feature* equal_inputs = features.make_app(0, {features.make_var(0), features.make_var(1)});
+    const feature* exclusive_or = features.make_app(0, {equal_inputs, features.make_constant(falsity)});
+    EXPECT_EQ(outputs.find(candidates, training.labels), std::optional<const feature*>(exclusive_or));
+    EXPECT_EQ(applications.count(), 2u);
+}
+
+TEST_F(FeatureSynthesisIntegrationTest, AnInputThatIsAlreadyTheOutputStopsTheSessionUnasked) {
+    feature_synthesizer_t synthesizer = make(10);
+    const bin copy_first{.scope = training.scope, .labels = training.scope[0].cells};
+    EXPECT_CALL(chooser, choose(_)).Times(0);
+    synthesizer.synthesize(copy_first);
+    EXPECT_EQ(applications.count(), 0u);
+}
+
+TEST_F(FeatureSynthesisIntegrationTest, EveryFeaturesColumnIsWhatEvaluatingItOnEachRowGives) {
+    feature_synthesizer_t synthesizer = make(1000);
+    ON_CALL(chooser, choose(_)).WillByDefault(Invoke(&last_option));
+    for (const candidate& entry : synthesizer.synthesize(unreachable)) {
+        for (size_t row = 0; row < unreachable.labels.size(); ++row) {
+            const std::vector<const value*> inputs{unreachable.scope[0].cells[row], unreachable.scope[1].cells[row]};
+            EXPECT_EQ(evaluator.evaluate(entry.expression, inputs), entry.observed.cells[row]);
+        }
+    }
+}
+
+TEST_F(FeatureSynthesisIntegrationTest, EveryFeaturesCostIsItsSize) {
+    feature_synthesizer_t synthesizer = make(1000);
+    ON_CALL(chooser, choose(_)).WillByDefault(Invoke(&last_option));
+    for (const candidate& entry : synthesizer.synthesize(unreachable))
+        EXPECT_EQ(entry.cost, feature_sizes.size(entry.expression));
 }

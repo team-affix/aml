@@ -6,6 +6,7 @@
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::_;
 
 namespace {
 
@@ -72,5 +73,32 @@ TEST_F(ConstantSeederTest, EveryEnumeratedValueOfEveryTypeIsInsertedAsAConstant)
                 insert(constant_operand{.expression = &false_feature, .literal = &falsity, .type = 0}));
     EXPECT_CALL(insert_constant, insert(constant_operand{.expression = &true_feature, .literal = &truth, .type = 0}));
     EXPECT_CALL(insert_constant, insert(constant_operand{.expression = &zero_feature, .literal = &zero, .type = 1}));
+    seeder.seed(4);
+}
+
+TEST_F(ConstantSeederTest, EachTypeIsEnumeratedUpToTheGivenSize) {
+    EXPECT_CALL(enumerate_values, enumerate(0, 4)).WillOnce(Return(std::vector<const value*>{}));
+    EXPECT_CALL(enumerate_values, enumerate(1, 4)).WillOnce(Return(std::vector<const value*>{}));
+    seeder.seed(4);
+}
+
+TEST_F(ConstantSeederTest, ATypeWithNoValuesInsertsNothing) {
+    ON_CALL(get_type_count, type_count()).WillByDefault(Return(1));
+    ON_CALL(enumerate_values, enumerate(0, 4)).WillByDefault(Return(std::vector<const value*>{}));
+    EXPECT_CALL(insert_constant, insert(_)).Times(0);
+    seeder.seed(4);
+}
+
+TEST_F(ConstantSeederTest, NoTypesSeedNothing) {
+    ON_CALL(get_type_count, type_count()).WillByDefault(Return(0));
+    EXPECT_CALL(enumerate_values, enumerate(_, _)).Times(0);
+    EXPECT_CALL(insert_constant, insert(_)).Times(0);
+    seeder.seed(4);
+}
+
+TEST_F(ConstantSeederTest, EachConstantsFeatureIsMadeFromItsLiteral) {
+    EXPECT_CALL(make_constant_feature, make_constant(&falsity)).WillOnce(Return(&false_feature));
+    EXPECT_CALL(make_constant_feature, make_constant(&truth)).WillOnce(Return(&true_feature));
+    EXPECT_CALL(make_constant_feature, make_constant(&zero)).WillOnce(Return(&zero_feature));
     seeder.seed(4);
 }

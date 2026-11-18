@@ -71,3 +71,26 @@ TEST_F(SynthesisStarterTest, TheBinsHeterogeneousVariablesBecomeTheFirstFeatures
     EXPECT_CALL(try_insert_feature_candidate, try_insert(variable_candidate));
     starter.start(data);
 }
+
+TEST_F(SynthesisStarterTest, VariablesAreSoughtFromTheFirstVariable) {
+    EXPECT_CALL(find_variable_candidates, find(data, 0)).WillOnce(Return(std::vector<candidate>{}));
+    starter.start(data);
+}
+
+TEST_F(SynthesisStarterTest, EveryHeterogeneousVariableIsInsertedInOrder) {
+    const candidate second{.expression = &variable, .cost = 2, .observed = data.scope[0]};
+    ON_CALL(find_variable_candidates, find(data, 0))
+        .WillByDefault(Return(std::vector<candidate>{variable_candidate, second}));
+    InSequence order;
+    EXPECT_CALL(try_insert_feature_candidate, try_insert(variable_candidate));
+    EXPECT_CALL(try_insert_feature_candidate, try_insert(second));
+    starter.start(data);
+}
+
+TEST_F(SynthesisStarterTest, NoHeterogeneousVariablesStillClearsTheSession) {
+    ON_CALL(find_variable_candidates, find(data, 0)).WillByDefault(Return(std::vector<candidate>{}));
+    EXPECT_CALL(clear_feature_candidates, clear());
+    EXPECT_CALL(clear_applications, clear());
+    EXPECT_CALL(try_insert_feature_candidate, try_insert(_)).Times(0);
+    starter.start(data);
+}

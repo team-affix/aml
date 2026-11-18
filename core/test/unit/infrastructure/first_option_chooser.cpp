@@ -12,3 +12,7 @@ struct FirstOptionChooserTest : public ::testing::Test {
 TEST_F(FirstOptionChooserTest, TheFirstOptionIsChosen) {
     EXPECT_EQ(chooser.choose(3), 0u);
 }
+
+TEST_F(FirstOptionChooserTest, ASingleOptionIsChosen) {
+    EXPECT_EQ(chooser.choose(1), 0u);
+}

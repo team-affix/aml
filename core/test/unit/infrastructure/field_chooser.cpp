@@ -54,3 +54,17 @@ TEST_F(FieldChooserTest, TheChosenHeterogeneousFieldFromTheFirstFieldOnIsTheScru
     EXPECT_CALL(choose_field, choose(2)).WillOnce(Return(1));
     EXPECT_EQ(chooser.choose(data, 1), second_field_candidate);
 }
+
+TEST_F(FieldChooserTest, TheOnlyFieldIsStillChosenThrough) {
+    ON_CALL(find_variable_candidates, find(data, 2))
+        .WillByDefault(Return(std::vector<candidate>{second_field_candidate}));
+    EXPECT_CALL(choose_field, choose(1)).WillOnce(Return(0));
+    EXPECT_EQ(chooser.choose(data, 2), second_field_candidate);
+}
+
+TEST_F(FieldChooserTest, FieldsAreFoundFromTheGivenFirstField) {
+    EXPECT_CALL(find_variable_candidates, find(data, 2))
+        .WillOnce(Return(std::vector<candidate>{second_field_candidate}));
+    ON_CALL(choose_field, choose(1)).WillByDefault(Return(0));
+    chooser.choose(data, 2);
+}

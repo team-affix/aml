@@ -6,6 +6,7 @@
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::_;
 
 namespace {
 
@@ -41,4 +42,17 @@ TEST_F(ArgumentChooserTest, EachArgumentIsChosenFromTheOptionsLeftByTheArguments
 
 TEST_F(ArgumentChooserTest, ANullaryPrimitiveHasNoArguments) {
     EXPECT_TRUE(chooser.choose(0, {}).empty());
+}
+
+TEST_F(ArgumentChooserTest, AUnaryPrimitiveTakesOneChoice) {
+    EXPECT_CALL(find_argument_options, find(2, std::vector<type_id>{4}, std::vector<size_t>{}))
+        .WillOnce(Return(std::vector<size_t>{7, 8, 9}));
+    EXPECT_CALL(choose_argument, choose(3)).WillOnce(Return(2));
+    EXPECT_EQ(chooser.choose(2, {4}), (std::vector<size_t>{9}));
+}
+
+TEST_F(ArgumentChooserTest, AForcedArgumentIsStillChosenThrough) {
+    ON_CALL(find_argument_options, find(_, _, _)).WillByDefault(Return(std::vector<size_t>{5}));
+    EXPECT_CALL(choose_argument, choose(1)).Times(3).WillRepeatedly(Return(0));
+    EXPECT_EQ(chooser.choose(0, {0, 0, 0}), (std::vector<size_t>{5, 5, 5}));
 }

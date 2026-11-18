@@ -6,7 +6,7 @@
 size_t model_node_hash::operator()(const model_node& node) const noexcept {
     size_t seed = std::hash<size_t>{}(node.content.index());
     if (const model_node::leaf* leaf = std::get_if<model_node::leaf>(&node.content))
-        return hash_combine(seed, std::hash<const value*>{}(leaf->label));
+        return hash_combine(seed, std::hash<const feature*>{}(leaf->output));
     const model_node::match* match = std::get_if<model_node::match>(&node.content);
     if (match == nullptr)
         return seed;

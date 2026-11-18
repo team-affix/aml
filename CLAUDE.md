@@ -10,18 +10,23 @@ and are minimal in symbolic description length. Fit comes first; among models th
 - **Features:** a variable, a primitive application, or a constant. Primitives are native C++ structs with a fixed
   signature, and they are total. A feature is heterogeneous over a bin when its values there are not all equal.
 - **Model:** three node types (`model_node`): `match` (an exhaustive one-layer case on a feature; each branch sees
-  its constructor's fields bound as the next variables), `leaf` (a constant label), `empty` (no data; infers nothing).
-- **Learning (`model_builder`):** an empty bin becomes `empty`, a bin whose labels agree becomes a `leaf`, and any
-  other bin is partitioned: `scrutinee_chooser` runs a synthesis session and returns one of its features as its own
-  value, and the bin is matched on it; while every row falls into one constructor, `field_chooser` picks a
-  heterogeneous field that constructor just bound to funnel into.
+  its constructor's fields bound as the next variables), `leaf` (outputs a feature evaluated in scope: a constant
+  label, a variable, or a synthesized feature), `empty` (no data; infers nothing). Variable and synthesized outputs
+  generalize past the training data, so a model can be right on inputs no row held.
+- **Learning (`model_builder`):** an empty bin becomes `empty`. `leaf_detector` makes a leaf of a variable whose
+  column is the label column (cost 1, preferred) or of labels that all agree (a constant). Otherwise a synthesis
+  session runs; a synthesized feature equal to the labels becomes the leaf's output (`output_finder`, cheapest
+  first), and failing that the bin is matched on a chosen session feature, copied out of the session. While every row
+  falls into one constructor the match funnels: a detected output becomes a leaf, else `field_chooser` picks a
+  heterogeneous field that constructor just bound.
 - **Synthesis session (`feature_synthesizer`):** nothing is enumerated exhaustively. Operands are the constants (read
   from `constant_store` by reference, never laid out as columns) then the session's heterogeneous features (the
-  variables first). `operand_table` alone knows that numbering; both stores also list their positions by type. Each step chooses stop (option 0) or a primitive with an
-  application witness (an untried, type-correct operand tuple holding at least one heterogeneous feature), then its
-  arguments one at a time, each keeping a witness. A heterogeneous result joins the features. The cap is
-  `max_applications` per session; the session also ends when no primitive has a witness.
-- **Cost:** a match costs 1 + its scrutinee's size, a leaf its label's size, empty 0. A feature's size is 1 per
+  variables first). `operand_table` alone knows that numbering; both stores also list their positions by type. Each
+  step chooses stop (option 0) or a primitive with an application witness (an untried, type-correct operand tuple
+  holding at least one heterogeneous feature), then its arguments one at a time, each keeping a witness. A
+  heterogeneous result joins the features. The cap is `max_applications` per session; the session also ends when no
+  primitive has a witness or once a feature equals the labels.
+- **Cost:** a match costs 1 + its scrutinee's size, a leaf its output's size, empty 0. A feature's size is 1 per
   variable and per primitive application, and a constant's own size.
 - Design doc: "Partition Model: Structure" (Claude Doc, https://claude.ai/artifact/H1DWSUimtzBz38G4nrhi7e).
 
@@ -55,7 +60,8 @@ docs/                                      design notes (see docs/continuous-doc
 - When you add a solver, add a new manifest + runtime instead of changing an existing one. Duplicate wiring
   across manifests if needed.
 - Solvers so far:
-  - **Scout** (`scout_*`): one episode, the first option at every choice (so synthesis stops at once).
+  - **Scout** (`scout_*`): one episode, the first option at every choice (so synthesis stops at once and only
+    variables or constants become leaf outputs).
   - **Razor** (`razor_*`): UCT over every choice, its parts from the `mcts` submodule wired one by one in
     `razor_manifest`; each episode builds a fresh model and is rewarded with its negated cost.
 
@@ -73,8 +79,7 @@ equivalence keeps the cheapest feature per column (`cheapest_feature_index`). Ra
 - Synthesis: `constant_enumerator` + `constant_seeder`, `synthesis_starter`, `variable_candidate_finder`,
   `witness_detector`, `primitive_option_finder`, `argument_option_finder`, `argument_chooser`,
   `primitive_dispatcher`, `operand_applier`, `app_candidate_finder`, `primitive_applier`, `feature_synthesizer`.
-- Partition: `leaf_detector`, `uniform_value_finder`, `scrutinee_chooser`, `field_chooser`, `bin_splitter`,
-  `model_builder`.
+- Partition: `leaf_detector`, `output_finder`, `uniform_value_finder`, `field_chooser`, `bin_splitter`, `model_builder`.
 - Choices: `first_option_chooser`, `mcts_option_chooser`; each chooses an index among `option_count` options.
   MCTS sees them as an `option_range` (a count, not a vector).
 - Cost and inference: `value_sizer`, `feature_sizer`, `model_sizer`, `feature_evaluator`, `model_evaluator`.
@@ -120,7 +125,9 @@ another struct.
 - **Don't create files unless asked.** Use the scratchpad for notes.
 - When asked only to write tests, **don't touch non-test source**. Never weaken or delete a test to make it pass.
 - New public behavior needs a unit test (one real SUT, everything else mocked). Add an integration test only when
-  correctness depends on real components interacting.
+  correctness depends on real components interacting (at least two real components collaborating).
+- Keep coverage strong: each component's tests cover its edge cases (empty inputs, ties, order, every branch), not
+  just the happy path. Strengthen weak tests without asking.
 - Docs: follow `docs/continuous-documentation.md`. Write down only what was stated, and ask instead of guessing.
 - Be terse.
 - Git: commit messages are short, lowercase, past tense. Branches use `feature/`, `enhancement/`, `bug-fix/`

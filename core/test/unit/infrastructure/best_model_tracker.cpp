@@ -35,3 +35,21 @@ TEST_F(BestModelTrackerTest, AModelNoCheaperThanTheBestIsIgnored) {
     tracker.try_record(&second, 4);
     EXPECT_EQ(tracker.best_model(), &first);
 }
+
+TEST_F(BestModelTrackerTest, TheFirstRecordAlwaysWins) {
+    tracker.try_record(&first, 1000);
+    EXPECT_EQ(tracker.best_model(), &first);
+    EXPECT_EQ(tracker.best_cost(), 1000u);
+}
+
+TEST_F(BestModelTrackerTest, ACostlierModelLaterIsIgnored) {
+    tracker.try_record(&first, 3);
+    tracker.try_record(&second, 8);
+    EXPECT_EQ(tracker.best_model(), &first);
+    EXPECT_EQ(tracker.best_cost(), 3u);
+}
+
+TEST_F(BestModelTrackerTest, AFreeModelIsRecorded) {
+    tracker.try_record(&first, 0);
+    EXPECT_EQ(tracker.best_cost(), 0u);
+}

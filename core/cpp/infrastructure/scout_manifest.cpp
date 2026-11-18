@@ -9,10 +9,11 @@ scout_manifest::scout_manifest(
     , constants_()
     , feature_candidates_()
     , applications_()
+    , output_finder_()
     , uniform_value_finder_()
     , value_sizer_()
     , feature_sizer_(value_sizer_)
-    , model_sizer_(feature_sizer_, value_sizer_)
+    , model_sizer_(feature_sizer_)
     , primitive_dispatcher_(primitives)
     , variable_candidate_finder_(features_, feature_sizer_, uniform_value_finder_)
     , constant_enumerator_(schema_, schema_, values_)
@@ -30,13 +31,13 @@ scout_manifest::scout_manifest(
     , synthesis_starter_(feature_candidates_, applications_, variable_candidate_finder_, feature_candidates_)
     , feature_synthesizer_(
           synthesis_starter_, applications_, primitive_option_finder_, option_chooser_, primitive_applier_,
-          feature_candidates_, options.max_applications)
-    , leaf_detector_(uniform_value_finder_)
+          feature_candidates_, output_finder_, options.max_applications)
+    , leaf_detector_(features_, uniform_value_finder_, features_)
     , bin_splitter_(schema_, schema_)
-    , scrutinee_chooser_(feature_synthesizer_, option_chooser_)
     , field_chooser_(variable_candidate_finder_, option_chooser_)
     , model_builder_(
-          leaf_detector_, scrutinee_chooser_, field_chooser_, bin_splitter_, nodes_, nodes_, nodes_)
+          leaf_detector_, feature_synthesizer_, output_finder_, option_chooser_, field_chooser_, bin_splitter_, nodes_,
+          nodes_, nodes_)
     , best_model_tracker_()
     , model_episode_(model_builder_, model_sizer_, best_model_tracker_)
     , feature_evaluator_(primitive_dispatcher_)
