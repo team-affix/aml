@@ -90,31 +90,31 @@ struct scout_manifest {
     scout_manifest(
         schema& types, value_pool& values, const std::vector<primitive>& primitives, const scout_options& options);
 
-    schema& schema_;
-    value_pool& values_;
-    feature_pool features_;
-    model_node_pool nodes_;
-    constant_store constants_;
-    cheapest_feature_index candidate_index_;
-    uniform_value_finder uniform_value_finder_;
-    value_sizer value_sizer_;
-    feature_sizer_t feature_sizer_;
-    model_sizer_t model_sizer_;
-    primitive_dispatcher_t primitive_dispatcher_;
-    column_applier_t column_applier_;
-    argument_tuple_enumerator argument_tuple_enumerator_;
+    schema&                     schema_;
+    value_pool&                 values_;
+    feature_pool                features_;
+    model_node_pool             nodes_;
+    constant_store              constants_;
+    cheapest_feature_index      candidate_index_;
+    uniform_value_finder        uniform_value_finder_;
+    value_sizer                 value_sizer_;
+    feature_sizer_t             feature_sizer_;
+    model_sizer_t               model_sizer_;
+    primitive_dispatcher_t      primitive_dispatcher_;
+    column_applier_t            column_applier_;
+    argument_tuple_enumerator   argument_tuple_enumerator_;
     variable_candidate_finder_t variable_candidate_finder_;
-    constant_enumerator_t constant_enumerator_;
-    constant_seeder_t constant_seeder_;
-    feature_synthesizer_t feature_synthesizer_;
-    leaf_detector_t leaf_detector_;
-    bin_splitter_t bin_splitter_;
-    first_candidate_chooser candidate_chooser_;
-    model_builder_t model_builder_;
-    best_model_tracker best_model_tracker_;
-    model_episode_t model_episode_;
-    feature_evaluator_t feature_evaluator_;
-    model_evaluator_t model_evaluator_;
+    constant_enumerator_t       constant_enumerator_;
+    constant_seeder_t           constant_seeder_;
+    feature_synthesizer_t       feature_synthesizer_;
+    leaf_detector_t             leaf_detector_;
+    bin_splitter_t              bin_splitter_;
+    first_candidate_chooser     candidate_chooser_;
+    model_builder_t             model_builder_;
+    best_model_tracker          best_model_tracker_;
+    model_episode_t             model_episode_;
+    feature_evaluator_t         feature_evaluator_;
+    model_evaluator_t           model_evaluator_;
 };
 
 #endif

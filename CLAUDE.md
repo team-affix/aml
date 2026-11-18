@@ -49,8 +49,8 @@ docs/                                      design notes (see docs/continuous-doc
   across manifests if needed.
 - Solvers so far:
   - **Scout** (`scout_*`): one episode, the first candidate at every choice.
-  - **Razor** (`razor_*`): MCTS (`monte_carlo::uct_value_manifest` from the `mcts` submodule) over every choice;
-    each episode builds a fresh model and is rewarded with its negated cost.
+  - **Razor** (`razor_*`): UCT over every choice, its parts from the `mcts` submodule wired one by one in
+    `razor_manifest`; each episode builds a fresh model and is rewarded with its negated cost.
 
 ### Per-bin columns
 
@@ -91,8 +91,10 @@ another struct.
 ## Conventions observed in the code
 
 - Out-of-line template definitions use a `X_TEMPLATE` / `X` macro pair, `#undef`'d at the end of the header.
-- Manifests name their component types as nested structs that inherit the instantiation
-  (`struct leaf_detector_t : leaf_detector<...> { using leaf_detector<...>::leaf_detector; };`).
+- Manifests name every templated component type, submodule ones included, as a nested struct that inherits the
+  instantiation (`struct leaf_detector_t : leaf_detector<...> { using leaf_detector<...>::leaf_detector; };`), not
+  a `using` alias, so type names stay short instead of nesting. Members are declared in dependency order with their
+  names aligned in one column.
 - Constructor init lists put the comma first. Value objects use `auto operator<=>(const T&) const = default;` and
   tests build them with designated initializers. Ids are aliases in their own headers (`type_id`, `ctor_id`, ...).
 - `std::optional` is checked with `.has_value()` and read with `.value()`. Locals are `const` wherever possible.

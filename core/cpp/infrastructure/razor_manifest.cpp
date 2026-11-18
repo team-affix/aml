@@ -1,5 +1,11 @@
 #include "infrastructure/razor_manifest.hpp"
 
+namespace {
+
+const mcts_tree_node_id k_root = 0;
+
+}
+
 razor_manifest::razor_manifest(
     schema& types, value_pool& values, const std::vector<primitive>& primitives, const razor_options& options)
     : schema_(types)
@@ -27,13 +33,26 @@ razor_manifest::razor_manifest(
     , visits_()
     , rewards_()
     , random_(options.seed)
-    , mcts_(visits_, visits_, rewards_, rewards_, random_, options.exploration_constant, 0)
-    , candidate_chooser_(mcts_.chooser)
+    , tree_walker_()
+    , rollout_(random_)
+    , exploration_constant_(options.exploration_constant)
+    , value_delta_()
+    , value_update_(rewards_, rewards_, value_delta_)
+    , cursor_(k_root)
+    , backprop_path_(k_root)
+    , visit_creditor_(backprop_path_, visits_, visits_)
+    , value_creditor_(visit_creditor_, backprop_path_, value_update_)
+    , policy_(visits_, rewards_, tree_walker_, exploration_constant_)
+    , in_rollout_()
+    , mcts_chooser_(
+          visits_, tree_walker_, policy_, rollout_, cursor_, cursor_, backprop_path_, in_rollout_, in_rollout_)
+    , terminator_(backprop_path_, value_creditor_, backprop_path_, backprop_path_, cursor_, in_rollout_, k_root)
+    , candidate_chooser_(mcts_chooser_)
     , model_builder_(
           leaf_detector_, feature_synthesizer_, candidate_chooser_, bin_splitter_, variable_candidate_finder_,
           candidate_chooser_, nodes_, nodes_, nodes_)
     , best_model_tracker_()
     , model_episode_(model_builder_, model_sizer_, best_model_tracker_)
-    , mcts_episode_(model_episode_, mcts_.delta, mcts_.terminator)
+    , mcts_episode_(model_episode_, value_delta_, terminator_)
     , feature_evaluator_(primitive_dispatcher_)
     , model_evaluator_(feature_evaluator_, schema_) {}
