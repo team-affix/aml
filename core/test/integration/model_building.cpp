@@ -128,3 +128,14 @@ TEST_F(ModelBuildingIntegrationTest, BuildingTheSameDataTwiceGivesTheSameInterne
     const bin training{.scope = {typed_column{.type = boolean, .cells = {falsity, truth}}}, .labels = {truth, falsity}};
     EXPECT_EQ(manifest.model_builder_.build(training), manifest.model_builder_.build(training));
 }
+
+TEST_F(ModelBuildingIntegrationTest, AnAgreeingLabelNeedNotBeASeededConstant) {
+    const bin training{
+        .scope = {typed_column{.type = boolean, .cells = {falsity, truth}}}, .labels = {number(5), number(5)}};
+    const model_node* model = manifest.model_builder_.build(training);
+    // Only zero is seeded at size one, yet the leaf outputs five.
+    EXPECT_EQ(manifest.constants_.constants_of_type(nat).size(), 1u);
+    EXPECT_EQ(model, manifest.nodes_.make_leaf(manifest.features_.make_constant(number(5))));
+    EXPECT_EQ(manifest.model_sizer_.size(model), 6u);
+    expect_fit(model, training);
+}
