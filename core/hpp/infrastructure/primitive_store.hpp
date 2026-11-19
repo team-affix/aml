@@ -4,35 +4,18 @@
 #include <cstddef>
 #include <vector>
 #include "value_objects/prim_id.hpp"
+#include "value_objects/primitive.hpp"
+#include "value_objects/primitive_type.hpp"
+#include "value_objects/typed_primitive.hpp"
 
-// Stores the native primitives a solver was given. A primitive's id is its position.
-template<typename IPrimitive>
+// Stores the primitives a solver was given, each with its function type. A primitive's id is its position.
 struct primitive_store {
-    primitive_store(const std::vector<IPrimitive>& primitives);
+    primitive_store(const std::vector<typed_primitive>& primitives);
     size_t count() const;
-    const IPrimitive& primitive_at(prim_id prim) const;
+    const primitive_type& type(prim_id prim) const;
+    const primitive& function(prim_id prim) const;
 private:
-    std::vector<IPrimitive> primitives_;
+    std::vector<typed_primitive> primitives_;
 };
-
-#define PRIMITIVE_STORE_TEMPLATE template<typename IPrimitive>
-#define PRIMITIVE_STORE          primitive_store<IPrimitive>
-
-PRIMITIVE_STORE_TEMPLATE
-PRIMITIVE_STORE::primitive_store(const std::vector<IPrimitive>& primitives)
-    : primitives_(primitives) {}
-
-PRIMITIVE_STORE_TEMPLATE
-size_t PRIMITIVE_STORE::count() const {
-    return primitives_.size();
-}
-
-PRIMITIVE_STORE_TEMPLATE
-const IPrimitive& PRIMITIVE_STORE::primitive_at(prim_id prim) const {
-    return primitives_.at(prim);
-}
-
-#undef PRIMITIVE_STORE
-#undef PRIMITIVE_STORE_TEMPLATE
 
 #endif

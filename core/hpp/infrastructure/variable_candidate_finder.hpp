@@ -32,12 +32,12 @@ VARIABLE_CANDIDATE_FINDER::variable_candidate_finder(
 VARIABLE_CANDIDATE_FINDER_TEMPLATE
 std::vector<candidate> VARIABLE_CANDIDATE_FINDER::find(const bin& data, var_id first_var) const {
     std::vector<candidate> candidates;
-    for (var_id index = first_var; index < data.scope.size(); ++index) {
-        if (find_uniform_value_.find(data.scope[index].cells).has_value())
+    for (var_id index = first_var; index < data.inputs.size(); ++index) {
+        if (find_uniform_value_.find(data.inputs[index].cells).has_value())
             continue;
         const feature* expression = make_var_feature_.make_var(index);
         candidates.push_back(candidate{
-            .expression = expression, .cost = size_feature_.size(expression), .observed = data.scope[index]});
+            .expression = expression, .cost = size_feature_.size(expression), .observed = data.inputs[index]});
     }
     return candidates;
 }

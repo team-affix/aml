@@ -3,21 +3,17 @@
 
 #include <cstddef>
 #include <vector>
-#include "value_objects/ctor_decl.hpp"
-#include "value_objects/ctor_id.hpp"
+#include "value_objects/type_def.hpp"
 #include "value_objects/type_id.hpp"
 
-// Stores the monomorphic algebraic data types: each type's constructors and each constructor's field types.
+// Stores the user's types, all given at once. A type's id is its position, so a constructor's argument types may
+// name any of the types, the one being defined included.
 struct schema {
-    schema();
-    type_id declare_type();
-    ctor_id declare_ctor(type_id type, const std::vector<type_id>& field_types);
-    const ctor_decl& decl(ctor_id ctor) const;
-    const std::vector<ctor_id>& ctors(type_id type) const;
+    schema(const std::vector<type_def>& types);
     size_t type_count() const;
+    const type_def& def(type_id type) const;
 private:
-    std::vector<std::vector<ctor_id>> type_ctors_;
-    std::vector<ctor_decl> ctor_decls_;
+    std::vector<type_def> types_;
 };
 
 #endif

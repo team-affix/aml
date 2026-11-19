@@ -4,7 +4,7 @@
 razor_runtime::razor_runtime(
     schema& types,
     value_pool& values,
-    const std::vector<primitive>& primitives,
+    const std::vector<typed_primitive>& primitives,
     const bin& training,
     const razor_options& options)
     : manifest_(types, values, primitives, options)

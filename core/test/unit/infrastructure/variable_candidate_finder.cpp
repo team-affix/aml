@@ -47,12 +47,12 @@ struct VariableCandidateFinderTest : public ::testing::Test {
 };
 
 VariableCandidateFinderTest::VariableCandidateFinderTest()
-    : falsity{.ctor = 0, .fields = {}}
-    , truth{.ctor = 1, .fields = {}}
+    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
+    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
     , first{feature::var{.index = 0}}
     , third{feature::var{.index = 2}}
     , data{
-          .scope = {
+          .inputs = {
               typed_column{.type = 0, .cells = {&falsity, &truth}},
               typed_column{.type = 0, .cells = {&truth, &truth}},
               typed_column{.type = 3, .cells = {&truth, &falsity}}},
@@ -66,13 +66,13 @@ VariableCandidateFinderTest::VariableCandidateFinderTest()
 TEST_F(VariableCandidateFinderTest, HeterogeneousVariablesBecomeCandidatesAndHomogeneousOnesAreSkipped) {
     EXPECT_EQ(finder.find(data, 0),
               (std::vector<candidate>{
-                  candidate{.expression = &first, .cost = 1, .observed = data.scope[0]},
-                  candidate{.expression = &third, .cost = 1, .observed = data.scope[2]}}));
+                  candidate{.expression = &first, .cost = 1, .observed = data.inputs[0]},
+                  candidate{.expression = &third, .cost = 1, .observed = data.inputs[2]}}));
 }
 
 TEST_F(VariableCandidateFinderTest, VariablesBeforeTheFirstAreSkipped) {
     EXPECT_EQ(finder.find(data, 1),
-              (std::vector<candidate>{candidate{.expression = &third, .cost = 1, .observed = data.scope[2]}}));
+              (std::vector<candidate>{candidate{.expression = &third, .cost = 1, .observed = data.inputs[2]}}));
 }
 
 TEST_F(VariableCandidateFinderTest, ACandidateCostsItsFeaturesSize) {
@@ -89,6 +89,6 @@ TEST_F(VariableCandidateFinderTest, ACandidateKeepsItsVariablesType) {
 }
 
 TEST_F(VariableCandidateFinderTest, AnEmptyScopeFindsNothing) {
-    const bin no_variables{.scope = {}, .labels = {&falsity, &truth}};
+    const bin no_variables{.inputs = {}, .labels = {&falsity, &truth}};
     EXPECT_TRUE(finder.find(no_variables, 0).empty());
 }

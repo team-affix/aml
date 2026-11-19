@@ -15,8 +15,8 @@ struct CheapestFeatureIndexTest : public ::testing::Test {
 };
 
 CheapestFeatureIndexTest::CheapestFeatureIndexTest()
-    : falsity{.ctor = 0, .fields = {}}
-    , truth{.ctor = 1, .fields = {}}
+    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
+    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
     , first{feature::var{.index = 0}}
     , second{feature::var{.index = 1}}
     , index() {}

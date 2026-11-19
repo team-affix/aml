@@ -7,7 +7,6 @@
 using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::Return;
-using ::testing::ReturnRef;
 
 namespace {
 
@@ -15,16 +14,10 @@ struct MockEvaluateFeature {
     MOCK_METHOD(const value*, evaluate, (const feature*, const std::vector<const value*>&), (const));
 };
 
-struct MockGetCtorDecl {
-    MOCK_METHOD(const ctor_decl&, decl, (ctor_id), (const));
-};
-
-// Nat: zero = 0, suc = 1. The outer match is on x0: zero gives false; suc binds x1 and matches on it, where zero
-// gives nothing and suc (binding x2) outputs x2.
+// Nat is type 0: zero is tag 0, suc tag 1. The outer match is on x0: zero gives false; suc binds x1 and matches on
+// it, where zero gives nothing and suc (binding x2) outputs x2.
 struct ModelEvaluatorTest : public ::testing::Test {
     ModelEvaluatorTest();
-    ctor_decl zero_decl;
-    ctor_decl suc_decl;
     value zero;
     value one;
     value two;
@@ -39,24 +32,18 @@ struct ModelEvaluatorTest : public ::testing::Test {
     model_node inner;
     model_node outer;
     NiceMock<MockEvaluateFeature> evaluate_feature;
-    NiceMock<MockGetCtorDecl> get_ctor_decl;
-    model_evaluator<NiceMock<MockEvaluateFeature>, NiceMock<MockGetCtorDecl>> evaluator{
-        evaluate_feature, get_ctor_decl};
+    model_evaluator<NiceMock<MockEvaluateFeature>> evaluator{evaluate_feature};
 
     void SetUp() override {
-        ON_CALL(get_ctor_decl, decl(0)).WillByDefault(ReturnRef(zero_decl));
-        ON_CALL(get_ctor_decl, decl(1)).WillByDefault(ReturnRef(suc_decl));
         ON_CALL(evaluate_feature, evaluate(&false_output, _)).WillByDefault(Return(&falsity));
     }
 };
 
 ModelEvaluatorTest::ModelEvaluatorTest()
-    : zero_decl{.type = 0, .tag = 0, .field_types = {}}
-    , suc_decl{.type = 0, .tag = 1, .field_types = {0}}
-    , zero{.ctor = 0, .fields = {}}
-    , one{.ctor = 1, .fields = {&zero}}
-    , two{.ctor = 1, .fields = {&one}}
-    , falsity{.ctor = 2, .fields = {}}
+    : zero{.ctor = {.type = 0, .tag = 0}, .args = {}}
+    , one{.ctor = {.type = 0, .tag = 1}, .args = {&zero}}
+    , two{.ctor = {.type = 0, .tag = 1}, .args = {&one}}
+    , falsity{.ctor = {.type = 0, .tag = 2}, .args = {}}
     , input{feature::var{.index = 0}}
     , predecessor{feature::var{.index = 1}}
     , second_predecessor{feature::var{.index = 2}}
@@ -66,8 +53,7 @@ ModelEvaluatorTest::ModelEvaluatorTest()
     , variable_leaf{model_node::leaf{.output = &second_predecessor}}
     , inner{model_node::match{.scrutinee = &predecessor, .branches = {&empty, &variable_leaf}}}
     , outer{model_node::match{.scrutinee = &input, .branches = {&false_leaf, &inner}}}
-    , evaluate_feature()
-    , get_ctor_decl() {}
+    , evaluate_feature() {}
 
 }
 
@@ -85,7 +71,7 @@ TEST_F(ModelEvaluatorTest, AMatchDescendsIntoTheMatchedConstructorsBranch) {
     EXPECT_EQ(evaluator.evaluate(&outer, {&zero}), std::optional<const value*>(&falsity));
 }
 
-TEST_F(ModelEvaluatorTest, EachMatchBindsItsConstructorsFieldsBeforeDescending) {
+TEST_F(ModelEvaluatorTest, EachMatchBindsItsConstructorsArgumentsBeforeDescending) {
     EXPECT_CALL(evaluate_feature, evaluate(&input, std::vector<const value*>{&two})).WillOnce(Return(&two));
     EXPECT_CALL(evaluate_feature, evaluate(&predecessor, std::vector<const value*>{&two, &one}))
         .WillOnce(Return(&one));
@@ -99,4 +85,10 @@ TEST_F(ModelEvaluatorTest, AnEmptyBranchGivesNothing) {
     ON_CALL(evaluate_feature, evaluate(&predecessor, std::vector<const value*>{&one, &zero}))
         .WillByDefault(Return(&zero));
     EXPECT_FALSE(evaluator.evaluate(&outer, {&one}).has_value());
+}
+
+TEST_F(ModelEvaluatorTest, TheBranchIsTheMatchedValuesTag) {
+    const value other_zero{.ctor = {.type = 9, .tag = 0}, .args = {}};
+    ON_CALL(evaluate_feature, evaluate(&input, _)).WillByDefault(Return(&other_zero));
+    EXPECT_EQ(evaluator.evaluate(&outer, {&zero}), std::optional<const value*>(&falsity));
 }

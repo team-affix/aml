@@ -1,70 +1,66 @@
-#include <variant>
 #include <vector>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "infrastructure/primitive_caller.hpp"
+#include "value_objects/primitive.hpp"
 
-using ::testing::_;
 using ::testing::NiceMock;
-using ::testing::Return;
 using ::testing::ReturnRef;
 
 namespace {
 
-struct MockPrimitive {
-    MOCK_METHOD(const value*, apply, (const std::vector<const value*>&), (const));
+struct MockGetPrimitiveFunction {
+    MOCK_METHOD(const primitive&, function, (prim_id), (const));
 };
 
-struct OtherMockPrimitive {
-    MOCK_METHOD(const value*, apply, (const std::vector<const value*>&), (const));
-};
+const value* first_argument(const std::vector<const value*>& args) {
+    return args.front();
+}
 
-using test_primitive = std::variant<const NiceMock<MockPrimitive>*, const NiceMock<OtherMockPrimitive>*>;
+const value* last_argument(const std::vector<const value*>& args) {
+    return args.back();
+}
 
-struct MockGetPrimitive {
-    MOCK_METHOD(const test_primitive&, primitive_at, (prim_id), (const));
-};
+const value* no_argument(const std::vector<const value*>& args) {
+    return args.empty() ? nullptr : args.front();
+}
 
 struct PrimitiveCallerTest : public ::testing::Test {
     PrimitiveCallerTest();
     value zero;
     value one;
-    NiceMock<MockPrimitive> first;
-    NiceMock<OtherMockPrimitive> second;
-    test_primitive first_entry;
-    test_primitive second_entry;
-    NiceMock<MockGetPrimitive> get_primitive;
-    primitive_caller<NiceMock<MockGetPrimitive>> caller{get_primitive};
+    primitive first;
+    primitive last;
+    NiceMock<MockGetPrimitiveFunction> get_primitive_function;
+    primitive_caller<NiceMock<MockGetPrimitiveFunction>> caller{get_primitive_function};
 
     void SetUp() override {
-        ON_CALL(get_primitive, primitive_at(0)).WillByDefault(ReturnRef(first_entry));
-        ON_CALL(get_primitive, primitive_at(1)).WillByDefault(ReturnRef(second_entry));
+        ON_CALL(get_primitive_function, function(0)).WillByDefault(ReturnRef(first));
+        ON_CALL(get_primitive_function, function(1)).WillByDefault(ReturnRef(last));
     }
 };
 
 PrimitiveCallerTest::PrimitiveCallerTest()
-    : zero{.ctor = 0, .fields = {}}
-    , one{.ctor = 1, .fields = {&zero}}
-    , first()
-    , second()
-    , first_entry(&first)
-    , second_entry(&second)
-    , get_primitive() {}
+    : zero{.ctor = {.type = 0, .tag = 0}, .args = {}}
+    , one{.ctor = {.type = 0, .tag = 1}, .args = {&zero}}
+    , first(&first_argument)
+    , last(&last_argument)
+    , get_primitive_function() {}
 
 }
 
 TEST_F(PrimitiveCallerTest, TheArgumentsGoToThePrimitiveAtThatId) {
-    EXPECT_CALL(first, apply(std::vector<const value*>{&zero})).WillOnce(Return(&one));
-    EXPECT_EQ(caller.call(0, {&zero}), &one);
-}
-
-TEST_F(PrimitiveCallerTest, OnlyThePrimitiveAtThatIdIsCalled) {
-    EXPECT_CALL(first, apply(_)).Times(0);
-    EXPECT_CALL(second, apply(std::vector<const value*>{&one, &zero})).WillOnce(Return(&zero));
+    EXPECT_EQ(caller.call(0, {&one, &zero}), &one);
     EXPECT_EQ(caller.call(1, {&one, &zero}), &zero);
 }
 
+TEST_F(PrimitiveCallerTest, ThePrimitiveIsLookedUpByItsId) {
+    EXPECT_CALL(get_primitive_function, function(1)).WillOnce(ReturnRef(last));
+    caller.call(1, {&zero});
+}
+
 TEST_F(PrimitiveCallerTest, ANullaryCallPassesNoArguments) {
-    EXPECT_CALL(first, apply(std::vector<const value*>{})).WillOnce(Return(&zero));
-    EXPECT_EQ(caller.call(0, {}), &zero);
+    const primitive nullary(&no_argument);
+    ON_CALL(get_primitive_function, function(2)).WillByDefault(ReturnRef(nullary));
+    EXPECT_EQ(caller.call(2, {}), nullptr);
 }

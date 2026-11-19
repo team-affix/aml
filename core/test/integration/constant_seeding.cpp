@@ -11,7 +11,7 @@
 
 namespace {
 
-using enumerator_t = constant_enumerator<schema, schema, value_pool>;
+using enumerator_t = constant_enumerator<schema, value_pool>;
 using seeder_t = constant_seeder<schema, enumerator_t, feature_pool, constant_store>;
 
 // Booleans, naturals, pairs of booleans and a type without constructors.
@@ -23,34 +23,38 @@ struct ConstantSeedingIntegrationTest : public ::testing::Test {
     constant_store constants;
     value_sizer sizes;
     type_id boolean;
-    ctor_id false_ctor;
-    ctor_id true_ctor;
+    ctor_ref false_ctor;
+    ctor_ref true_ctor;
     type_id nat;
-    ctor_id zero_ctor;
-    ctor_id suc_ctor;
+    ctor_ref zero_ctor;
+    ctor_ref suc_ctor;
     type_id bool_pair;
-    ctor_id pair_ctor;
+    ctor_ref pair_ctor;
     type_id empty_type;
     enumerator_t enumerator;
     seeder_t seeder;
 };
 
 ConstantSeedingIntegrationTest::ConstantSeedingIntegrationTest()
-    : types()
+    : types(std::vector<type_def>{
+              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}},
+              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {1}}}},
+              type_def{.ctors = {ctor_def{.arg_types = {0, 0}}}},
+              type_def{.ctors = {}}})
     , values()
     , features()
     , constants()
     , sizes()
-    , boolean(types.declare_type())
-    , false_ctor(types.declare_ctor(boolean, {}))
-    , true_ctor(types.declare_ctor(boolean, {}))
-    , nat(types.declare_type())
-    , zero_ctor(types.declare_ctor(nat, {}))
-    , suc_ctor(types.declare_ctor(nat, {nat}))
-    , bool_pair(types.declare_type())
-    , pair_ctor(types.declare_ctor(bool_pair, {boolean, boolean}))
-    , empty_type(types.declare_type())
-    , enumerator(types, types, values)
+    , boolean(0)
+    , false_ctor{.type = boolean, .tag = 0}
+    , true_ctor{.type = boolean, .tag = 1}
+    , nat(1)
+    , zero_ctor{.type = nat, .tag = 0}
+    , suc_ctor{.type = nat, .tag = 1}
+    , bool_pair(2)
+    , pair_ctor{.type = bool_pair, .tag = 0}
+    , empty_type(3)
+    , enumerator(types, values)
     , seeder(types, enumerator, features, constants) {}
 
 }
@@ -60,7 +64,7 @@ TEST_F(ConstantSeedingIntegrationTest, EveryValueUpToTheSizeIsSeededOnceAsAnInte
     std::set<const value*> seen;
     for (const constant_operand& constant : constants.constants()) {
         EXPECT_LE(sizes.size(constant.literal), 3u);
-        EXPECT_EQ(types.decl(constant.literal->ctor).type, constant.type);
+        EXPECT_EQ(constant.literal->ctor.type, constant.type);
         EXPECT_EQ(constant.expression, features.make_constant(constant.literal));
         EXPECT_TRUE(seen.insert(constant.literal).second);
     }

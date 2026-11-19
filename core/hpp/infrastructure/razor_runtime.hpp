@@ -4,20 +4,20 @@
 #include <cstddef>
 #include <optional>
 #include <vector>
-#include "infrastructure/primitive.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/razor_manifest.hpp"
 #include "infrastructure/value_pool.hpp"
 #include "value_objects/bin.hpp"
 #include "value_objects/model_node.hpp"
 #include "value_objects/razor_options.hpp"
+#include "value_objects/typed_primitive.hpp"
 #include "value_objects/value.hpp"
 
 struct razor_runtime {
     razor_runtime(
         schema& types,
         value_pool& values,
-        const std::vector<primitive>& primitives,
+        const std::vector<typed_primitive>& primitives,
         const bin& training,
         const razor_options& options);
     void next();

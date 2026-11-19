@@ -1,10 +1,10 @@
 #include <vector>
 #include <gtest/gtest.h>
-#include "infrastructure/primitive.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/scout_runtime.hpp"
-#include "infrastructure/value_equality.hpp"
 #include "infrastructure/value_pool.hpp"
+#include "support/value_equality.hpp"
+#include "value_objects/typed_primitive.hpp"
 
 namespace {
 
@@ -16,25 +16,27 @@ struct ScoutIntegrationTest : public ::testing::Test {
     schema types;
     value_pool values;
     type_id boolean;
-    ctor_id false_ctor;
-    ctor_id true_ctor;
+    ctor_ref false_ctor;
+    ctor_ref true_ctor;
     type_id nat;
-    ctor_id zero_ctor;
-    ctor_id suc_ctor;
+    ctor_ref zero_ctor;
+    ctor_ref suc_ctor;
     const value* falsity;
     const value* truth;
     scout_options options;
 };
 
 ScoutIntegrationTest::ScoutIntegrationTest()
-    : types()
+    : types(std::vector<type_def>{
+              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}},
+              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {1}}}}})
     , values()
-    , boolean(types.declare_type())
-    , false_ctor(types.declare_ctor(boolean, {}))
-    , true_ctor(types.declare_ctor(boolean, {}))
-    , nat(types.declare_type())
-    , zero_ctor(types.declare_ctor(nat, {}))
-    , suc_ctor(types.declare_ctor(nat, {nat}))
+    , boolean(0)
+    , false_ctor{.type = boolean, .tag = 0}
+    , true_ctor{.type = boolean, .tag = 1}
+    , nat(1)
+    , zero_ctor{.type = nat, .tag = 0}
+    , suc_ctor{.type = nat, .tag = 1}
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
     , options{.max_applications = 1, .max_constant_size = 2} {}
@@ -42,7 +44,7 @@ ScoutIntegrationTest::ScoutIntegrationTest()
 void ScoutIntegrationTest::expect_fit(const scout_runtime& runtime, const bin& training) {
     for (size_t row = 0; row < training.labels.size(); ++row) {
         std::vector<const value*> inputs;
-        for (const typed_column& input : training.scope)
+        for (const typed_column& input : training.inputs)
             inputs.push_back(input.cells[row]);
         EXPECT_EQ(runtime.infer(inputs), std::optional<const value*>(training.labels[row]));
     }
@@ -50,17 +52,17 @@ void ScoutIntegrationTest::expect_fit(const scout_runtime& runtime, const bin& t
 
 bin ScoutIntegrationTest::xor_training() {
     return bin{
-        .scope = {typed_column{.type = boolean, .cells = {falsity, falsity, truth, truth}},
+        .inputs = {typed_column{.type = boolean, .cells = {falsity, falsity, truth, truth}},
                   typed_column{.type = boolean, .cells = {falsity, truth, falsity, truth}}},
         .labels = {falsity, truth, truth, falsity}};
 }
 
 bin ScoutIntegrationTest::is_even_training(size_t count) {
-    bin training{.scope = {typed_column{.type = nat, .cells = {}}}, .labels = {}};
+    bin training{.inputs = {typed_column{.type = nat, .cells = {}}}, .labels = {}};
     const value* number = values.make(zero_ctor, {});
     for (size_t index = 0; index < count; ++index) {
         const bool even = (index % 2) == 0;
-        training.scope[0].cells.push_back(number);
+        training.inputs[0].cells.push_back(number);
         training.labels.push_back(even ? truth : falsity);
         number = values.make(suc_ctor, {number});
     }
@@ -101,7 +103,7 @@ TEST_F(ScoutIntegrationTest, IsEvenIsFitByFunnellingThroughPredecessors) {
 
 TEST_F(ScoutIntegrationTest, AnInputUnlikeEveryTrainingRowCanReachAnEmptyBranch) {
     bin training = is_even_training(3);
-    training.scope[0].cells.erase(training.scope[0].cells.begin());
+    training.inputs[0].cells.erase(training.inputs[0].cells.begin());
     training.labels.erase(training.labels.begin());
     scout_runtime runtime(types, values, {}, training, options);
     runtime.next();
@@ -123,9 +125,10 @@ TEST_F(ScoutIntegrationTest, MoreEpisodesChangeNothing) {
 
 TEST_F(ScoutIntegrationTest, ScoutStopsSynthesisAtOnceSoPrimitivesDoNotChangeItsModel) {
     const bin training = xor_training();
-    value_equality<value_pool> equality(
-        values, boolean, boolean_encoding{.type = boolean, .false_ctor = false_ctor, .true_ctor = true_ctor});
-    scout_runtime with_primitive(types, values, {&equality}, training, options);
+    const typed_primitive equality{
+        .type = primitive_type{.arg_types = {boolean, boolean}, .result_type = boolean},
+        .apply = value_equality<value_pool>(values, false_ctor, true_ctor)};
+    scout_runtime with_primitive(types, values, {equality}, training, options);
     scout_runtime without_primitive(types, values, {}, training, options);
     with_primitive.next();
     without_primitive.next();
