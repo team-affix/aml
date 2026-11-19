@@ -33,8 +33,8 @@ struct BoundArgumentChooserTest : public ::testing::Test {
 };
 
 BoundArgumentChooserTest::BoundArgumentChooserTest()
-    : falsity{.ctor = 0, .args = {}}
-    , truth{.ctor = 1, .args = {}}
+    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
+    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
     , first_bound_argument{feature::var{.index = 1}}
     , second_argument{feature::var{.index = 2}}
     , data{.inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}},

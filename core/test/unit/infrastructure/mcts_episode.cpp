@@ -32,7 +32,7 @@ struct MctsEpisodeTest : public ::testing::Test {
 };
 
 MctsEpisodeTest::MctsEpisodeTest()
-    : label{.ctor = 0, .args = {}}
+    : label{.ctor = {.type = 0, .tag = 0}, .args = {}}
     , training{.inputs = {}, .labels = {&label}}
     , run_episode()
     , set_reward()

@@ -3,7 +3,8 @@
 #include <functional>
 
 size_t value_hash::operator()(const value& term) const noexcept {
-    size_t seed = std::hash<ctor_id>{}(term.ctor);
+    size_t seed = std::hash<type_id>{}(term.ctor.type);
+    seed = hash_combine(seed, std::hash<size_t>{}(term.ctor.tag));
     seed = hash_combine(seed, std::hash<size_t>{}(term.args.size()));
     for (const value* argument : term.args)
         seed = hash_combine(seed, std::hash<const value*>{}(argument));

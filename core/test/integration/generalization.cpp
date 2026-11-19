@@ -2,12 +2,12 @@
 #include <variant>
 #include <vector>
 #include <gtest/gtest.h>
-#include "infrastructure/nat_add.hpp"
-#include "infrastructure/primitive.hpp"
 #include "infrastructure/razor_runtime.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/scout_runtime.hpp"
 #include "infrastructure/value_pool.hpp"
+#include "support/nat_add.hpp"
+#include "value_objects/typed_primitive.hpp"
 
 namespace {
 
@@ -21,34 +21,39 @@ struct GeneralizationIntegrationTest : public ::testing::Test {
     schema types;
     value_pool values;
     type_id boolean;
-    ctor_id false_ctor;
-    ctor_id true_ctor;
+    ctor_ref false_ctor;
+    ctor_ref true_ctor;
     type_id nat;
-    ctor_id zero_ctor;
-    ctor_id suc_ctor;
+    ctor_ref zero_ctor;
+    ctor_ref suc_ctor;
     type_id pair;
-    ctor_id pair_ctor;
+    ctor_ref pair_ctor;
     const value* falsity;
     const value* truth;
-    nat_add<value_pool> addition;
+    typed_primitive addition;
     scout_options scout_settings;
     razor_options razor_settings;
 };
 
 GeneralizationIntegrationTest::GeneralizationIntegrationTest()
-    : types()
+    : types(std::vector<type_def>{
+              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}},
+              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {1}}}},
+              type_def{.ctors = {ctor_def{.arg_types = {1, 0}}}}})
     , values()
-    , boolean(types.declare_type())
-    , false_ctor(types.declare_ctor(boolean, {}))
-    , true_ctor(types.declare_ctor(boolean, {}))
-    , nat(types.declare_type())
-    , zero_ctor(types.declare_ctor(nat, {}))
-    , suc_ctor(types.declare_ctor(nat, {nat}))
-    , pair(types.declare_type())
-    , pair_ctor(types.declare_ctor(pair, {nat, boolean}))
+    , boolean(0)
+    , false_ctor{.type = boolean, .tag = 0}
+    , true_ctor{.type = boolean, .tag = 1}
+    , nat(1)
+    , zero_ctor{.type = nat, .tag = 0}
+    , suc_ctor{.type = nat, .tag = 1}
+    , pair(2)
+    , pair_ctor{.type = pair, .tag = 0}
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
-    , addition(values, nat_encoding{.type = nat, .zero_ctor = zero_ctor, .suc_ctor = suc_ctor})
+    , addition{
+          .type = primitive_type{.arg_types = {nat, nat}, .result_type = nat},
+          .apply = nat_add<value_pool>(values, suc_ctor)}
     , scout_settings{.max_applications = 2, .max_constant_size = 1}
     , razor_settings{.max_applications = 1, .max_constant_size = 1, .exploration_constant = 3.0, .seed = 11} {}
 
@@ -65,7 +70,7 @@ const value* GeneralizationIntegrationTest::pair_of(const value* first, const va
 
 bin GeneralizationIntegrationTest::unary_training(
     const std::vector<const value*>& inputs, const std::vector<const value*>& labels) {
-    return bin{.inputs = {typed_column{.type = types.decl(inputs.front()->ctor).type, .cells = inputs}},
+    return bin{.inputs = {typed_column{.type = inputs.front()->ctor.type, .cells = inputs}},
                .labels = labels};
 }
 
@@ -124,7 +129,7 @@ TEST_F(GeneralizationIntegrationTest, ASecondInputIsChosenOverAConstantWhenItIsT
 TEST_F(GeneralizationIntegrationTest, RazorDoublesByAddingTheInputToItself) {
     const bin training = unary_training(
         {number(0), number(1), number(2), number(3)}, {number(0), number(2), number(4), number(6)});
-    razor_runtime runtime(types, values, {&addition}, training, razor_settings);
+    razor_runtime runtime(types, values, {addition}, training, razor_settings);
     for (size_t episode = 0; episode < 200; ++episode)
         runtime.next();
     // leaf add(x0, x0): 1 + 1 + 1
@@ -138,7 +143,7 @@ TEST_F(GeneralizationIntegrationTest, RazorAddsTwoInputs) {
         .inputs = {typed_column{.type = nat, .cells = {number(0), number(1), number(2), number(1)}},
                   typed_column{.type = nat, .cells = {number(2), number(0), number(1), number(3)}}},
         .labels = {number(2), number(1), number(3), number(4)}};
-    razor_runtime runtime(types, values, {&addition}, training, razor_settings);
+    razor_runtime runtime(types, values, {addition}, training, razor_settings);
     for (size_t episode = 0; episode < 200; ++episode)
         runtime.next();
     EXPECT_EQ(runtime.best_cost(), 3u);

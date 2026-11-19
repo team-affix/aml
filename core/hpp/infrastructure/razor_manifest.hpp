@@ -32,11 +32,9 @@
 #include "infrastructure/operand_table.hpp"
 #include "infrastructure/option_range.hpp"
 #include "infrastructure/output_finder.hpp"
-#include "infrastructure/primitive.hpp"
 #include "infrastructure/primitive_applier.hpp"
 #include "infrastructure/primitive_caller.hpp"
 #include "infrastructure/primitive_option_finder.hpp"
-#include "infrastructure/primitive_signature_reader.hpp"
 #include "infrastructure/primitive_store.hpp"
 #include "infrastructure/random_rollout.hpp"
 #include "infrastructure/schema.hpp"
@@ -62,6 +60,7 @@
 #include "value_objects/mcts_choice.hpp"
 #include "value_objects/mcts_tree_node_id.hpp"
 #include "value_objects/razor_options.hpp"
+#include "value_objects/typed_primitive.hpp"
 
 // Razor: Monte Carlo tree search over every choice a model build makes (the feature each partition matches on and
 // the argument each funnel step descends into), rewarding each episode with its negated model cost.
@@ -133,21 +132,15 @@ struct razor_manifest {
     struct model_sizer_t : model_sizer<feature_sizer_t> {
         using model_sizer<feature_sizer_t>::model_sizer;
     };
-    struct primitive_store_t : primitive_store<primitive> {
-        using primitive_store<primitive>::primitive_store;
-    };
-    struct signature_reader_t : primitive_signature_reader<primitive_store_t> {
-        using primitive_signature_reader<primitive_store_t>::primitive_signature_reader;
-    };
-    struct primitive_caller_t : primitive_caller<primitive_store_t> {
-        using primitive_caller<primitive_store_t>::primitive_caller;
+    struct primitive_caller_t : primitive_caller<primitive_store> {
+        using primitive_caller<primitive_store>::primitive_caller;
     };
     struct variable_candidate_finder_t
         : variable_candidate_finder<feature_pool, feature_sizer_t, uniform_value_finder> {
         using variable_candidate_finder<feature_pool, feature_sizer_t, uniform_value_finder>::variable_candidate_finder;
     };
-    struct constant_enumerator_t : constant_enumerator<schema, schema, value_pool> {
-        using constant_enumerator<schema, schema, value_pool>::constant_enumerator;
+    struct constant_enumerator_t : constant_enumerator<schema, value_pool> {
+        using constant_enumerator<schema, value_pool>::constant_enumerator;
     };
     struct constant_seeder_t : constant_seeder<schema, constant_enumerator_t, feature_pool, constant_store> {
         using constant_seeder<schema, constant_enumerator_t, feature_pool, constant_store>::constant_seeder;
@@ -171,9 +164,9 @@ struct razor_manifest {
         using witness_detector<operand_table_t, operand_table_t, operand_table_t, application_log>::witness_detector;
     };
     struct primitive_option_finder_t
-        : primitive_option_finder<primitive_store_t, signature_reader_t, witness_detector_t> {
+        : primitive_option_finder<primitive_store, primitive_store, witness_detector_t> {
         using primitive_option_finder<
-            primitive_store_t, signature_reader_t, witness_detector_t>::primitive_option_finder;
+            primitive_store, primitive_store, witness_detector_t>::primitive_option_finder;
     };
     struct argument_option_finder_t
         : argument_option_finder<operand_table_t, operand_table_t, witness_detector_t> {
@@ -183,9 +176,9 @@ struct razor_manifest {
         using argument_chooser<argument_option_finder_t, option_chooser_t>::argument_chooser;
     };
     struct primitive_applier_t : primitive_applier<
-        signature_reader_t, argument_chooser_t, application_log, app_candidate_finder_t, cheapest_feature_index> {
+        primitive_store, argument_chooser_t, application_log, app_candidate_finder_t, cheapest_feature_index> {
         using primitive_applier<
-            signature_reader_t, argument_chooser_t, application_log, app_candidate_finder_t,
+            primitive_store, argument_chooser_t, application_log, app_candidate_finder_t,
             cheapest_feature_index>::primitive_applier;
     };
     struct synthesis_starter_t : synthesis_starter<
@@ -204,8 +197,8 @@ struct razor_manifest {
     struct leaf_detector_t : leaf_detector<feature_pool, uniform_value_finder, feature_pool> {
         using leaf_detector<feature_pool, uniform_value_finder, feature_pool>::leaf_detector;
     };
-    struct bin_splitter_t : bin_splitter<schema, schema> {
-        using bin_splitter<schema, schema>::bin_splitter;
+    struct bin_splitter_t : bin_splitter<schema> {
+        using bin_splitter<schema>::bin_splitter;
     };
     struct bound_argument_chooser_t : bound_argument_chooser<variable_candidate_finder_t, option_chooser_t> {
         using bound_argument_chooser<variable_candidate_finder_t, option_chooser_t>::bound_argument_chooser;
@@ -226,12 +219,15 @@ struct razor_manifest {
     struct feature_evaluator_t : feature_evaluator<primitive_caller_t> {
         using feature_evaluator<primitive_caller_t>::feature_evaluator;
     };
-    struct model_evaluator_t : model_evaluator<feature_evaluator_t, schema> {
-        using model_evaluator<feature_evaluator_t, schema>::model_evaluator;
+    struct model_evaluator_t : model_evaluator<feature_evaluator_t> {
+        using model_evaluator<feature_evaluator_t>::model_evaluator;
     };
 
     razor_manifest(
-        schema& types, value_pool& values, const std::vector<primitive>& primitives, const razor_options& options);
+        schema& types,
+        value_pool& values,
+        const std::vector<typed_primitive>& primitives,
+        const razor_options& options);
 
     schema&                      schema_;
     value_pool&                  values_;
@@ -245,8 +241,7 @@ struct razor_manifest {
     value_sizer                  value_sizer_;
     feature_sizer_t              feature_sizer_;
     model_sizer_t                model_sizer_;
-    primitive_store_t            primitive_store_;
-    signature_reader_t           signature_reader_;
+    primitive_store              primitive_store_;
     primitive_caller_t           primitive_caller_;
     variable_candidate_finder_t  variable_candidate_finder_;
     constant_enumerator_t        constant_enumerator_;

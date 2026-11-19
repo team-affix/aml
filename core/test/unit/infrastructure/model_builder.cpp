@@ -119,8 +119,8 @@ struct ModelBuilderTest : public ::testing::Test {
 };
 
 ModelBuilderTest::ModelBuilderTest()
-    : falsity{.ctor = 0, .args = {}}
-    , truth{.ctor = 1, .args = {}}
+    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
+    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
     , first_feature{feature::var{.index = 0}}
     , second_feature{feature::app{.prim = 0, .args = {&first_feature}}}
     , first_bound_argument{feature::var{.index = 1}}

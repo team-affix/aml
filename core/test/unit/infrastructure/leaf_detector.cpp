@@ -44,8 +44,8 @@ struct LeafDetectorTest : public ::testing::Test {
 };
 
 LeafDetectorTest::LeafDetectorTest()
-    : falsity{.ctor = 0, .args = {}}
-    , truth{.ctor = 1, .args = {}}
+    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
+    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
     , first_variable{feature::var{.index = 0}}
     , second_variable{feature::var{.index = 1}}
     , true_constant{feature::constant{.literal = &truth}}

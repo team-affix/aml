@@ -5,10 +5,16 @@
 AML (abstractive machine learning) learns models of noiseless, functional data that fit every data point exactly
 and are minimal in symbolic description length. Fit comes first; among models that fit, cheaper is better.
 
-- **Data:** each data point is an input tuple (bound to variables x0..xn-1) and a label. Types are monomorphic
-  algebraic data types; values are interned constructor terms.
-- **Features:** a variable, a primitive application, or a constant. Primitives are native C++ structs with a fixed
-  signature, and they are total. A feature is heterogeneous over a bin when its values there are not all equal.
+- **Data:** each data point is an input tuple (bound to variables x0..xn-1) and a label. Values are interned
+  constructor terms: `value{ctor, args}`, where `ctor_ref{type, tag}` names a constructor by its type and position.
+- **User types are data, never C++ types.** A user type is a `type_def`: its constructors (`ctor_def`), each with its
+  argument types. `schema` is built once from all of them; a type's id is its position, so types can be recursive.
+  Core knows no particular user type (no bool, no nat); anything specific to one lives with the user (the tests).
+- **Primitives:** a `primitive` is a `std::function` from argument values to a result value, made through the
+  solver's value pool; a `typed_primitive` pairs it with its `primitive_type` (argument and result types). Solvers
+  receive them at construction. They are user code: the ones the tests use live in `core/test/support/`.
+- **Features:** a variable, a primitive application, or a constant. A feature is heterogeneous over a bin when its
+  values there are not all equal.
 - **Model:** three node types (`model_node`): `match` (an exhaustive one-layer case on a feature; each branch sees
   its constructor's arguments bound as the next variables), `leaf` (outputs a feature evaluated in scope: a constant
   label, a variable, or a synthesized feature), `empty` (no data; infers nothing). Variable and synthesized outputs
@@ -39,6 +45,7 @@ Only `core/` exists. There is no CLI or parser yet; tests build their data in C+
 core/hpp/{infrastructure,value_objects}   headers   (behavior types | plain data)
 core/cpp/{infrastructure,value_objects}   .cpp for non-templated types
 core/test/{unit,integration}, main.cpp    GTest/GMock
+core/test/support/                         user-level code the tests share (the example primitives)
 mcts/ googletest/                          git submodules, not ours to edit
 debug_assert.hpp                           DEBUG_ASSERT(cond): throws std::logic_error under -DDEBUG
 docs/                                      design notes (see docs/continuous-documentation.md)
@@ -80,7 +87,7 @@ data points are never re-read.
   `operand_table` is a read-only view over the constant and feature stores.
 - Synthesis: `constant_enumerator` + `constant_seeder`, `synthesis_starter`, `variable_candidate_finder`,
   `witness_detector`, `primitive_option_finder`, `argument_option_finder`, `argument_chooser`,
-  `primitive_signature_reader`, `primitive_caller`, `operand_applier`, `app_candidate_finder`, `primitive_applier`,
+  `primitive_caller`, `operand_applier`, `app_candidate_finder`, `primitive_applier`,
   `feature_synthesizer`.
 - Partition: `leaf_detector`, `output_finder`, `uniform_value_finder`, `bound_argument_chooser`, `bin_splitter`,
   `model_builder`.
@@ -88,8 +95,6 @@ data points are never re-read.
   MCTS sees them as an `option_range` (a count, not a vector).
 - Cost and inference: `value_sizer`, `feature_sizer`, `model_sizer`, `feature_evaluator`, `model_evaluator`.
 - Episodes: `model_episode`, `mcts_episode`.
-- Primitives: `bool_not`, `bool_and`, `bool_or`, `value_equality`, `nat_add`; `primitive` is the variant of
-  pointers to them that solvers take.
 
 ## Build & test
 
@@ -104,13 +109,13 @@ The detailed rules live in `.claude/rules/*.md` (copied from Atlas) and load aut
 
 Core of it in one breath: simplest thing that works. `struct` only. Collaborators are injected **by reference as
 template params named per invoked capability**. The only inheritance is the manifest naming trick. No lambdas
-(except a genuinely generic `std::visit`) or `std::function`, no overloads, no default args, no default member
-initializers. Every infrastructure struct supports one mechanism: a store, or one job; extra behavior goes into
-another struct. A store (passive: holds data) may have several accessors and mutators and is named as a noun
+(except a genuinely generic `std::visit`), no `std::function` (except `primitive`), no overloads, no default args,
+no default member initializers. Every infrastructure struct supports one mechanism: a store, or one job; extra
+behavior goes into another struct. A store (passive: holds data) may have several accessors and mutators and is named as a noun
 (`_store`, `_pool`, `_index`, `_log`, `_table`). Active infrastructure has exactly one public function besides its
-constructor and is named after its job (`_finder`, `_chooser`, `_reader`, `_caller`, ...); never mix the two, and
+constructor and is named after its job (`_finder`, `_chooser`, `_applier`, `_caller`, ...); never mix the two, and
 avoid jargon names that don't say what the struct does. The runtimes are the one exception: public facades, as in
-Atlas. Native primitives expose `signature()` and `apply()`: their signature is fixed data about their one job.
+Atlas. Test primitives are function objects whose one public function is `operator()`.
 
 ## Conventions observed in the code
 
@@ -120,7 +125,8 @@ Atlas. Native primitives expose `signature()` and `apply()`: their signature is 
   a `using` alias, so type names stay short instead of nesting. Members are declared in dependency order with their
   names aligned in one column.
 - Constructor init lists put the comma first. Value objects use `auto operator<=>(const T&) const = default;` and
-  tests build them with designated initializers. Ids are aliases in their own headers (`type_id`, `ctor_id`, ...).
+  tests build them with designated initializers (`typed_primitive` is the one value object without `operator<=>`,
+  since a `std::function` cannot be compared). Ids are aliases in their own headers (`type_id`, `var_id`, ...).
 - `std::optional` is checked with `.has_value()` and read with `.value()`. Locals are `const` wherever possible.
 - Tests: mocks and the fixture go in an anonymous namespace; NiceMock by default. Once a method has any
   `EXPECT_CALL`, add a catch-all `EXPECT_CALL(..., method(_)).Times(AnyNumber())` before the specific ones.

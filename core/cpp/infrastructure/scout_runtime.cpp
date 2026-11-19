@@ -4,7 +4,7 @@
 scout_runtime::scout_runtime(
     schema& types,
     value_pool& values,
-    const std::vector<primitive>& primitives,
+    const std::vector<typed_primitive>& primitives,
     const bin& training,
     const scout_options& options)
     : manifest_(types, values, primitives, options)

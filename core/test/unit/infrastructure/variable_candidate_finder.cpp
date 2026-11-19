@@ -47,8 +47,8 @@ struct VariableCandidateFinderTest : public ::testing::Test {
 };
 
 VariableCandidateFinderTest::VariableCandidateFinderTest()
-    : falsity{.ctor = 0, .args = {}}
-    , truth{.ctor = 1, .args = {}}
+    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
+    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
     , first{feature::var{.index = 0}}
     , third{feature::var{.index = 2}}
     , data{

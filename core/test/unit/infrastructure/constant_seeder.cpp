@@ -54,9 +54,9 @@ struct ConstantSeederTest : public ::testing::Test {
 };
 
 ConstantSeederTest::ConstantSeederTest()
-    : falsity{.ctor = 0, .args = {}}
-    , truth{.ctor = 1, .args = {}}
-    , zero{.ctor = 2, .args = {}}
+    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
+    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
+    , zero{.ctor = {.type = 0, .tag = 2}, .args = {}}
     , false_feature{feature::constant{.literal = &falsity}}
     , true_feature{feature::constant{.literal = &truth}}
     , zero_feature{feature::constant{.literal = &zero}}

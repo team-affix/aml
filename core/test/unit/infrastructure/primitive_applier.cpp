@@ -8,11 +8,12 @@ using ::testing::_;
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::ReturnRef;
 
 namespace {
 
-struct MockGetPrimitiveSignature {
-    MOCK_METHOD(primitive_signature, signature, (prim_id), (const));
+struct MockGetPrimitiveType {
+    MOCK_METHOD(const primitive_type&, type, (prim_id), (const));
 };
 
 struct MockChooseArguments {
@@ -38,32 +39,32 @@ struct PrimitiveApplierTest : public ::testing::Test {
     value truth;
     feature application;
     candidate application_candidate;
-    primitive_signature signature;
-    NiceMock<MockGetPrimitiveSignature> get_primitive_signature;
+    primitive_type type;
+    NiceMock<MockGetPrimitiveType> get_primitive_type;
     NiceMock<MockChooseArguments> choose_arguments;
     NiceMock<MockRecordApplication> record_application;
     NiceMock<MockFindAppCandidate> find_app_candidate;
     NiceMock<MockTryInsertFeature> try_insert_feature;
     primitive_applier<
-        NiceMock<MockGetPrimitiveSignature>, NiceMock<MockChooseArguments>, NiceMock<MockRecordApplication>,
+        NiceMock<MockGetPrimitiveType>, NiceMock<MockChooseArguments>, NiceMock<MockRecordApplication>,
         NiceMock<MockFindAppCandidate>, NiceMock<MockTryInsertFeature>>
-        applier{get_primitive_signature, choose_arguments, record_application, find_app_candidate, try_insert_feature};
+        applier{get_primitive_type, choose_arguments, record_application, find_app_candidate, try_insert_feature};
 
     void SetUp() override {
-        ON_CALL(get_primitive_signature, signature(5)).WillByDefault(Return(signature));
-        ON_CALL(choose_arguments, choose(5, signature.arg_types)).WillByDefault(Return(std::vector<size_t>{0, 1}));
+        ON_CALL(get_primitive_type, type(5)).WillByDefault(ReturnRef(type));
+        ON_CALL(choose_arguments, choose(5, type.arg_types)).WillByDefault(Return(std::vector<size_t>{0, 1}));
         ON_CALL(find_app_candidate, find(5, 4, _, _)).WillByDefault(Return(application_candidate));
     }
 };
 
 PrimitiveApplierTest::PrimitiveApplierTest()
-    : falsity{.ctor = 0, .args = {}}
-    , truth{.ctor = 1, .args = {}}
+    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
+    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
     , application{feature::app{.prim = 5, .args = {}}}
     , application_candidate{
           .expression = &application, .cost = 3, .observed = typed_column{.type = 4, .cells = {&truth, &falsity}}}
-    , signature{.arg_types = {0, 0}, .result_type = 4}
-    , get_primitive_signature()
+    , type{.arg_types = {0, 0}, .result_type = 4}
+    , get_primitive_type()
     , choose_arguments()
     , record_application()
     , find_app_candidate()
@@ -73,7 +74,7 @@ PrimitiveApplierTest::PrimitiveApplierTest()
 
 TEST_F(PrimitiveApplierTest, TheArgumentsAreChosenForTheSignatureThenLoggedThenApplied) {
     InSequence order;
-    EXPECT_CALL(choose_arguments, choose(5, signature.arg_types)).WillOnce(Return(std::vector<size_t>{0, 1}));
+    EXPECT_CALL(choose_arguments, choose(5, type.arg_types)).WillOnce(Return(std::vector<size_t>{0, 1}));
     EXPECT_CALL(record_application, record(prim_application{.prim = 5, .args = {0, 1}}));
     EXPECT_CALL(find_app_candidate, find(5, 4, std::vector<size_t>{0, 1}, 2)).WillOnce(Return(application_candidate));
     applier.apply(5, 2);
@@ -91,8 +92,8 @@ TEST_F(PrimitiveApplierTest, AnApplicationThatIsNotFoundIsStillLoggedButDoesNotJ
     applier.apply(5, 2);
 }
 
-TEST_F(PrimitiveApplierTest, TheSignatureOfTheChosenPrimitiveIsUsed) {
-    EXPECT_CALL(get_primitive_signature, signature(5)).WillOnce(Return(signature));
+TEST_F(PrimitiveApplierTest, TheTypeOfTheChosenPrimitiveIsUsed) {
+    EXPECT_CALL(get_primitive_type, type(5)).WillOnce(ReturnRef(type));
     applier.apply(5, 2);
 }
 

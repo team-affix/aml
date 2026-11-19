@@ -5,80 +5,68 @@
 
 using ::testing::AnyNumber;
 using ::testing::_;
+using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRef;
-using ::testing::InSequence;
 
 namespace {
 
-struct MockGetTypeCtors {
-    MOCK_METHOD(const std::vector<ctor_id>&, ctors, (type_id), (const));
-};
-
-struct MockGetCtorDecl {
-    MOCK_METHOD(const ctor_decl&, decl, (ctor_id), (const));
+struct MockGetTypeDef {
+    MOCK_METHOD(const type_def&, def, (type_id), (const));
 };
 
 struct MockMakeValue {
-    MOCK_METHOD(const value*, make, (ctor_id, const std::vector<const value*>&));
+    MOCK_METHOD(const value*, make, (ctor_ref, const std::vector<const value*>&));
 };
 
-// Types: 0 = bool {false = 0, true = 1}, 1 = nat {zero = 2, suc = 3}, 2 = pair(bool, bool) {pair = 4}.
+// Types: 0 = bool {false, true}, 1 = nat {zero, suc(nat)}, 2 = pair(bool, bool).
 struct ConstantEnumeratorTest : public ::testing::Test {
     ConstantEnumeratorTest();
-    std::vector<ctor_id> bool_ctors;
-    std::vector<ctor_id> nat_ctors;
-    std::vector<ctor_id> pair_ctors;
-    ctor_decl false_decl;
-    ctor_decl true_decl;
-    ctor_decl zero_decl;
-    ctor_decl suc_decl;
-    ctor_decl pair_decl;
+    type_def boolean;
+    type_def nat;
+    type_def pair;
+    ctor_ref false_ctor;
+    ctor_ref true_ctor;
+    ctor_ref zero_ctor;
+    ctor_ref suc_ctor;
+    ctor_ref pair_ctor;
     value falsity;
     value truth;
     value zero;
     value one;
     value two;
-    NiceMock<MockGetTypeCtors> get_type_ctors;
-    NiceMock<MockGetCtorDecl> get_ctor_decl;
+    NiceMock<MockGetTypeDef> get_type_def;
     NiceMock<MockMakeValue> make_value;
-    constant_enumerator<NiceMock<MockGetTypeCtors>, NiceMock<MockGetCtorDecl>, NiceMock<MockMakeValue>> enumerator{
-        get_type_ctors, get_ctor_decl, make_value};
+    constant_enumerator<NiceMock<MockGetTypeDef>, NiceMock<MockMakeValue>> enumerator{get_type_def, make_value};
 
     void SetUp() override {
-        ON_CALL(get_type_ctors, ctors(0)).WillByDefault(ReturnRef(bool_ctors));
-        ON_CALL(get_type_ctors, ctors(1)).WillByDefault(ReturnRef(nat_ctors));
-        ON_CALL(get_type_ctors, ctors(2)).WillByDefault(ReturnRef(pair_ctors));
-        ON_CALL(get_ctor_decl, decl(0)).WillByDefault(ReturnRef(false_decl));
-        ON_CALL(get_ctor_decl, decl(1)).WillByDefault(ReturnRef(true_decl));
-        ON_CALL(get_ctor_decl, decl(2)).WillByDefault(ReturnRef(zero_decl));
-        ON_CALL(get_ctor_decl, decl(3)).WillByDefault(ReturnRef(suc_decl));
-        ON_CALL(get_ctor_decl, decl(4)).WillByDefault(ReturnRef(pair_decl));
-        ON_CALL(make_value, make(0, std::vector<const value*>{})).WillByDefault(Return(&falsity));
-        ON_CALL(make_value, make(1, std::vector<const value*>{})).WillByDefault(Return(&truth));
-        ON_CALL(make_value, make(2, std::vector<const value*>{})).WillByDefault(Return(&zero));
-        ON_CALL(make_value, make(3, std::vector<const value*>{&zero})).WillByDefault(Return(&one));
-        ON_CALL(make_value, make(3, std::vector<const value*>{&one})).WillByDefault(Return(&two));
+        ON_CALL(get_type_def, def(0)).WillByDefault(ReturnRef(boolean));
+        ON_CALL(get_type_def, def(1)).WillByDefault(ReturnRef(nat));
+        ON_CALL(get_type_def, def(2)).WillByDefault(ReturnRef(pair));
+        ON_CALL(make_value, make(false_ctor, std::vector<const value*>{})).WillByDefault(Return(&falsity));
+        ON_CALL(make_value, make(true_ctor, std::vector<const value*>{})).WillByDefault(Return(&truth));
+        ON_CALL(make_value, make(zero_ctor, std::vector<const value*>{})).WillByDefault(Return(&zero));
+        ON_CALL(make_value, make(suc_ctor, std::vector<const value*>{&zero})).WillByDefault(Return(&one));
+        ON_CALL(make_value, make(suc_ctor, std::vector<const value*>{&one})).WillByDefault(Return(&two));
     }
 };
 
 ConstantEnumeratorTest::ConstantEnumeratorTest()
-    : bool_ctors{0, 1}
-    , nat_ctors{2, 3}
-    , pair_ctors{4}
-    , false_decl{.type = 0, .tag = 0, .arg_types = {}}
-    , true_decl{.type = 0, .tag = 1, .arg_types = {}}
-    , zero_decl{.type = 1, .tag = 0, .arg_types = {}}
-    , suc_decl{.type = 1, .tag = 1, .arg_types = {1}}
-    , pair_decl{.type = 2, .tag = 0, .arg_types = {0, 0}}
-    , falsity{.ctor = 0, .args = {}}
-    , truth{.ctor = 1, .args = {}}
-    , zero{.ctor = 2, .args = {}}
-    , one{.ctor = 3, .args = {&zero}}
-    , two{.ctor = 3, .args = {&one}}
-    , get_type_ctors()
-    , get_ctor_decl()
+    : boolean{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}}
+    , nat{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {1}}}}
+    , pair{.ctors = {ctor_def{.arg_types = {0, 0}}}}
+    , false_ctor{.type = 0, .tag = 0}
+    , true_ctor{.type = 0, .tag = 1}
+    , zero_ctor{.type = 1, .tag = 0}
+    , suc_ctor{.type = 1, .tag = 1}
+    , pair_ctor{.type = 2, .tag = 0}
+    , falsity{.ctor = false_ctor, .args = {}}
+    , truth{.ctor = true_ctor, .args = {}}
+    , zero{.ctor = zero_ctor, .args = {}}
+    , one{.ctor = suc_ctor, .args = {&zero}}
+    , two{.ctor = suc_ctor, .args = {&one}}
+    , get_type_def()
     , make_value() {}
 
 }
@@ -97,20 +85,16 @@ TEST_F(ConstantEnumeratorTest, ASizeZeroEnumeratesNothing) {
 
 TEST_F(ConstantEnumeratorTest, EveryCombinationOfArgumentsThatFitsTheSizeIsMade) {
     EXPECT_CALL(make_value, make(_, _)).Times(AnyNumber());
-    EXPECT_CALL(make_value, make(4, std::vector<const value*>{&falsity, &falsity}));
-    EXPECT_CALL(make_value, make(4, std::vector<const value*>{&falsity, &truth}));
-    EXPECT_CALL(make_value, make(4, std::vector<const value*>{&truth, &falsity}));
-    EXPECT_CALL(make_value, make(4, std::vector<const value*>{&truth, &truth}));
+    EXPECT_CALL(make_value, make(pair_ctor, std::vector<const value*>{&falsity, &falsity}));
+    EXPECT_CALL(make_value, make(pair_ctor, std::vector<const value*>{&falsity, &truth}));
+    EXPECT_CALL(make_value, make(pair_ctor, std::vector<const value*>{&truth, &falsity}));
+    EXPECT_CALL(make_value, make(pair_ctor, std::vector<const value*>{&truth, &truth}));
     EXPECT_EQ(enumerator.enumerate(2, 3).size(), 4u);
 }
 
 TEST_F(ConstantEnumeratorTest, AValueWhoseArgumentsCannotFitIsNotMade) {
-    EXPECT_CALL(make_value, make(4, _)).Times(0);
+    EXPECT_CALL(make_value, make(pair_ctor, _)).Times(0);
     EXPECT_TRUE(enumerator.enumerate(2, 2).empty());
-}
-
-TEST_F(ConstantEnumeratorTest, ASizeBelowTheSmallestValueEnumeratesNothing) {
-    EXPECT_TRUE(enumerator.enumerate(0, 0).empty());
 }
 
 TEST_F(ConstantEnumeratorTest, ValuesOfOneSizeComeBeforeLargerOnes) {
@@ -123,7 +107,20 @@ TEST_F(ConstantEnumeratorTest, ASizeLargerThanAFiniteTypeNeedsGivesJustItsValues
 
 TEST_F(ConstantEnumeratorTest, ConstructorsAreTriedInTagOrderWithinASize) {
     InSequence order;
-    EXPECT_CALL(make_value, make(0, std::vector<const value*>{})).WillOnce(Return(&falsity));
-    EXPECT_CALL(make_value, make(1, std::vector<const value*>{})).WillOnce(Return(&truth));
+    EXPECT_CALL(make_value, make(false_ctor, std::vector<const value*>{})).WillOnce(Return(&falsity));
+    EXPECT_CALL(make_value, make(true_ctor, std::vector<const value*>{})).WillOnce(Return(&truth));
     enumerator.enumerate(0, 1);
+}
+
+TEST_F(ConstantEnumeratorTest, AValueIsMadeWithItsTypeAndTag) {
+    EXPECT_CALL(make_value, make(_, _)).Times(AnyNumber());
+    EXPECT_CALL(make_value, make(ctor_ref{.type = 1, .tag = 1}, std::vector<const value*>{&zero}))
+        .WillOnce(Return(&one));
+    enumerator.enumerate(1, 2);
+}
+
+TEST_F(ConstantEnumeratorTest, ATypeWithoutConstructorsHasNoValues) {
+    const type_def uninhabited{.ctors = {}};
+    ON_CALL(get_type_def, def(7)).WillByDefault(ReturnRef(uninhabited));
+    EXPECT_TRUE(enumerator.enumerate(7, 4).empty());
 }

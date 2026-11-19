@@ -17,20 +17,19 @@
 #include "infrastructure/operand_applier.hpp"
 #include "infrastructure/operand_table.hpp"
 #include "infrastructure/output_finder.hpp"
-#include "infrastructure/primitive.hpp"
 #include "infrastructure/primitive_caller.hpp"
-#include "infrastructure/primitive_signature_reader.hpp"
 #include "infrastructure/primitive_store.hpp"
 #include "infrastructure/primitive_applier.hpp"
 #include "infrastructure/primitive_option_finder.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/synthesis_starter.hpp"
 #include "infrastructure/uniform_value_finder.hpp"
-#include "infrastructure/value_equality.hpp"
 #include "infrastructure/value_pool.hpp"
 #include "infrastructure/value_sizer.hpp"
 #include "infrastructure/variable_candidate_finder.hpp"
 #include "infrastructure/witness_detector.hpp"
+#include "support/value_equality.hpp"
+#include "value_objects/typed_primitive.hpp"
 
 using ::testing::Invoke;
 using ::testing::InSequence;
@@ -51,11 +50,9 @@ size_t last_option(size_t option_count) {
 
 using chooser_t = NiceMock<MockChooseOption>;
 using feature_sizer_t = feature_sizer<value_sizer>;
-using primitive_store_t = primitive_store<primitive>;
-using signature_reader_t = primitive_signature_reader<primitive_store_t>;
-using primitive_caller_t = primitive_caller<primitive_store_t>;
+using primitive_caller_t = primitive_caller<primitive_store>;
 using variable_candidate_finder_t = variable_candidate_finder<feature_pool, feature_sizer_t, uniform_value_finder>;
-using constant_enumerator_t = constant_enumerator<schema, schema, value_pool>;
+using constant_enumerator_t = constant_enumerator<schema, value_pool>;
 using constant_seeder_t = constant_seeder<schema, constant_enumerator_t, feature_pool, constant_store>;
 using operand_table_t =
     operand_table<constant_store, constant_store, cheapest_feature_index, cheapest_feature_index>;
@@ -64,12 +61,12 @@ using app_candidate_finder_t =
     app_candidate_finder<operand_applier_t, uniform_value_finder, operand_table_t, feature_pool, feature_sizer_t>;
 using witness_detector_t = witness_detector<operand_table_t, operand_table_t, operand_table_t, application_log>;
 using primitive_option_finder_t =
-    primitive_option_finder<primitive_store_t, signature_reader_t, witness_detector_t>;
+    primitive_option_finder<primitive_store, primitive_store, witness_detector_t>;
 using argument_option_finder_t =
     argument_option_finder<operand_table_t, operand_table_t, witness_detector_t>;
 using argument_chooser_t = argument_chooser<argument_option_finder_t, chooser_t>;
 using primitive_applier_t = primitive_applier<
-    signature_reader_t, argument_chooser_t, application_log, app_candidate_finder_t, cheapest_feature_index>;
+    primitive_store, argument_chooser_t, application_log, app_candidate_finder_t, cheapest_feature_index>;
 using synthesis_starter_t =
     synthesis_starter<cheapest_feature_index, application_log, variable_candidate_finder_t, cheapest_feature_index>;
 using feature_synthesizer_t = feature_synthesizer<
@@ -86,14 +83,14 @@ struct FeatureSynthesisIntegrationTest : public ::testing::Test {
     schema types;
     value_pool values;
     type_id boolean;
-    ctor_id false_ctor;
-    ctor_id true_ctor;
+    ctor_ref false_ctor;
+    ctor_ref true_ctor;
     const value* falsity;
     const value* truth;
     type_id colour;
     const value* red;
     const value* green;
-    value_equality<value_pool> equality;
+    typed_primitive equality;
     bin training;
     bin unreachable;
     feature_pool features;
@@ -104,8 +101,7 @@ struct FeatureSynthesisIntegrationTest : public ::testing::Test {
     uniform_value_finder uniform_values;
     value_sizer value_sizes;
     feature_sizer_t feature_sizes;
-    primitive_store_t primitives;
-    signature_reader_t signatures;
+    primitive_store primitives;
     primitive_caller_t caller;
     variable_candidate_finder_t variable_candidate_finder;
     constant_enumerator_t constant_enumerator;
@@ -124,17 +120,21 @@ struct FeatureSynthesisIntegrationTest : public ::testing::Test {
 };
 
 FeatureSynthesisIntegrationTest::FeatureSynthesisIntegrationTest()
-    : types()
+    : types(std::vector<type_def>{
+              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}},
+              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}}})
     , values()
-    , boolean(types.declare_type())
-    , false_ctor(types.declare_ctor(boolean, {}))
-    , true_ctor(types.declare_ctor(boolean, {}))
+    , boolean(0)
+    , false_ctor{.type = boolean, .tag = 0}
+    , true_ctor{.type = boolean, .tag = 1}
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
-    , colour(types.declare_type())
-    , red(values.make(types.declare_ctor(colour, {}), {}))
-    , green(values.make(types.declare_ctor(colour, {}), {}))
-    , equality(values, boolean, boolean_encoding{.type = boolean, .false_ctor = false_ctor, .true_ctor = true_ctor})
+    , colour(1)
+    , red(values.make(ctor_ref{.type = colour, .tag = 0}, {}))
+    , green(values.make(ctor_ref{.type = colour, .tag = 1}, {}))
+    , equality{
+          .type = primitive_type{.arg_types = {boolean, boolean}, .result_type = boolean},
+          .apply = value_equality<value_pool>(values, false_ctor, true_ctor)}
     , training{
           .inputs = {typed_column{.type = boolean, .cells = {falsity, falsity, truth, truth}},
                     typed_column{.type = boolean, .cells = {falsity, truth, falsity, truth}}},
@@ -148,21 +148,20 @@ FeatureSynthesisIntegrationTest::FeatureSynthesisIntegrationTest()
     , uniform_values()
     , value_sizes()
     , feature_sizes(value_sizes)
-    , primitives(std::vector<primitive>{&equality})
-    , signatures(primitives)
+    , primitives(std::vector<typed_primitive>{equality})
     , caller(primitives)
     , variable_candidate_finder(features, feature_sizes, uniform_values)
-    , constant_enumerator(types, types, values)
+    , constant_enumerator(types, values)
     , constant_seeder(types, constant_enumerator, features, constants)
     , operand_table(constants, constants, feature_candidates, feature_candidates)
     , operand_applier(operand_table, caller)
     , app_candidate_finder(operand_applier, uniform_values, operand_table, features, feature_sizes)
     , witness_detector(operand_table, operand_table, operand_table, applications)
-    , primitive_option_finder(primitives, signatures, witness_detector)
+    , primitive_option_finder(primitives, primitives, witness_detector)
     , argument_option_finder(operand_table, operand_table, witness_detector)
     , chooser()
     , argument_chooser(argument_option_finder, chooser)
-    , primitive_applier(signatures, argument_chooser, applications, app_candidate_finder, feature_candidates)
+    , primitive_applier(primitives, argument_chooser, applications, app_candidate_finder, feature_candidates)
     , synthesis_starter(feature_candidates, applications, variable_candidate_finder, feature_candidates)
     , evaluator(caller) {
     constant_seeder.seed(1);

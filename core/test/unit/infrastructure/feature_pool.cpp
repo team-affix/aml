@@ -10,7 +10,7 @@ struct FeaturePoolTest : public ::testing::Test {
 };
 
 FeaturePoolTest::FeaturePoolTest()
-    : zero{.ctor = 0, .args = {}}
+    : zero{.ctor = {.type = 0, .tag = 0}, .args = {}}
     , features() {}
 
 }

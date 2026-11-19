@@ -1,12 +1,12 @@
 #include <variant>
 #include <vector>
 #include <gtest/gtest.h>
-#include "infrastructure/primitive.hpp"
 #include "infrastructure/razor_runtime.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/scout_runtime.hpp"
-#include "infrastructure/value_equality.hpp"
 #include "infrastructure/value_pool.hpp"
+#include "support/value_equality.hpp"
+#include "value_objects/typed_primitive.hpp"
 
 namespace {
 
@@ -18,30 +18,33 @@ struct RazorIntegrationTest : public ::testing::Test {
     schema types;
     value_pool values;
     type_id boolean;
-    ctor_id false_ctor;
-    ctor_id true_ctor;
+    ctor_ref false_ctor;
+    ctor_ref true_ctor;
     type_id nat;
-    ctor_id zero_ctor;
-    ctor_id suc_ctor;
+    ctor_ref zero_ctor;
+    ctor_ref suc_ctor;
     const value* falsity;
     const value* truth;
-    value_equality<value_pool> bool_equality;
+    typed_primitive bool_equality;
     razor_options options;
 };
 
 RazorIntegrationTest::RazorIntegrationTest()
-    : types()
+    : types(std::vector<type_def>{
+              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}},
+              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {1}}}}})
     , values()
-    , boolean(types.declare_type())
-    , false_ctor(types.declare_ctor(boolean, {}))
-    , true_ctor(types.declare_ctor(boolean, {}))
-    , nat(types.declare_type())
-    , zero_ctor(types.declare_ctor(nat, {}))
-    , suc_ctor(types.declare_ctor(nat, {nat}))
+    , boolean(0)
+    , false_ctor{.type = boolean, .tag = 0}
+    , true_ctor{.type = boolean, .tag = 1}
+    , nat(1)
+    , zero_ctor{.type = nat, .tag = 0}
+    , suc_ctor{.type = nat, .tag = 1}
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
-    , bool_equality(
-          values, boolean, boolean_encoding{.type = boolean, .false_ctor = false_ctor, .true_ctor = true_ctor})
+    , bool_equality{
+          .type = primitive_type{.arg_types = {boolean, boolean}, .result_type = boolean},
+          .apply = value_equality<value_pool>(values, false_ctor, true_ctor)}
     , options{.max_applications = 2, .max_constant_size = 1, .exploration_constant = 5.0, .seed = 7} {}
 
 void RazorIntegrationTest::expect_fit(const razor_runtime& runtime, const bin& training) {
@@ -76,7 +79,7 @@ bin RazorIntegrationTest::is_even_training(size_t count) {
 
 TEST_F(RazorIntegrationTest, XorIsFoundAsOneSynthesizedOutput) {
     const bin training = xor_training();
-    razor_runtime runtime(types, values, {&bool_equality}, training, options);
+    razor_runtime runtime(types, values, {bool_equality}, training, options);
     for (size_t episode = 0; episode < 200; ++episode)
         runtime.next();
     // leaf eq(eq(x0, x1), false): 1 + (1 + 1 + 1) + 1
@@ -107,7 +110,7 @@ TEST_F(RazorIntegrationTest, RazorFindsAModelNoCostlierThanScouts) {
 
 TEST_F(RazorIntegrationTest, TheBestCostNeverRises) {
     const bin training = xor_training();
-    razor_runtime runtime(types, values, {&bool_equality}, training, options);
+    razor_runtime runtime(types, values, {bool_equality}, training, options);
     size_t previous = runtime.best_cost();
     for (size_t episode = 0; episode < 100; ++episode) {
         runtime.next();
@@ -118,8 +121,8 @@ TEST_F(RazorIntegrationTest, TheBestCostNeverRises) {
 
 TEST_F(RazorIntegrationTest, TheSameSeedFindsTheSameModel) {
     const bin training = xor_training();
-    razor_runtime first(types, values, {&bool_equality}, training, options);
-    razor_runtime second(types, values, {&bool_equality}, training, options);
+    razor_runtime first(types, values, {bool_equality}, training, options);
+    razor_runtime second(types, values, {bool_equality}, training, options);
     for (size_t episode = 0; episode < 50; ++episode) {
         first.next();
         second.next();
@@ -136,7 +139,7 @@ TEST_F(RazorIntegrationTest, ACapOfZeroNeverAppliesAPrimitive) {
     const bin training = xor_training();
     razor_options no_applications = options;
     no_applications.max_applications = 0;
-    razor_runtime runtime(types, values, {&bool_equality}, training, no_applications);
+    razor_runtime runtime(types, values, {bool_equality}, training, no_applications);
     for (size_t episode = 0; episode < 100; ++episode)
         runtime.next();
     // Without synthesis XOR needs a match on both inputs: the best is scout's cost 7.
@@ -147,7 +150,7 @@ TEST_F(RazorIntegrationTest, ACapOfZeroNeverAppliesAPrimitive) {
 TEST_F(RazorIntegrationTest, AgreeingLabelsNeedNoSearch) {
     bin training = xor_training();
     training.labels = {truth, truth, truth, truth};
-    razor_runtime runtime(types, values, {&bool_equality}, training, options);
+    razor_runtime runtime(types, values, {bool_equality}, training, options);
     runtime.next();
     EXPECT_EQ(runtime.best_cost(), 1u);
 }

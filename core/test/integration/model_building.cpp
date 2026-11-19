@@ -2,7 +2,6 @@
 #include <variant>
 #include <vector>
 #include <gtest/gtest.h>
-#include "infrastructure/primitive.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/scout_manifest.hpp"
 #include "infrastructure/value_pool.hpp"
@@ -18,25 +17,27 @@ struct ModelBuildingIntegrationTest : public ::testing::Test {
     schema types;
     value_pool values;
     type_id boolean;
-    ctor_id false_ctor;
-    ctor_id true_ctor;
+    ctor_ref false_ctor;
+    ctor_ref true_ctor;
     type_id nat;
-    ctor_id zero_ctor;
-    ctor_id suc_ctor;
+    ctor_ref zero_ctor;
+    ctor_ref suc_ctor;
     const value* falsity;
     const value* truth;
     scout_manifest manifest;
 };
 
 ModelBuildingIntegrationTest::ModelBuildingIntegrationTest()
-    : types()
+    : types(std::vector<type_def>{
+              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}},
+              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {1}}}}})
     , values()
-    , boolean(types.declare_type())
-    , false_ctor(types.declare_ctor(boolean, {}))
-    , true_ctor(types.declare_ctor(boolean, {}))
-    , nat(types.declare_type())
-    , zero_ctor(types.declare_ctor(nat, {}))
-    , suc_ctor(types.declare_ctor(nat, {nat}))
+    , boolean(0)
+    , false_ctor{.type = boolean, .tag = 0}
+    , true_ctor{.type = boolean, .tag = 1}
+    , nat(1)
+    , zero_ctor{.type = nat, .tag = 0}
+    , suc_ctor{.type = nat, .tag = 1}
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
     , manifest(types, values, {}, scout_options{.max_applications = 0, .max_constant_size = 1}) {

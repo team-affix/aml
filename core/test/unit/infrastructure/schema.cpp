@@ -1,69 +1,62 @@
+#include <vector>
 #include <gtest/gtest.h>
 #include "infrastructure/schema.hpp"
 
 namespace {
 
+// Types: 0 = bool {false, true}, 1 = nat {zero, suc(nat)}, 2 = list of nat {nil, cons(nat, list)}.
 struct SchemaTest : public ::testing::Test {
+    SchemaTest();
+    type_def boolean;
+    type_def nat;
+    type_def list;
     schema types;
 };
 
+SchemaTest::SchemaTest()
+    : boolean{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}}
+    , nat{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {1}}}}
+    , list{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {1, 2}}}}
+    , types(std::vector<type_def>{boolean, nat, list}) {}
+
 }
 
-TEST_F(SchemaTest, TypesAreNumberedInDeclarationOrder) {
-    EXPECT_EQ(types.declare_type(), 0u);
-    EXPECT_EQ(types.declare_type(), 1u);
-    EXPECT_EQ(types.type_count(), 2u);
+TEST_F(SchemaTest, CountsItsTypes) {
+    EXPECT_EQ(types.type_count(), 3u);
 }
 
-TEST_F(SchemaTest, ConstructorsAreNumberedAcrossTypes) {
-    const type_id boolean = types.declare_type();
-    const type_id nat = types.declare_type();
-    EXPECT_EQ(types.declare_ctor(boolean, {}), 0u);
-    EXPECT_EQ(types.declare_ctor(nat, {}), 1u);
-    EXPECT_EQ(types.declare_ctor(boolean, {}), 2u);
+TEST_F(SchemaTest, ATypesIdIsItsPosition) {
+    EXPECT_EQ(types.def(0), boolean);
+    EXPECT_EQ(types.def(1), nat);
+    EXPECT_EQ(types.def(2), list);
 }
 
-TEST_F(SchemaTest, AConstructorsTagIsItsPositionWithinItsType) {
-    const type_id boolean = types.declare_type();
-    const type_id nat = types.declare_type();
-    types.declare_ctor(boolean, {});
-    const ctor_id zero = types.declare_ctor(nat, {});
-    const ctor_id suc = types.declare_ctor(nat, {nat});
-    EXPECT_EQ(types.decl(zero), (ctor_decl{.type = nat, .tag = 0, .arg_types = {}}));
-    EXPECT_EQ(types.decl(suc), (ctor_decl{.type = nat, .tag = 1, .arg_types = {nat}}));
+TEST_F(SchemaTest, ConstructorsKeepTheirTagOrderAndArgumentTypes) {
+    EXPECT_EQ(types.def(2).ctors.size(), 2u);
+    EXPECT_TRUE(types.def(2).ctors[0].arg_types.empty());
+    EXPECT_EQ(types.def(2).ctors[1].arg_types, (std::vector<type_id>{1, 2}));
 }
 
-TEST_F(SchemaTest, ATypeListsItsConstructorsInTagOrder) {
-    const type_id boolean = types.declare_type();
-    const type_id nat = types.declare_type();
-    const ctor_id zero = types.declare_ctor(nat, {});
-    const ctor_id falsity = types.declare_ctor(boolean, {});
-    const ctor_id suc = types.declare_ctor(nat, {nat});
-    EXPECT_EQ(types.ctors(nat), (std::vector<ctor_id>{zero, suc}));
-    EXPECT_EQ(types.ctors(boolean), (std::vector<ctor_id>{falsity}));
+TEST_F(SchemaTest, ATypeMayReferToItselfAndToLaterTypes) {
+    const schema forward(std::vector<type_def>{
+        type_def{.ctors = {ctor_def{.arg_types = {1}}, ctor_def{.arg_types = {0}}}},
+        type_def{.ctors = {ctor_def{.arg_types = {}}}}});
+    EXPECT_EQ(forward.def(0).ctors[0].arg_types, (std::vector<type_id>{1}));
 }
 
-TEST_F(SchemaTest, ANewSchemaHasNoTypes) {
-    EXPECT_EQ(types.type_count(), 0u);
+TEST_F(SchemaTest, ASchemaWithoutTypesIsEmpty) {
+    const schema empty(std::vector<type_def>{});
+    EXPECT_EQ(empty.type_count(), 0u);
 }
 
-TEST_F(SchemaTest, ATypeWithoutConstructorsListsNone) {
-    const type_id unit = types.declare_type();
-    EXPECT_TRUE(types.ctors(unit).empty());
+TEST_F(SchemaTest, ATypeWithoutConstructorsIsAllowed) {
+    const schema uninhabited(std::vector<type_def>{type_def{.ctors = {}}});
+    EXPECT_TRUE(uninhabited.def(0).ctors.empty());
 }
 
-TEST_F(SchemaTest, AConstructorKeepsItsArgumentTypesInOrder) {
-    const type_id boolean = types.declare_type();
-    const type_id nat = types.declare_type();
-    const type_id pair = types.declare_type();
-    const ctor_id make_pair = types.declare_ctor(pair, {nat, boolean, nat});
-    EXPECT_EQ(types.decl(make_pair).arg_types, (std::vector<type_id>{nat, boolean, nat}));
-}
-
-TEST_F(SchemaTest, ATypeMayHoldItselfInAArgument) {
-    const type_id list = types.declare_type();
-    const type_id element = types.declare_type();
-    types.declare_ctor(list, {});
-    const ctor_id cons = types.declare_ctor(list, {element, list});
-    EXPECT_EQ(types.decl(cons), (ctor_decl{.type = list, .tag = 1, .arg_types = {element, list}}));
+TEST_F(SchemaTest, TheTypesAreHeldNotReferredTo) {
+    std::vector<type_def> given{boolean};
+    const schema held(given);
+    given[0].ctors.clear();
+    EXPECT_EQ(held.def(0), boolean);
 }

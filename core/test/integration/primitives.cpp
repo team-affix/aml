@@ -1,70 +1,68 @@
 #include <vector>
 #include <gtest/gtest.h>
-#include "infrastructure/bool_and.hpp"
-#include "infrastructure/bool_not.hpp"
-#include "infrastructure/bool_or.hpp"
 #include "infrastructure/feature_evaluator.hpp"
 #include "infrastructure/feature_pool.hpp"
-#include "infrastructure/nat_add.hpp"
-#include "infrastructure/primitive.hpp"
 #include "infrastructure/primitive_caller.hpp"
-#include "infrastructure/primitive_signature_reader.hpp"
 #include "infrastructure/primitive_store.hpp"
 #include "infrastructure/schema.hpp"
-#include "infrastructure/value_equality.hpp"
 #include "infrastructure/value_pool.hpp"
+#include "support/bool_and.hpp"
+#include "support/bool_not.hpp"
+#include "support/bool_or.hpp"
+#include "support/nat_add.hpp"
+#include "support/value_equality.hpp"
+#include "value_objects/typed_primitive.hpp"
 
 namespace {
 
-// Every native primitive over a real value pool, reached through the store, its signature reader and its caller, and
-// through features evaluated on a row. Primitive ids: not 0, and 1, or 2, eq on nat 3, add 4.
+// The test primitives over a real value pool, stored with their types and reached through the caller and through
+// features evaluated on a row. Primitive ids: not 0, and 1, or 2, eq on nat 3, add 4.
 struct PrimitivesIntegrationTest : public ::testing::Test {
     PrimitivesIntegrationTest();
     const value* number(size_t count);
     schema types;
     value_pool values;
     type_id boolean;
-    ctor_id false_ctor;
-    ctor_id true_ctor;
+    ctor_ref false_ctor;
+    ctor_ref true_ctor;
     type_id nat;
-    ctor_id zero_ctor;
-    ctor_id suc_ctor;
+    ctor_ref zero_ctor;
+    ctor_ref suc_ctor;
     const value* falsity;
     const value* truth;
-    boolean_encoding booleans;
-    nat_encoding nats;
-    bool_not<value_pool> negation;
-    bool_and<value_pool> conjunction;
-    bool_or<value_pool> disjunction;
-    value_equality<value_pool> nat_equality;
-    nat_add<value_pool> addition;
-    primitive_store<primitive> primitives;
-    primitive_signature_reader<primitive_store<primitive>> signatures;
-    primitive_caller<primitive_store<primitive>> caller;
+    primitive_type unary_boolean;
+    primitive_type binary_boolean;
+    primitive_type nat_comparison;
+    primitive_type nat_arithmetic;
+    primitive_store primitives;
+    primitive_caller<primitive_store> caller;
     feature_pool features;
-    feature_evaluator<primitive_caller<primitive_store<primitive>>> evaluator;
+    feature_evaluator<primitive_caller<primitive_store>> evaluator;
 };
 
 PrimitivesIntegrationTest::PrimitivesIntegrationTest()
-    : types()
+    : types(std::vector<type_def>{
+              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}},
+              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {1}}}}})
     , values()
-    , boolean(types.declare_type())
-    , false_ctor(types.declare_ctor(boolean, {}))
-    , true_ctor(types.declare_ctor(boolean, {}))
-    , nat(types.declare_type())
-    , zero_ctor(types.declare_ctor(nat, {}))
-    , suc_ctor(types.declare_ctor(nat, {nat}))
+    , boolean(0)
+    , false_ctor{.type = boolean, .tag = 0}
+    , true_ctor{.type = boolean, .tag = 1}
+    , nat(1)
+    , zero_ctor{.type = nat, .tag = 0}
+    , suc_ctor{.type = nat, .tag = 1}
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
-    , booleans{.type = boolean, .false_ctor = false_ctor, .true_ctor = true_ctor}
-    , nats{.type = nat, .zero_ctor = zero_ctor, .suc_ctor = suc_ctor}
-    , negation(values, booleans)
-    , conjunction(values, booleans)
-    , disjunction(values, booleans)
-    , nat_equality(values, nat, booleans)
-    , addition(values, nats)
-    , primitives(std::vector<primitive>{&negation, &conjunction, &disjunction, &nat_equality, &addition})
-    , signatures(primitives)
+    , unary_boolean{.arg_types = {boolean}, .result_type = boolean}
+    , binary_boolean{.arg_types = {boolean, boolean}, .result_type = boolean}
+    , nat_comparison{.arg_types = {nat, nat}, .result_type = boolean}
+    , nat_arithmetic{.arg_types = {nat, nat}, .result_type = nat}
+    , primitives(std::vector<typed_primitive>{
+          typed_primitive{.type = unary_boolean, .apply = bool_not<value_pool>(values, false_ctor, true_ctor)},
+          typed_primitive{.type = binary_boolean, .apply = bool_and<value_pool>(values, false_ctor, true_ctor)},
+          typed_primitive{.type = binary_boolean, .apply = bool_or<value_pool>(values, false_ctor, true_ctor)},
+          typed_primitive{.type = nat_comparison, .apply = value_equality<value_pool>(values, false_ctor, true_ctor)},
+          typed_primitive{.type = nat_arithmetic, .apply = nat_add<value_pool>(values, suc_ctor)}})
     , caller(primitives)
     , features()
     , evaluator(caller) {}
@@ -78,11 +76,11 @@ const value* PrimitivesIntegrationTest::number(size_t count) {
 
 }
 
-TEST_F(PrimitivesIntegrationTest, TheReaderReportsEachStoredPrimitivesSignature) {
+TEST_F(PrimitivesIntegrationTest, TheStoreKeepsEachPrimitivesType) {
     EXPECT_EQ(primitives.count(), 5u);
-    EXPECT_EQ(signatures.signature(0), (primitive_signature{.arg_types = {boolean}, .result_type = boolean}));
-    EXPECT_EQ(signatures.signature(3), (primitive_signature{.arg_types = {nat, nat}, .result_type = boolean}));
-    EXPECT_EQ(signatures.signature(4), (primitive_signature{.arg_types = {nat, nat}, .result_type = nat}));
+    EXPECT_EQ(primitives.type(0), unary_boolean);
+    EXPECT_EQ(primitives.type(3), nat_comparison);
+    EXPECT_EQ(primitives.type(4), nat_arithmetic);
 }
 
 TEST_F(PrimitivesIntegrationTest, BooleanPrimitivesFollowTheirTruthTables) {

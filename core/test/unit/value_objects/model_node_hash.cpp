@@ -17,8 +17,8 @@ struct ModelNodeHashTest : public ::testing::Test {
 };
 
 ModelNodeHashTest::ModelNodeHashTest()
-    : falsity{.ctor = 0, .args = {}}
-    , truth{.ctor = 1, .args = {}}
+    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
+    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
     , scrutinee{feature::var{.index = 0}}
     , other_scrutinee{feature::var{.index = 1}}
     , false_output{feature::constant{.literal = &falsity}}

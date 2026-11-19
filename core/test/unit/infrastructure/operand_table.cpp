@@ -66,9 +66,9 @@ struct OperandTableTest : public ::testing::Test {
 };
 
 OperandTableTest::OperandTableTest()
-    : falsity{.ctor = 0, .args = {}}
-    , truth{.ctor = 1, .args = {}}
-    , zero{.ctor = 2, .args = {}}
+    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
+    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
+    , zero{.ctor = {.type = 0, .tag = 2}, .args = {}}
     , true_constant{feature::constant{.literal = &truth}}
     , zero_constant{feature::constant{.literal = &zero}}
     , false_constant{feature::constant{.literal = &falsity}}
