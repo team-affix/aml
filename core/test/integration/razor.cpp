@@ -90,7 +90,7 @@ TEST_F(RazorIntegrationTest, XorIsFoundAsOneSynthesizedOutput) {
         runtime.next();
     // leaf eq(eq(x0, x1), false): 1 + (1 + 1 + 1) + 1
     EXPECT_EQ(runtime.best_cost(), 5u);
-    EXPECT_TRUE(std::holds_alternative<model_node::leaf>(runtime.best_model()->content));
+    EXPECT_TRUE(std::holds_alternative<model_node::leaf>(runtime.best_model().value().content));
     expect_fit(runtime, training);
 }
 
@@ -138,7 +138,7 @@ TEST_F(RazorIntegrationTest, TheSameSeedFindsTheSameModel) {
 
 TEST_F(RazorIntegrationTest, NoModelExistsBeforeTheFirstEpisode) {
     razor_runtime runtime(types, values, {}, constants, xor_training(), options);
-    EXPECT_EQ(runtime.best_model(), nullptr);
+    EXPECT_FALSE(runtime.best_model().has_value());
 }
 
 TEST_F(RazorIntegrationTest, ACapOfZeroNeverAppliesAPrimitive) {

@@ -1,7 +1,6 @@
 #include <vector>
 #include <gtest/gtest.h>
 #include "infrastructure/feature_evaluator.hpp"
-#include "infrastructure/feature_pool.hpp"
 #include "infrastructure/primitive_caller.hpp"
 #include "infrastructure/primitive_store.hpp"
 #include "infrastructure/schema.hpp"
@@ -36,7 +35,6 @@ struct PrimitivesIntegrationTest : public ::testing::Test {
     primitive_type nat_arithmetic;
     primitive_store primitives;
     primitive_caller<primitive_store> caller;
-    feature_pool features;
     feature_evaluator<primitive_caller<primitive_store>> evaluator;
 };
 
@@ -64,7 +62,6 @@ PrimitivesIntegrationTest::PrimitivesIntegrationTest()
           typed_primitive{.type = nat_comparison, .apply = value_equality<value_pool>(values, false_ctor, true_ctor)},
           typed_primitive{.type = nat_arithmetic, .apply = nat_add<value_pool>(values, suc_ctor)}})
     , caller(primitives)
-    , features()
     , evaluator(caller) {}
 
 const value* PrimitivesIntegrationTest::number(size_t count) {
@@ -110,9 +107,12 @@ TEST_F(PrimitivesIntegrationTest, EqualityHoldsExactlyForEqualNumbers) {
 }
 
 TEST_F(PrimitivesIntegrationTest, NestedFeaturesEvaluateThroughTheCaller) {
-    const feature* sum = features.make_app(4, {features.make_var(0), features.make_constant(number(2))});
-    const feature* is_five = features.make_app(3, {sum, features.make_constant(number(5))});
-    const feature* not_five = features.make_app(0, {is_five});
+    const feature input{feature::var{.index = 0}};
+    const feature two{feature::constant{.literal = number(2)}};
+    const feature five{feature::constant{.literal = number(5)}};
+    const feature sum{feature::app{.prim = 4, .args = {input, two}}};
+    const feature is_five{feature::app{.prim = 3, .args = {sum, five}}};
+    const feature not_five{feature::app{.prim = 0, .args = {is_five}}};
     EXPECT_EQ(evaluator.evaluate(sum, {number(3)}), number(5));
     EXPECT_EQ(evaluator.evaluate(is_five, {number(3)}), truth);
     EXPECT_EQ(evaluator.evaluate(not_five, {number(3)}), falsity);

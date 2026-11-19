@@ -2,20 +2,17 @@
 #include <gtest/gtest.h>
 #include "infrastructure/constant_seeder.hpp"
 #include "infrastructure/constant_store.hpp"
-#include "infrastructure/feature_pool.hpp"
 #include "infrastructure/value_pool.hpp"
 #include "value_objects/typed_constant.hpp"
 
 namespace {
 
-using seeder_t = constant_seeder<feature_pool, constant_store>;
+using seeder_t = constant_seeder<constant_store>;
 
-// The user offers false and true (type 0) and zero and one (type 1); they are seeded through a real feature pool into
-// a real store.
+// The user offers false and true (type 0) and zero and one (type 1); they are seeded into a real store.
 struct ConstantSeedingIntegrationTest : public ::testing::Test {
     ConstantSeedingIntegrationTest();
     value_pool values;
-    feature_pool features;
     constant_store constants;
     seeder_t seeder;
     const value* falsity;
@@ -27,9 +24,8 @@ struct ConstantSeedingIntegrationTest : public ::testing::Test {
 
 ConstantSeedingIntegrationTest::ConstantSeedingIntegrationTest()
     : values()
-    , features()
     , constants()
-    , seeder(features, constants)
+    , seeder(constants)
     , falsity(values.make(0, {}))
     , truth(values.make(1, {}))
     , zero(values.make(0, {}))
@@ -40,14 +36,14 @@ ConstantSeedingIntegrationTest::ConstantSeedingIntegrationTest()
 
 }
 
-TEST_F(ConstantSeedingIntegrationTest, EveryOfferedConstantIsStoredInOrderWithItsTypeAndInternedFeature) {
+TEST_F(ConstantSeedingIntegrationTest, EveryOfferedConstantIsStoredInOrderWithItsTypeAndConstantFeature) {
     seeder.seed(offered);
     ASSERT_EQ(constants.constants().size(), 4u);
     for (size_t position = 0; position < offered.size(); ++position) {
         const constant_operand& stored = constants.constants()[position];
         EXPECT_EQ(stored.literal, offered[position].literal);
         EXPECT_EQ(stored.type, offered[position].type);
-        EXPECT_EQ(stored.expression, features.make_constant(offered[position].literal));
+        EXPECT_EQ(stored.expression, feature{feature::constant{.literal = offered[position].literal}});
     }
 }
 

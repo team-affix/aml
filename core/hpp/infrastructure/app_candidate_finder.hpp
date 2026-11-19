@@ -18,14 +18,12 @@ template<
     typename IApplyPrimitiveToOperands,
     typename IFindUniformValue,
     typename IGetOperandExpression,
-    typename IMakeAppFeature,
     typename ISizeFeature>
 struct app_candidate_finder {
     app_candidate_finder(
         IApplyPrimitiveToOperands& apply_primitive_to_operands,
         IFindUniformValue& find_uniform_value,
         IGetOperandExpression& get_operand_expression,
-        IMakeAppFeature& make_app_feature,
         ISizeFeature& size_feature);
     std::optional<candidate> find(
         prim_id prim, type_id result_type, const std::vector<size_t>& args, size_t row_count);
@@ -33,25 +31,18 @@ private:
     IApplyPrimitiveToOperands& apply_primitive_to_operands_;
     IFindUniformValue& find_uniform_value_;
     IGetOperandExpression& get_operand_expression_;
-    IMakeAppFeature& make_app_feature_;
     ISizeFeature& size_feature_;
 };
 
-#define APP_CANDIDATE_FINDER_TEMPLATE \
-    template<typename IAPO, typename IFUV, typename IGOE, typename IMAF, typename ISF>
-#define APP_CANDIDATE_FINDER app_candidate_finder<IAPO, IFUV, IGOE, IMAF, ISF>
+#define APP_CANDIDATE_FINDER_TEMPLATE template<typename IAPO, typename IFUV, typename IGOE, typename ISF>
+#define APP_CANDIDATE_FINDER          app_candidate_finder<IAPO, IFUV, IGOE, ISF>
 
 APP_CANDIDATE_FINDER_TEMPLATE
 APP_CANDIDATE_FINDER::app_candidate_finder(
-    IAPO& apply_primitive_to_operands,
-    IFUV& find_uniform_value,
-    IGOE& get_operand_expression,
-    IMAF& make_app_feature,
-    ISF& size_feature)
+    IAPO& apply_primitive_to_operands, IFUV& find_uniform_value, IGOE& get_operand_expression, ISF& size_feature)
     : apply_primitive_to_operands_(apply_primitive_to_operands)
     , find_uniform_value_(find_uniform_value)
     , get_operand_expression_(get_operand_expression)
-    , make_app_feature_(make_app_feature)
     , size_feature_(size_feature) {}
 
 APP_CANDIDATE_FINDER_TEMPLATE
@@ -61,13 +52,14 @@ std::optional<candidate> APP_CANDIDATE_FINDER::find(
     if (find_uniform_value_.find(cells).has_value())
         return std::nullopt;
 
-    std::vector<const feature*> arg_features;
+    std::vector<feature> arg_features;
     for (const size_t operand : args)
         arg_features.push_back(get_operand_expression_.expression(operand));
-    const feature* expression = make_app_feature_.make_app(prim, arg_features);
+    feature expression{feature::app{.prim = prim, .args = std::move(arg_features)}};
+    const size_t cost = size_feature_.size(expression);
     return candidate{
-        .expression = expression,
-        .cost = size_feature_.size(expression),
+        .expression = std::move(expression),
+        .cost = cost,
         .observed = typed_column{.type = result_type, .cells = std::move(cells)}};
 }
 

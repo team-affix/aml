@@ -16,12 +16,14 @@ and are minimal in symbolic description length. Fit comes first; among models th
   through the solver's value pool; a `typed_primitive` pairs it with its `primitive_type` (argument and result
   types). The constants synthesis may use as arguments are `typed_constant`s the user offers. Solvers receive both at
   construction; nothing is enumerated. They are user code: the ones the tests use live in `core/test/support/`.
-- **Features:** a variable, a primitive application, or a constant. A feature is heterogeneous over a bin when its
-  values there are not all equal.
-- **Model:** three node types (`model_node`): `match` (an exhaustive one-layer case on a feature; each branch sees
-  its constructor's arguments bound as the next variables), `leaf` (outputs a feature evaluated in scope: a constant
-  label, a variable, or a synthesized feature), `empty` (no data; infers nothing). Variable and synthesized outputs
-  generalize past the training data, so a model can be right on inputs no row held.
+- **Features:** a variable, a primitive application, or a constant. A feature owns its arguments, so it is a tree
+  (not interned). A feature is heterogeneous over a bin when its values there are not all equal.
+- **Model:** a tree that owns its nodes (not interned); each episode builds one, and `best_model_tracker` keeps a copy
+  of the cheapest. Three node types, nested in `model_node` so `match` needs no forward declaration: `match` (an
+  exhaustive one-layer case on a feature; each branch sees its constructor's arguments bound as the next variables),
+  `leaf` (outputs a feature evaluated in scope: a constant label, a variable, or a synthesized feature), `empty` (no
+  data; infers nothing). Variable and synthesized outputs generalize past the training data, so a model can be right on
+  inputs no row held.
 - **Learning (`model_builder`):** an empty bin becomes `empty`. `leaf_detector` makes a leaf of a variable whose
   column is the label column (cost 1, preferred) or of labels that all agree (a constant). Otherwise a synthesis
   session runs; a synthesized feature equal to the labels becomes the leaf's output (`output_finder`, cheapest
@@ -86,9 +88,9 @@ data points are never re-read.
 
 ### Components (one mechanism each)
 
-- Stores: `schema`, `value_pool`, `feature_pool`, `model_node_pool`, `constant_store`, `primitive_store`,
-  `cheapest_feature_index` (a session's features), `application_log`, `best_model_tracker`, `tree_walker`;
-  `operand_table` is a read-only view over the constant and feature stores.
+- Stores: `schema`, `value_pool`, `constant_store`, `primitive_store`, `cheapest_feature_index` (a session's features),
+  `application_log`, `best_model_tracker`, `tree_walker`; `operand_table` is a read-only view over the constant and
+  feature stores.
 - Synthesis: `constant_seeder`, `synthesis_starter`, `variable_candidate_finder`,
   `witness_detector`, `primitive_option_finder`, `argument_option_finder`, `argument_chooser`,
   `primitive_caller`, `operand_applier`, `app_candidate_finder`, `primitive_applier`,

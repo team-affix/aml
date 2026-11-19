@@ -141,7 +141,7 @@ TEST_F(GeneralizationIntegrationTest, RazorDoublesByAddingTheInputToItself) {
         runtime.next();
     // leaf add(x0, x0): 1 + 1 + 1
     EXPECT_EQ(runtime.best_cost(), 3u);
-    EXPECT_TRUE(std::holds_alternative<model_node::leaf>(runtime.best_model()->content));
+    EXPECT_TRUE(std::holds_alternative<model_node::leaf>(runtime.best_model().value().content));
     EXPECT_EQ(runtime.infer({number(7)}), std::optional<const value*>(number(14)));
 }
 

@@ -17,7 +17,7 @@ void scout_runtime::next() {
     manifest_.model_episode_.run(training_);
 }
 
-const model_node* scout_runtime::best_model() const {
+const std::optional<model_node>& scout_runtime::best_model() const {
     return manifest_.best_model_tracker_.best_model();
 }
 
@@ -26,6 +26,6 @@ size_t scout_runtime::best_cost() const {
 }
 
 std::optional<const value*> scout_runtime::infer(const std::vector<const value*>& inputs) const {
-    DEBUG_ASSERT(best_model() != nullptr);
-    return manifest_.model_evaluator_.evaluate(best_model(), inputs);
+    DEBUG_ASSERT(best_model().has_value());
+    return manifest_.model_evaluator_.evaluate(best_model().value(), inputs);
 }

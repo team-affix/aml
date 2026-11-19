@@ -1,6 +1,6 @@
 #include "infrastructure/output_finder.hpp"
 
-std::optional<const feature*> output_finder::find(
+std::optional<feature> output_finder::find(
     const std::vector<candidate>& candidates, const typed_column& labels) const {
     const candidate* cheapest = nullptr;
     for (const candidate& entry : candidates) {

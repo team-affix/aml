@@ -9,7 +9,7 @@
 template<typename ISizeValue>
 struct feature_sizer {
     feature_sizer(ISizeValue& size_value);
-    size_t size(const feature* expression) const;
+    size_t size(const feature& expression) const;
 private:
     ISizeValue& size_value_;
 };
@@ -22,13 +22,13 @@ FEATURE_SIZER::feature_sizer(ISizeValue& size_value)
     : size_value_(size_value) {}
 
 FEATURE_SIZER_TEMPLATE
-size_t FEATURE_SIZER::size(const feature* expression) const {
-    if (std::holds_alternative<feature::var>(expression->content))
+size_t FEATURE_SIZER::size(const feature& expression) const {
+    if (std::holds_alternative<feature::var>(expression.content))
         return 1;
-    if (const feature::constant* constant = std::get_if<feature::constant>(&expression->content))
+    if (const feature::constant* constant = std::get_if<feature::constant>(&expression.content))
         return size_value_.size(constant->literal);
     size_t total = 1;
-    for (const feature* arg : std::get<feature::app>(expression->content).args)
+    for (const feature& arg : std::get<feature::app>(expression.content).args)
         total += size(arg);
     return total;
 }

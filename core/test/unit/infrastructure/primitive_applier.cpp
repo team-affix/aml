@@ -62,7 +62,7 @@ PrimitiveApplierTest::PrimitiveApplierTest()
     , truth{.tag = 1, .args = {}}
     , application{feature::app{.prim = 5, .args = {}}}
     , application_candidate{
-          .expression = &application, .cost = 3, .observed = typed_column{.type = 4, .cells = {&truth, &falsity}}}
+          .expression = application, .cost = 3, .observed = typed_column{.type = 4, .cells = {&truth, &falsity}}}
     , type{.arg_types = {0, 0}, .result_type = 4}
     , get_primitive_type()
     , choose_arguments()

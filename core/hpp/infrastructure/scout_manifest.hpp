@@ -12,7 +12,6 @@
 #include "infrastructure/constant_seeder.hpp"
 #include "infrastructure/constant_store.hpp"
 #include "infrastructure/feature_evaluator.hpp"
-#include "infrastructure/feature_pool.hpp"
 #include "infrastructure/feature_sizer.hpp"
 #include "infrastructure/feature_synthesizer.hpp"
 #include "infrastructure/bound_argument_chooser.hpp"
@@ -21,7 +20,6 @@
 #include "infrastructure/model_builder.hpp"
 #include "infrastructure/model_episode.hpp"
 #include "infrastructure/model_evaluator.hpp"
-#include "infrastructure/model_node_pool.hpp"
 #include "infrastructure/model_sizer.hpp"
 #include "infrastructure/operand_applier.hpp"
 #include "infrastructure/operand_table.hpp"
@@ -51,12 +49,11 @@ struct scout_manifest {
     struct primitive_caller_t : primitive_caller<primitive_store> {
         using primitive_caller<primitive_store>::primitive_caller;
     };
-    struct variable_candidate_finder_t
-        : variable_candidate_finder<feature_pool, feature_sizer_t, uniform_value_finder> {
-        using variable_candidate_finder<feature_pool, feature_sizer_t, uniform_value_finder>::variable_candidate_finder;
+    struct variable_candidate_finder_t : variable_candidate_finder<feature_sizer_t, uniform_value_finder> {
+        using variable_candidate_finder<feature_sizer_t, uniform_value_finder>::variable_candidate_finder;
     };
-    struct constant_seeder_t : constant_seeder<feature_pool, constant_store> {
-        using constant_seeder<feature_pool, constant_store>::constant_seeder;
+    struct constant_seeder_t : constant_seeder<constant_store> {
+        using constant_seeder<constant_store>::constant_seeder;
     };
     struct operand_table_t
         : operand_table<constant_store, constant_store, cheapest_feature_index, cheapest_feature_index> {
@@ -66,11 +63,10 @@ struct scout_manifest {
     struct operand_applier_t : operand_applier<operand_table_t, primitive_caller_t> {
         using operand_applier<operand_table_t, primitive_caller_t>::operand_applier;
     };
-    struct app_candidate_finder_t : app_candidate_finder<
-        operand_applier_t, uniform_value_finder, operand_table_t, feature_pool, feature_sizer_t> {
+    struct app_candidate_finder_t
+        : app_candidate_finder<operand_applier_t, uniform_value_finder, operand_table_t, feature_sizer_t> {
         using app_candidate_finder<
-            operand_applier_t, uniform_value_finder, operand_table_t, feature_pool,
-            feature_sizer_t>::app_candidate_finder;
+            operand_applier_t, uniform_value_finder, operand_table_t, feature_sizer_t>::app_candidate_finder;
     };
     struct witness_detector_t
         : witness_detector<operand_table_t, operand_table_t, operand_table_t, application_log> {
@@ -107,8 +103,8 @@ struct scout_manifest {
             synthesis_starter_t, application_log, primitive_option_finder_t, first_option_chooser, first_option_chooser,
             primitive_applier_t, cheapest_feature_index, output_finder>::feature_synthesizer;
     };
-    struct leaf_detector_t : leaf_detector<feature_pool, uniform_value_finder, feature_pool> {
-        using leaf_detector<feature_pool, uniform_value_finder, feature_pool>::leaf_detector;
+    struct leaf_detector_t : leaf_detector<uniform_value_finder> {
+        using leaf_detector<uniform_value_finder>::leaf_detector;
     };
     struct bin_splitter_t : bin_splitter<schema> {
         using bin_splitter<schema>::bin_splitter;
@@ -118,10 +114,10 @@ struct scout_manifest {
     };
     struct model_builder_t : model_builder<
         leaf_detector_t, feature_synthesizer_t, output_finder, first_option_chooser, bound_argument_chooser_t,
-        bin_splitter_t, model_node_pool, model_node_pool, model_node_pool> {
+        bin_splitter_t> {
         using model_builder<
             leaf_detector_t, feature_synthesizer_t, output_finder, first_option_chooser, bound_argument_chooser_t,
-            bin_splitter_t, model_node_pool, model_node_pool, model_node_pool>::model_builder;
+            bin_splitter_t>::model_builder;
     };
     struct model_episode_t : model_episode<model_builder_t, model_sizer_t, best_model_tracker> {
         using model_episode<model_builder_t, model_sizer_t, best_model_tracker>::model_episode;
@@ -141,8 +137,6 @@ struct scout_manifest {
 
     schema&                     schema_;
     value_pool&                 values_;
-    feature_pool                features_;
-    model_node_pool             nodes_;
     constant_store              constants_;
     cheapest_feature_index      feature_candidates_;
     application_log             applications_;

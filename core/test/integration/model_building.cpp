@@ -14,7 +14,7 @@ namespace {
 struct ModelBuildingIntegrationTest : public ::testing::Test {
     ModelBuildingIntegrationTest();
     const value* number(size_t count);
-    void expect_fit(const model_node* model, const bin& training);
+    void expect_fit(const model_node& model, const bin& training);
     schema types;
     value_pool values;
     type_id boolean;
@@ -54,7 +54,7 @@ const value* ModelBuildingIntegrationTest::number(size_t count) {
     return result;
 }
 
-void ModelBuildingIntegrationTest::expect_fit(const model_node* model, const bin& training) {
+void ModelBuildingIntegrationTest::expect_fit(const model_node& model, const bin& training) {
     for (size_t row = 0; row < training.labels.cells.size(); ++row) {
         std::vector<const value*> inputs;
         for (const typed_column& input : training.inputs)
@@ -69,8 +69,8 @@ void ModelBuildingIntegrationTest::expect_fit(const model_node* model, const bin
 TEST_F(ModelBuildingIntegrationTest, AgreeingLabelsBuildAConstantLeaf) {
     const bin training{.inputs = {typed_column{.type = boolean, .cells = {falsity, truth}}},
                        .labels = typed_column{.type = boolean, .cells = {truth, truth}}};
-    const model_node* model = manifest.model_builder_.build(training);
-    EXPECT_EQ(model, manifest.nodes_.make_leaf(manifest.features_.make_constant(truth)));
+    const model_node model = manifest.model_builder_.build(training);
+    EXPECT_EQ(model, (model_node{model_node::leaf{.output = feature{feature::constant{.literal = truth}}}}));
     EXPECT_EQ(manifest.model_sizer_.size(model), 1u);
 }
 
@@ -79,18 +79,20 @@ TEST_F(ModelBuildingIntegrationTest, AnInputEqualToTheLabelsBuildsAVariableLeaf)
         .inputs = {typed_column{.type = boolean, .cells = {truth, truth}},
                   typed_column{.type = boolean, .cells = {falsity, truth}}},
         .labels = typed_column{.type = boolean, .cells = {falsity, truth}}};
-    EXPECT_EQ(manifest.model_builder_.build(training), manifest.nodes_.make_leaf(manifest.features_.make_var(1)));
+    EXPECT_EQ(manifest.model_builder_.build(training),
+              (model_node{model_node::leaf{.output = feature{feature::var{.index = 1}}}}));
 }
 
 TEST_F(ModelBuildingIntegrationTest, NegationIsAMatchWithConstantLeaves) {
     const bin training{
         .inputs = {typed_column{.type = boolean, .cells = {falsity, truth}}},
         .labels = typed_column{.type = boolean, .cells = {truth, falsity}}};
-    const model_node* model = manifest.model_builder_.build(training);
-    const model_node* expected = manifest.nodes_.make_match(
-        manifest.features_.make_var(0),
-        {manifest.nodes_.make_leaf(manifest.features_.make_constant(truth)),
-         manifest.nodes_.make_leaf(manifest.features_.make_constant(falsity))});
+    const model_node model = manifest.model_builder_.build(training);
+    const model_node expected{model_node::match{
+        .scrutinee = feature{feature::var{.index = 0}},
+        .branches = {
+            model_node{model_node::leaf{.output = feature{feature::constant{.literal = truth}}}},
+            model_node{model_node::leaf{.output = feature{feature::constant{.literal = falsity}}}}}}};
     EXPECT_EQ(model, expected);
     EXPECT_EQ(manifest.model_sizer_.size(model), 4u);
     expect_fit(model, training);
@@ -100,9 +102,9 @@ TEST_F(ModelBuildingIntegrationTest, AConstructorNoRowHasBecomesAnEmptyBranch) {
     const bin training{
         .inputs = {typed_column{.type = nat, .cells = {number(1), number(2)}}},
         .labels = typed_column{.type = boolean, .cells = {truth, falsity}}};
-    const model_node* model = manifest.model_builder_.build(training);
-    const model_node::match& root = std::get<model_node::match>(model->content);
-    EXPECT_EQ(root.branches[0], manifest.nodes_.make_empty());
+    const model_node model = manifest.model_builder_.build(training);
+    const model_node::match& root = std::get<model_node::match>(model.content);
+    EXPECT_EQ(root.branches[0], (model_node{model_node::empty{}}));
     EXPECT_FALSE(manifest.model_evaluator_.evaluate(model, {number(0)}).has_value());
     expect_fit(model, training);
 }
@@ -124,16 +126,17 @@ TEST_F(ModelBuildingIntegrationTest, ConjunctionOutputsTheSecondInputWhereTheFir
         .inputs = {typed_column{.type = boolean, .cells = {falsity, falsity, truth, truth}},
                   typed_column{.type = boolean, .cells = {falsity, truth, falsity, truth}}},
         .labels = typed_column{.type = boolean, .cells = {falsity, falsity, falsity, truth}}};
-    const model_node* model = manifest.model_builder_.build(training);
-    const model_node* expected = manifest.nodes_.make_match(
-        manifest.features_.make_var(0),
-        {manifest.nodes_.make_leaf(manifest.features_.make_var(0)),
-         manifest.nodes_.make_leaf(manifest.features_.make_var(1))});
+    const model_node model = manifest.model_builder_.build(training);
+    const model_node expected{model_node::match{
+        .scrutinee = feature{feature::var{.index = 0}},
+        .branches = {
+            model_node{model_node::leaf{.output = feature{feature::var{.index = 0}}}},
+            model_node{model_node::leaf{.output = feature{feature::var{.index = 1}}}}}}};
     EXPECT_EQ(model, expected);
     EXPECT_EQ(manifest.model_sizer_.size(model), 4u);
 }
 
-TEST_F(ModelBuildingIntegrationTest, BuildingTheSameDataTwiceGivesTheSameInternedModel) {
+TEST_F(ModelBuildingIntegrationTest, BuildingTheSameDataTwiceGivesEqualModels) {
     const bin training{
         .inputs = {typed_column{.type = boolean, .cells = {falsity, truth}}},
         .labels = typed_column{.type = boolean, .cells = {truth, falsity}}};
@@ -144,10 +147,10 @@ TEST_F(ModelBuildingIntegrationTest, AnAgreeingLabelNeedNotBeASeededConstant) {
     const bin training{
         .inputs = {typed_column{.type = boolean, .cells = {falsity, truth}}},
         .labels = typed_column{.type = nat, .cells = {number(5), number(5)}}};
-    const model_node* model = manifest.model_builder_.build(training);
+    const model_node model = manifest.model_builder_.build(training);
     // Only zero is seeded at size one, yet the leaf outputs five.
     EXPECT_EQ(manifest.constants_.constants_of_type(nat).size(), 1u);
-    EXPECT_EQ(model, manifest.nodes_.make_leaf(manifest.features_.make_constant(number(5))));
+    EXPECT_EQ(model, (model_node{model_node::leaf{.output = feature{feature::constant{.literal = number(5)}}}}));
     EXPECT_EQ(manifest.model_sizer_.size(model), 6u);
     expect_fit(model, training);
 }

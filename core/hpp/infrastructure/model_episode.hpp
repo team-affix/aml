@@ -27,7 +27,7 @@ MODEL_EPISODE::model_episode(IBuildModel& build_model, ISizeModel& size_model, I
 
 MODEL_EPISODE_TEMPLATE
 size_t MODEL_EPISODE::run(const bin& training) {
-    const model_node* model = build_model_.build(training);
+    const model_node model = build_model_.build(training);
     const size_t cost = size_model_.size(model);
     try_record_model_.try_record(model, cost);
     return cost;

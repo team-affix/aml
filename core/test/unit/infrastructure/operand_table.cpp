@@ -75,13 +75,13 @@ OperandTableTest::OperandTableTest()
     , first_variable{feature::var{.index = 0}}
     , second_variable{feature::var{.index = 1}}
     , constants{
-          constant_operand{.expression = &true_constant, .literal = &truth, .type = 0},
-          constant_operand{.expression = &zero_constant, .literal = &zero, .type = 1},
-          constant_operand{.expression = &false_constant, .literal = &falsity, .type = 0}}
+          constant_operand{.expression = true_constant, .literal = &truth, .type = 0},
+          constant_operand{.expression = zero_constant, .literal = &zero, .type = 1},
+          constant_operand{.expression = false_constant, .literal = &falsity, .type = 0}}
     , features{
-          candidate{.expression = &first_variable, .cost = 1,
+          candidate{.expression = first_variable, .cost = 1,
                     .observed = typed_column{.type = 0, .cells = {&falsity, &truth}}},
-          candidate{.expression = &second_variable, .cost = 1,
+          candidate{.expression = second_variable, .cost = 1,
                     .observed = typed_column{.type = 1, .cells = {&zero, &truth}}}}
     , boolean_constants{0, 2}
     , nat_constants{1}
@@ -114,8 +114,8 @@ TEST_F(OperandTableTest, ATypesOperandsAreNumberedConstantsFirst) {
 }
 
 TEST_F(OperandTableTest, AnOperandsExpressionComesFromItsStore) {
-    EXPECT_EQ(table.expression(1), &zero_constant);
-    EXPECT_EQ(table.expression(4), &second_variable);
+    EXPECT_EQ(table.expression(1), zero_constant);
+    EXPECT_EQ(table.expression(4), second_variable);
 }
 
 TEST_F(OperandTableTest, AConstantGivesItsLiteralOnEveryRowAndAFeatureItsCell) {

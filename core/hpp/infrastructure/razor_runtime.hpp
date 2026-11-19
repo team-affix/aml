@@ -23,7 +23,7 @@ struct razor_runtime {
         const bin& training,
         const razor_options& options);
     void next();
-    const model_node* best_model() const;
+    const std::optional<model_node>& best_model() const;
     size_t best_cost() const;
     std::optional<const value*> infer(const std::vector<const value*>& inputs) const;
 private:

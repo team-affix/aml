@@ -79,7 +79,7 @@ bin ScoutIntegrationTest::is_even_training(size_t count) {
 
 TEST_F(ScoutIntegrationTest, NoModelExistsBeforeTheFirstEpisode) {
     scout_runtime runtime(types, values, {}, constants, xor_training(), options);
-    EXPECT_EQ(runtime.best_model(), nullptr);
+    EXPECT_FALSE(runtime.best_model().has_value());
 }
 
 TEST_F(ScoutIntegrationTest, AgreeingLabelsGiveASingleLeaf) {
@@ -121,11 +121,11 @@ TEST_F(ScoutIntegrationTest, MoreEpisodesChangeNothing) {
     const bin training = is_even_training(5);
     scout_runtime runtime(types, values, {}, constants, training, options);
     runtime.next();
-    const model_node* model = runtime.best_model();
+    const model_node model = runtime.best_model().value();
     const size_t cost = runtime.best_cost();
     runtime.next();
     runtime.next();
-    EXPECT_EQ(runtime.best_model(), model);
+    EXPECT_EQ(runtime.best_model(), std::optional<model_node>(model));
     EXPECT_EQ(runtime.best_cost(), cost);
 }
 
