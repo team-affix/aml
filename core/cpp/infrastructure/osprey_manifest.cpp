@@ -49,8 +49,10 @@ osprey_manifest::osprey_manifest(
     , commitments_(k_root)
     , commit_threshold_(options.commit_visits)
     , ucb1_policy_(visits_, rewards_, reward_bounds_, reward_bounds_, tree_walker_, exploration_constant_)
+    , commit_child_finder_(visits_, rewards_, tree_walker_)
     , committing_policy_(
-          visits_, tree_walker_, commitments_, commitments_, commit_threshold_, commitments_, ucb1_policy_)
+          visits_, tree_walker_, commitments_, commitments_, commit_threshold_, commit_child_finder_, commitments_,
+          ucb1_policy_)
     , policy_(commitments_, committing_policy_)
     , mcts_chooser_(
           visits_, tree_walker_, policy_, rollout_, cursor_, cursor_, backprop_path_, in_rollout_, in_rollout_)

@@ -20,6 +20,7 @@
 #include "infrastructure/feature_order_measurer.hpp"
 #include "infrastructure/feature_sizer.hpp"
 #include "infrastructure/feature_synthesizer.hpp"
+#include "infrastructure/highest_mean_child_finder.hpp"
 #include "infrastructure/bound_argument_chooser.hpp"
 #include "infrastructure/in_rollout_flag.hpp"
 #include "infrastructure/leaf_detector.hpp"
@@ -69,9 +70,9 @@
 #include "value_objects/typed_primitive.hpp"
 
 // Osprey: Kite with commitments. Once the frontier (the root at first) has gathered `commit_visits` visits since it
-// became the frontier, the search commits to its most visited child and takes that choice in every later episode,
-// searching only below it; that child becomes the frontier. A commitment is never undone. Everything else is Kite's:
-// normalized UCT from the mcts submodule, order-tiered choices and two-way choices.
+// became the frontier, the search commits to its child with the highest mean reward and takes that choice in every
+// later episode, searching only below it; that child becomes the frontier. A commitment is never undone. Everything
+// else is Kite's: normalized UCT from the mcts submodule, order-tiered choices and two-way choices.
 struct osprey_manifest {
     struct visits_table_t : monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map> {
         using monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map>::visits_table;
@@ -123,12 +124,20 @@ struct osprey_manifest {
     struct commitment_store_t : monte_carlo::commitment_store<mcts_tree_node_id, mcts_choice, std::unordered_map> {
         using monte_carlo::commitment_store<mcts_tree_node_id, mcts_choice, std::unordered_map>::commitment_store;
     };
+    struct commit_child_finder_t : monte_carlo::highest_mean_child_finder<
+        mcts_tree_node_id, mcts_choice, double, visits_table_t, value_table_t, tree_walker_t, option_range,
+        option_range> {
+        using monte_carlo::highest_mean_child_finder<
+            mcts_tree_node_id, mcts_choice, double, visits_table_t, value_table_t, tree_walker_t, option_range,
+            option_range>::highest_mean_child_finder;
+    };
     struct committing_policy_t : monte_carlo::committing_policy<
         mcts_tree_node_id, mcts_choice, visits_table_t, tree_walker_t, commitment_store_t, commitment_store_t,
-        monte_carlo::visit_threshold, commitment_store_t, ucb1_policy_t, option_range, option_range> {
+        monte_carlo::visit_threshold, commit_child_finder_t, commitment_store_t, ucb1_policy_t, option_range,
+        option_range> {
         using monte_carlo::committing_policy<
             mcts_tree_node_id, mcts_choice, visits_table_t, tree_walker_t, commitment_store_t, commitment_store_t,
-            monte_carlo::visit_threshold, commitment_store_t, ucb1_policy_t, option_range,
+            monte_carlo::visit_threshold, commit_child_finder_t, commitment_store_t, ucb1_policy_t, option_range,
             option_range>::committing_policy;
     };
     struct policy_t : monte_carlo::committed_policy<
@@ -306,6 +315,7 @@ struct osprey_manifest {
     value_creditor_t             value_creditor_;
     commitment_store_t           commitments_;
     monte_carlo::visit_threshold commit_threshold_;
+    commit_child_finder_t        commit_child_finder_;
     ucb1_policy_t                ucb1_policy_;
     committing_policy_t          committing_policy_;
     policy_t                     policy_;
