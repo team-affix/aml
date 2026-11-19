@@ -212,3 +212,21 @@ TEST_F(OspreyIntegrationTest, WithoutCommitmentsOspreySearchesExactlyLikeKite) {
         EXPECT_EQ(osprey.best_cost(), kite.best_cost());
     }
 }
+
+TEST_F(OspreyIntegrationTest, TheRootIsCommittedToItsChildWithTheHighestMeanReward) {
+    const bin training = xor_training();
+    osprey_options committing = options;
+    committing.commit_visits = 20;
+    osprey_manifest manifest(types, values, {bool_equality}, committing);
+    manifest.constant_seeder_.seed(constants);
+    for (size_t episode = 0; episode < 20; ++episode)
+        manifest.mcts_episode_.run(training);
+    std::vector<double> means;
+    for (mcts_choice choice = 0; choice < 2; ++choice) {
+        const mcts_tree_node_id child = manifest.tree_walker_.walk(0, choice);
+        means.push_back(manifest.rewards_.get_value(child) / static_cast<double>(manifest.visits_.get_visits(child)));
+    }
+    manifest.mcts_episode_.run(training);
+    const mcts_choice committed = manifest.commitments_.find_commitment(0).value();
+    EXPECT_GE(means[committed], means[1 - committed]);
+}
