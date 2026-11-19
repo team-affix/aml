@@ -10,7 +10,7 @@
 // Interns values, so equal values share one pointer.
 struct value_pool {
     value_pool();
-    const value* make(ctor_id ctor, const std::vector<const value*>& fields);
+    const value* make(ctor_id ctor, const std::vector<const value*>& arguments);
 private:
     std::unordered_set<value, value_hash> values_;
 };

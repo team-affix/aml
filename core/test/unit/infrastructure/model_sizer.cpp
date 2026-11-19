@@ -33,7 +33,7 @@ struct ModelSizerTest : public ::testing::Test {
 };
 
 ModelSizerTest::ModelSizerTest()
-    : label{.ctor = 0, .fields = {}}
+    : label{.ctor = 0, .args = {}}
     , scrutinee{feature::var{.index = 0}}
     , inner_scrutinee{feature::var{.index = 1}}
     , constant_output{feature::constant{.literal = &label}}

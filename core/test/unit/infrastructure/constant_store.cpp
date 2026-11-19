@@ -11,7 +11,7 @@ struct ConstantStoreTest : public ::testing::Test {
 };
 
 ConstantStoreTest::ConstantStoreTest()
-    : zero{.ctor = 0, .fields = {}}
+    : zero{.ctor = 0, .args = {}}
     , zero_feature{feature::constant{.literal = &zero}}
     , constants() {}
 

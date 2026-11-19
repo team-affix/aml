@@ -7,7 +7,7 @@
 // A constructor term. Values are interned, so two values are equal exactly when their pointers are.
 struct value {
     ctor_id ctor;
-    std::vector<const value*> fields;
+    std::vector<const value*> args;
     auto operator<=>(const value&) const = default;
 };
 

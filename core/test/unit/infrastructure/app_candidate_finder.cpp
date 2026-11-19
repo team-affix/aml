@@ -67,8 +67,8 @@ struct AppCandidateFinderTest : public ::testing::Test {
 };
 
 AppCandidateFinderTest::AppCandidateFinderTest()
-    : falsity{.ctor = 0, .fields = {}}
-    , truth{.ctor = 1, .fields = {}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
     , true_constant{feature::constant{.literal = &truth}}
     , variable{feature::var{.index = 0}}
     , application{feature::app{.prim = 2, .args = {&true_constant, &variable}}}

@@ -10,16 +10,16 @@ and are minimal in symbolic description length. Fit comes first; among models th
 - **Features:** a variable, a primitive application, or a constant. Primitives are native C++ structs with a fixed
   signature, and they are total. A feature is heterogeneous over a bin when its values there are not all equal.
 - **Model:** three node types (`model_node`): `match` (an exhaustive one-layer case on a feature; each branch sees
-  its constructor's fields bound as the next variables), `leaf` (outputs a feature evaluated in scope: a constant
+  its constructor's arguments bound as the next variables), `leaf` (outputs a feature evaluated in scope: a constant
   label, a variable, or a synthesized feature), `empty` (no data; infers nothing). Variable and synthesized outputs
   generalize past the training data, so a model can be right on inputs no row held.
 - **Learning (`model_builder`):** an empty bin becomes `empty`. `leaf_detector` makes a leaf of a variable whose
   column is the label column (cost 1, preferred) or of labels that all agree (a constant). Otherwise a synthesis
   session runs; a synthesized feature equal to the labels becomes the leaf's output (`output_finder`, cheapest
   first), and failing that the bin is matched on a chosen session feature, copied out of the session. A **funnel** is
-  a match whose rows all land in one branch (every other branch is `empty`); it only binds that constructor's fields.
-  A funnel's branch decomposes eagerly, with no synthesis: a detected output becomes a leaf, else `field_chooser`
-  picks a heterogeneous field that constructor just bound to match on next.
+  a match whose rows all land in one branch (every other branch is `empty`); it only binds that constructor's
+  arguments. A funnel's branch decomposes eagerly, with no synthesis: a detected output becomes a leaf, else
+  `bound_argument_chooser` picks a heterogeneous argument that constructor just bound to match on next.
 - **Synthesis session (`feature_synthesizer`):** nothing is enumerated exhaustively. Operands are the constants (read
   from `constant_store` by reference, never laid out as columns) then the session's heterogeneous features (the
   variables first). `operand_table` alone knows that numbering; both stores also list their positions by type. Each
@@ -68,7 +68,7 @@ docs/                                      design notes (see docs/continuous-doc
 
 ### Per-bin columns
 
-A `bin` is columns aligned by row: `scope[v]` is variable v's column (inputs first, then fields bound by the
+A `bin` is columns aligned by row: `scope[v]` is variable v's column (inputs first, then arguments bound by the
 matches above), and `labels`. Synthesis applies primitives row-wise to operands (`operand_applier`); observational
 equivalence keeps the cheapest feature per column (`cheapest_feature_index`). Raw data points are never re-read.
 
@@ -81,7 +81,8 @@ equivalence keeps the cheapest feature per column (`cheapest_feature_index`). Ra
   `witness_detector`, `primitive_option_finder`, `argument_option_finder`, `argument_chooser`,
   `primitive_signature_reader`, `primitive_caller`, `operand_applier`, `app_candidate_finder`, `primitive_applier`,
   `feature_synthesizer`.
-- Partition: `leaf_detector`, `output_finder`, `uniform_value_finder`, `field_chooser`, `bin_splitter`, `model_builder`.
+- Partition: `leaf_detector`, `output_finder`, `uniform_value_finder`, `bound_argument_chooser`, `bin_splitter`,
+  `model_builder`.
 - Choices: `first_option_chooser`, `mcts_option_chooser`; each chooses an index among `option_count` options.
   MCTS sees them as an `option_range` (a count, not a vector).
 - Cost and inference: `value_sizer`, `feature_sizer`, `model_sizer`, `feature_evaluator`, `model_evaluator`.

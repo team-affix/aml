@@ -29,8 +29,8 @@ TEST_F(SchemaTest, AConstructorsTagIsItsPositionWithinItsType) {
     types.declare_ctor(boolean, {});
     const ctor_id zero = types.declare_ctor(nat, {});
     const ctor_id suc = types.declare_ctor(nat, {nat});
-    EXPECT_EQ(types.decl(zero), (ctor_decl{.type = nat, .tag = 0, .field_types = {}}));
-    EXPECT_EQ(types.decl(suc), (ctor_decl{.type = nat, .tag = 1, .field_types = {nat}}));
+    EXPECT_EQ(types.decl(zero), (ctor_decl{.type = nat, .tag = 0, .arg_types = {}}));
+    EXPECT_EQ(types.decl(suc), (ctor_decl{.type = nat, .tag = 1, .arg_types = {nat}}));
 }
 
 TEST_F(SchemaTest, ATypeListsItsConstructorsInTagOrder) {
@@ -52,18 +52,18 @@ TEST_F(SchemaTest, ATypeWithoutConstructorsListsNone) {
     EXPECT_TRUE(types.ctors(unit).empty());
 }
 
-TEST_F(SchemaTest, AConstructorKeepsItsFieldTypesInOrder) {
+TEST_F(SchemaTest, AConstructorKeepsItsArgumentTypesInOrder) {
     const type_id boolean = types.declare_type();
     const type_id nat = types.declare_type();
     const type_id pair = types.declare_type();
     const ctor_id make_pair = types.declare_ctor(pair, {nat, boolean, nat});
-    EXPECT_EQ(types.decl(make_pair).field_types, (std::vector<type_id>{nat, boolean, nat}));
+    EXPECT_EQ(types.decl(make_pair).arg_types, (std::vector<type_id>{nat, boolean, nat}));
 }
 
-TEST_F(SchemaTest, ATypeMayHoldItselfInAField) {
+TEST_F(SchemaTest, ATypeMayHoldItselfInAArgument) {
     const type_id list = types.declare_type();
     const type_id element = types.declare_type();
     types.declare_ctor(list, {});
     const ctor_id cons = types.declare_ctor(list, {element, list});
-    EXPECT_EQ(types.decl(cons), (ctor_decl{.type = list, .tag = 1, .field_types = {element, list}}));
+    EXPECT_EQ(types.decl(cons), (ctor_decl{.type = list, .tag = 1, .arg_types = {element, list}}));
 }

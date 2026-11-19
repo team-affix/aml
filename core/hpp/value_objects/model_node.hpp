@@ -6,7 +6,7 @@
 #include "value_objects/feature.hpp"
 
 // A node of a model. `match` is an exhaustive one-layer case on `scrutinee`: `branches[t]` handles the constructor
-// with tag t and sees that constructor's fields bound as the next variables in scope. `leaf` returns its output
+// with tag t and sees that constructor's arguments bound as the next variables in scope. `leaf` returns its output
 // feature evaluated in scope: a constant label, a variable, or any synthesized feature. `empty` saw no data and
 // returns nothing.
 struct model_node {

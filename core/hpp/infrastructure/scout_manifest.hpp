@@ -16,7 +16,7 @@
 #include "infrastructure/feature_pool.hpp"
 #include "infrastructure/feature_sizer.hpp"
 #include "infrastructure/feature_synthesizer.hpp"
-#include "infrastructure/field_chooser.hpp"
+#include "infrastructure/bound_argument_chooser.hpp"
 #include "infrastructure/first_option_chooser.hpp"
 #include "infrastructure/leaf_detector.hpp"
 #include "infrastructure/model_builder.hpp"
@@ -124,14 +124,14 @@ struct scout_manifest {
     struct bin_splitter_t : bin_splitter<schema, schema> {
         using bin_splitter<schema, schema>::bin_splitter;
     };
-    struct field_chooser_t : field_chooser<variable_candidate_finder_t, first_option_chooser> {
-        using field_chooser<variable_candidate_finder_t, first_option_chooser>::field_chooser;
+    struct bound_argument_chooser_t : bound_argument_chooser<variable_candidate_finder_t, first_option_chooser> {
+        using bound_argument_chooser<variable_candidate_finder_t, first_option_chooser>::bound_argument_chooser;
     };
     struct model_builder_t : model_builder<
-        leaf_detector_t, feature_synthesizer_t, output_finder, first_option_chooser, field_chooser_t, bin_splitter_t,
-        model_node_pool, model_node_pool, model_node_pool> {
+        leaf_detector_t, feature_synthesizer_t, output_finder, first_option_chooser, bound_argument_chooser_t,
+        bin_splitter_t, model_node_pool, model_node_pool, model_node_pool> {
         using model_builder<
-            leaf_detector_t, feature_synthesizer_t, output_finder, first_option_chooser, field_chooser_t,
+            leaf_detector_t, feature_synthesizer_t, output_finder, first_option_chooser, bound_argument_chooser_t,
             bin_splitter_t, model_node_pool, model_node_pool, model_node_pool>::model_builder;
     };
     struct model_episode_t : model_episode<model_builder_t, model_sizer_t, best_model_tracker> {
@@ -178,7 +178,7 @@ struct scout_manifest {
     feature_synthesizer_t       feature_synthesizer_;
     leaf_detector_t             leaf_detector_;
     bin_splitter_t              bin_splitter_;
-    field_chooser_t             field_chooser_;
+    bound_argument_chooser_t    bound_argument_chooser_;
     model_builder_t             model_builder_;
     best_model_tracker          best_model_tracker_;
     model_episode_t             model_episode_;

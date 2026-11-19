@@ -79,7 +79,7 @@ TEST_F(GeneralizationIntegrationTest, IdentityIsOneVariableLeafAndHoldsForUnseen
     EXPECT_EQ(runtime.infer({number(25)}), std::optional<const value*>(number(25)));
 }
 
-TEST_F(GeneralizationIntegrationTest, PredecessorOutputsTheBoundFieldAndHoldsForUnseenInputs) {
+TEST_F(GeneralizationIntegrationTest, PredecessorOutputsTheBoundArgumentAndHoldsForUnseenInputs) {
     const bin training = unary_training(
         {number(0), number(1), number(2), number(3)}, {number(0), number(0), number(1), number(2)});
     scout_runtime runtime(types, values, {}, training, scout_settings);
@@ -90,7 +90,7 @@ TEST_F(GeneralizationIntegrationTest, PredecessorOutputsTheBoundFieldAndHoldsFor
     EXPECT_EQ(runtime.infer({number(17)}), std::optional<const value*>(number(16)));
 }
 
-TEST_F(GeneralizationIntegrationTest, AProjectionFunnelsIntoTheFieldThatIsTheOutput) {
+TEST_F(GeneralizationIntegrationTest, AProjectionFunnelsIntoTheArgumentThatIsTheOutput) {
     const bin training = unary_training(
         {pair_of(number(0), truth), pair_of(number(2), falsity), pair_of(number(1), truth)},
         {number(0), number(2), number(1)});
@@ -101,7 +101,7 @@ TEST_F(GeneralizationIntegrationTest, AProjectionFunnelsIntoTheFieldThatIsTheOut
     EXPECT_EQ(runtime.infer({pair_of(number(9), falsity)}), std::optional<const value*>(number(9)));
 }
 
-TEST_F(GeneralizationIntegrationTest, TheOtherProjectionPicksTheOtherField) {
+TEST_F(GeneralizationIntegrationTest, TheOtherProjectionPicksTheOtherArgument) {
     const bin training = unary_training(
         {pair_of(number(0), truth), pair_of(number(2), falsity), pair_of(number(1), truth)}, {truth, falsity, truth});
     scout_runtime runtime(types, values, {}, training, scout_settings);

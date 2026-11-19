@@ -34,7 +34,7 @@ struct ModelEpisodeTest : public ::testing::Test {
 };
 
 ModelEpisodeTest::ModelEpisodeTest()
-    : label{.ctor = 0, .fields = {}}
+    : label{.ctor = 0, .args = {}}
     , training{.scope = {}, .labels = {&label}}
     , label_output{feature::constant{.literal = &label}}
     , model{model_node::leaf{.output = &label_output}}

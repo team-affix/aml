@@ -14,7 +14,7 @@
 // Builds a model that fits a bin exactly. A bin without rows becomes empty. A bin with a detected output (a variable
 // equal to its labels, or labels that agree) becomes a leaf. Otherwise a synthesis session runs over the bin: a
 // synthesized feature equal to the labels becomes a leaf's output, and failing that the bin is partitioned by a match
-// on a chosen feature. While every row falls into one constructor the match funnels into a chosen field that
+// on a chosen feature. While every row falls into one constructor the match funnels into a chosen bound argument that
 // constructor just bound, unless a variable already gives the output; once rows fall into two or more constructors,
 // each child bin is built in turn.
 template<
@@ -22,7 +22,7 @@ template<
     typename ISynthesizeFeatures,
     typename IFindOutput,
     typename IChooseFeature,
-    typename IChooseField,
+    typename IChooseBoundArgument,
     typename ISplitBin,
     typename IMakeEmpty,
     typename IMakeLeaf,
@@ -33,7 +33,7 @@ struct model_builder {
         ISynthesizeFeatures& synthesize_features,
         IFindOutput& find_output,
         IChooseFeature& choose_feature,
-        IChooseField& choose_field,
+        IChooseBoundArgument& choose_bound_argument,
         ISplitBin& split_bin,
         IMakeEmpty& make_empty,
         IMakeLeaf& make_leaf,
@@ -46,7 +46,7 @@ private:
     ISynthesizeFeatures& synthesize_features_;
     IFindOutput& find_output_;
     IChooseFeature& choose_feature_;
-    IChooseField& choose_field_;
+    IChooseBoundArgument& choose_bound_argument_;
     ISplitBin& split_bin_;
     IMakeEmpty& make_empty_;
     IMakeLeaf& make_leaf_;
@@ -54,9 +54,9 @@ private:
 };
 
 #define MODEL_BUILDER_TEMPLATE                                                                                   \
-    template<typename IDL, typename ISF, typename IFO, typename ICFe, typename ICFi, typename ISB, typename IME, \
+    template<typename IDL, typename ISF, typename IFO, typename ICFe, typename ICBA, typename ISB, typename IME, \
              typename IML, typename IMM>
-#define MODEL_BUILDER model_builder<IDL, ISF, IFO, ICFe, ICFi, ISB, IME, IML, IMM>
+#define MODEL_BUILDER model_builder<IDL, ISF, IFO, ICFe, ICBA, ISB, IME, IML, IMM>
 
 MODEL_BUILDER_TEMPLATE
 MODEL_BUILDER::model_builder(
@@ -64,7 +64,7 @@ MODEL_BUILDER::model_builder(
     ISF& synthesize_features,
     IFO& find_output,
     ICFe& choose_feature,
-    ICFi& choose_field,
+    ICBA& choose_bound_argument,
     ISB& split_bin,
     IME& make_empty,
     IML& make_leaf,
@@ -73,7 +73,7 @@ MODEL_BUILDER::model_builder(
     , synthesize_features_(synthesize_features)
     , find_output_(find_output)
     , choose_feature_(choose_feature)
-    , choose_field_(choose_field)
+    , choose_bound_argument_(choose_bound_argument)
     , split_bin_(split_bin)
     , make_empty_(make_empty)
     , make_leaf_(make_leaf)
@@ -109,7 +109,7 @@ const model_node* MODEL_BUILDER::build_match(const bin& data, const candidate& s
     DEBUG_ASSERT(occupied_count > 0);
     const bool funnels = occupied_count == 1;
 
-    const var_id first_field = static_cast<var_id>(data.scope.size());
+    const var_id first_bound_argument = static_cast<var_id>(data.scope.size());
     std::vector<const model_node*> branches;
     for (const bin& child : children) {
         if (!funnels || child.labels.empty()) {
@@ -121,7 +121,7 @@ const model_node* MODEL_BUILDER::build_match(const bin& data, const candidate& s
             branches.push_back(make_leaf_.make_leaf(detected.value()));
             continue;
         }
-        branches.push_back(build_match(child, choose_field_.choose(child, first_field)));
+        branches.push_back(build_match(child, choose_bound_argument_.choose(child, first_bound_argument)));
     }
     return make_match_.make_match(scrutinee.expression, branches);
 }

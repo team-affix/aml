@@ -3,6 +3,6 @@
 value_pool::value_pool()
     : values_() {}
 
-const value* value_pool::make(ctor_id ctor, const std::vector<const value*>& fields) {
-    return &*values_.insert(value{.ctor = ctor, .fields = fields}).first;
+const value* value_pool::make(ctor_id ctor, const std::vector<const value*>& arguments) {
+    return &*values_.insert(value{.ctor = ctor, .args = arguments}).first;
 }

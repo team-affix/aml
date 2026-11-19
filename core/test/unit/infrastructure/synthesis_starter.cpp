@@ -48,7 +48,7 @@ struct SynthesisStarterTest : public ::testing::Test {
 };
 
 SynthesisStarterTest::SynthesisStarterTest()
-    : truth{.ctor = 1, .fields = {}}
+    : truth{.ctor = 1, .args = {}}
     , variable{feature::var{.index = 0}}
     , data{.scope = {typed_column{.type = 0, .cells = {&truth}}}, .labels = {&truth}}
     , variable_candidate{.expression = &variable, .cost = 1, .observed = data.scope[0]}

@@ -12,7 +12,7 @@ struct FeatureHashTest : public ::testing::Test {
 };
 
 FeatureHashTest::FeatureHashTest()
-    : zero{.ctor = 0, .fields = {}}
+    : zero{.ctor = 0, .args = {}}
     , first_var{feature::var{.index = 0}}
     , second_var{feature::var{.index = 1}}
     , hasher() {}
@@ -34,7 +34,7 @@ TEST_F(FeatureHashTest, AVariableAndAConstantHashApart) {
 }
 
 TEST_F(FeatureHashTest, DifferentConstantsHashApart) {
-    const value one{.ctor = 1, .fields = {&zero}};
+    const value one{.ctor = 1, .args = {&zero}};
     EXPECT_NE(hasher(feature{feature::constant{.literal = &zero}}),
               hasher(feature{feature::constant{.literal = &one}}));
 }

@@ -38,8 +38,8 @@ struct OperandApplierTest : public ::testing::Test {
 };
 
 OperandApplierTest::OperandApplierTest()
-    : falsity{.ctor = 0, .fields = {}}
-    , truth{.ctor = 1, .fields = {}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
     , get_operand_cell()
     , call_primitive() {}
 

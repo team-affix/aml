@@ -29,10 +29,10 @@ struct ValueEqualityTest : public ::testing::Test {
 };
 
 ValueEqualityTest::ValueEqualityTest()
-    : falsity{.ctor = 0, .fields = {}}
-    , truth{.ctor = 1, .fields = {}}
-    , zero{.ctor = 2, .fields = {}}
-    , one{.ctor = 3, .fields = {&zero}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
+    , zero{.ctor = 2, .args = {}}
+    , one{.ctor = 3, .args = {&zero}}
     , make_value() {}
 
 }
@@ -50,7 +50,7 @@ TEST_F(ValueEqualityTest, DifferentValuesAreNotEqual) {
 }
 
 TEST_F(ValueEqualityTest, EqualityIsByIdentityOfInternedValues) {
-    const value copy_of_one{.ctor = 3, .fields = {&zero}};
+    const value copy_of_one{.ctor = 3, .args = {&zero}};
     EXPECT_EQ(primitive.apply({&one, &copy_of_one}), &falsity);
 }
 

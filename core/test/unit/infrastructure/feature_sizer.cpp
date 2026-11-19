@@ -25,7 +25,7 @@ struct FeatureSizerTest : public ::testing::Test {
 };
 
 FeatureSizerTest::FeatureSizerTest()
-    : four{.ctor = 0, .fields = {}}
+    : four{.ctor = 0, .args = {}}
     , variable{feature::var{.index = 0}}
     , constant{feature::constant{.literal = &four}}
     , size_value() {}

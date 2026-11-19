@@ -11,8 +11,8 @@ struct ColumnHashTest : public ::testing::Test {
 };
 
 ColumnHashTest::ColumnHashTest()
-    : falsity{.ctor = 0, .fields = {}}
-    , truth{.ctor = 1, .fields = {}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
     , hasher() {}
 
 }

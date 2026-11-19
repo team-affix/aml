@@ -18,8 +18,8 @@ struct OutputFinderTest : public ::testing::Test {
 };
 
 OutputFinderTest::OutputFinderTest()
-    : falsity{.ctor = 0, .fields = {}}
-    , truth{.ctor = 1, .fields = {}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
     , first{feature::var{.index = 0}}
     , second{feature::var{.index = 1}}
     , third{feature::var{.index = 2}}
