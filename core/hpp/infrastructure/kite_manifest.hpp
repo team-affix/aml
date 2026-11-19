@@ -8,8 +8,6 @@
 #include "infrastructure/application_log.hpp"
 #include "infrastructure/argument_option_finder.hpp"
 #include "infrastructure/best_model_tracker.hpp"
-#include "infrastructure/best_path_grafter.hpp"
-#include "infrastructure/best_path_terminator.hpp"
 #include "infrastructure/binary_option_chooser.hpp"
 #include "infrastructure/bin_splitter.hpp"
 #include "infrastructure/cheapest_feature_index.hpp"
@@ -37,8 +35,6 @@
 #include "infrastructure/primitive_option_finder.hpp"
 #include "infrastructure/primitive_store.hpp"
 #include "infrastructure/random_rollout.hpp"
-#include "infrastructure/rollout_choice_log.hpp"
-#include "infrastructure/rollout_choice_logger.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/synthesis_starter.hpp"
 #include "infrastructure/tiered_argument_chooser.hpp"
@@ -67,12 +63,12 @@
 #include "value_objects/kite_options.hpp"
 #include "value_objects/typed_primitive.hpp"
 
-// Kite: Hawk with order-tiered choices. A feature's order is zero for a variable or a constant and one more than its
+// Kite: Razor with order-tiered choices. A feature's order is zero for a variable or a constant and one more than its
 // highest-order argument for a primitive application. Each argument of a primitive and the feature a bin is matched on
 // are chosen highest order first: a two-way choice takes the highest order present or descends to the next, and the
-// taken order's options are then split into two-way choices as in Hawk. So a random rollout builds on the highest-order
-// feature half the time, however many features there are. Everything else is Hawk's: best-path memory, UCT
-// selection and backups, and two-way choices.
+// taken order's options are then split into two-way choices as in Razor. So a random rollout builds on the
+// highest-order feature half the time, however many features there are. Everything else is Razor's: plain UCT from the
+// mcts submodule and two-way choices.
 struct kite_manifest {
     struct visits_table_t : monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map> {
         using monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map>::visits_table;
@@ -82,14 +78,6 @@ struct kite_manifest {
     };
     struct rollout_t : monte_carlo::random_rollout<mcts_choice, std::mt19937, option_range, option_range> {
         using monte_carlo::random_rollout<mcts_choice, std::mt19937, option_range, option_range>::random_rollout;
-    };
-    struct choice_log_t : monte_carlo::rollout_choice_log<mcts_choice> {
-        using monte_carlo::rollout_choice_log<mcts_choice>::rollout_choice_log;
-    };
-    struct rollout_logger_t : monte_carlo::rollout_choice_logger<
-        mcts_choice, option_range, option_range, rollout_t, choice_log_t> {
-        using monte_carlo::rollout_choice_logger<
-            mcts_choice, option_range, option_range, rollout_t, choice_log_t>::rollout_choice_logger;
     };
     struct exploration_constant_t : monte_carlo::uniform_exploration_constant<double> {
         using monte_carlo::uniform_exploration_constant<double>::uniform_exploration_constant;
@@ -127,30 +115,19 @@ struct kite_manifest {
             exploration_constant_t, option_range, option_range>::ucb1;
     };
     struct mcts_chooser_t : monte_carlo::uct_chooser<
-        mcts_tree_node_id, mcts_choice, visits_table_t, tree_walker_t, option_range, option_range, policy_t,
-        rollout_logger_t, cursor_t, cursor_t, backprop_path_t, monte_carlo::in_rollout_flag,
-        monte_carlo::in_rollout_flag> {
+        mcts_tree_node_id, mcts_choice, visits_table_t, tree_walker_t, option_range, option_range, policy_t, rollout_t,
+        cursor_t, cursor_t, backprop_path_t, monte_carlo::in_rollout_flag, monte_carlo::in_rollout_flag> {
         using monte_carlo::uct_chooser<
             mcts_tree_node_id, mcts_choice, visits_table_t, tree_walker_t, option_range, option_range, policy_t,
-            rollout_logger_t, cursor_t, cursor_t, backprop_path_t, monte_carlo::in_rollout_flag,
+            rollout_t, cursor_t, cursor_t, backprop_path_t, monte_carlo::in_rollout_flag,
             monte_carlo::in_rollout_flag>::uct_chooser;
     };
-    struct grafter_t : monte_carlo::best_path_grafter<
-        mcts_tree_node_id, mcts_choice, double, monte_carlo::in_rollout_flag, value_delta_t, choice_log_t,
-        choice_log_t, backprop_path_t, tree_walker_t, backprop_path_t> {
-        using monte_carlo::best_path_grafter<
-            mcts_tree_node_id, mcts_choice, double, monte_carlo::in_rollout_flag, value_delta_t, choice_log_t,
-            choice_log_t, backprop_path_t, tree_walker_t, backprop_path_t>::best_path_grafter;
-    };
-    struct backprop_terminator_t : monte_carlo::uct_terminator<
+    struct terminator_t : monte_carlo::uct_terminator<
         mcts_tree_node_id, backprop_path_t, value_creditor_t, backprop_path_t, backprop_path_t, cursor_t,
         monte_carlo::in_rollout_flag> {
         using monte_carlo::uct_terminator<
             mcts_tree_node_id, backprop_path_t, value_creditor_t, backprop_path_t, backprop_path_t, cursor_t,
             monte_carlo::in_rollout_flag>::uct_terminator;
-    };
-    struct terminator_t : monte_carlo::best_path_terminator<grafter_t, backprop_terminator_t> {
-        using monte_carlo::best_path_terminator<grafter_t, backprop_terminator_t>::best_path_terminator;
     };
 
     struct option_chooser_t : mcts_option_chooser<mcts_chooser_t> {
@@ -296,8 +273,6 @@ struct kite_manifest {
     monte_carlo::in_rollout_flag in_rollout_;
     tree_walker_t                tree_walker_;
     rollout_t                    rollout_;
-    choice_log_t                 choice_log_;
-    rollout_logger_t             rollout_logger_;
     exploration_constant_t       exploration_constant_;
     value_delta_t                value_delta_;
     value_update_t               value_update_;
@@ -307,8 +282,6 @@ struct kite_manifest {
     value_creditor_t             value_creditor_;
     policy_t                     policy_;
     mcts_chooser_t               mcts_chooser_;
-    grafter_t                    grafter_;
-    backprop_terminator_t        backprop_terminator_;
     terminator_t                 terminator_;
     option_chooser_t             option_chooser_;
     binary_option_chooser_t      binary_option_chooser_;
