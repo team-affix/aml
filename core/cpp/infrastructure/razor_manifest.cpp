@@ -56,8 +56,8 @@ razor_manifest::razor_manifest(
           primitive_store_, argument_chooser_, applications_, app_candidate_finder_, feature_candidates_)
     , synthesis_starter_(feature_candidates_, applications_, variable_candidate_finder_, feature_candidates_)
     , feature_synthesizer_(
-          synthesis_starter_, applications_, primitive_option_finder_, option_chooser_, primitive_applier_,
-          feature_candidates_, output_finder_, options.max_applications)
+          synthesis_starter_, applications_, primitive_option_finder_, option_chooser_, option_chooser_,
+          primitive_applier_, feature_candidates_, output_finder_, options.max_applications)
     , leaf_detector_(features_, uniform_value_finder_, features_)
     , bin_splitter_(schema_)
     , bound_argument_chooser_(variable_candidate_finder_, option_chooser_)

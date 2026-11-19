@@ -8,14 +8,17 @@
 #include "value_objects/prim_id.hpp"
 
 // Synthesizes heterogeneous features of a bin in one session of at most `max_applications` primitive applications.
-// Each step chooses to stop (option 0) or to apply one of the primitives that has an application witness. The
-// session also stops at the cap, once no primitive has a witness, or once a feature's column is the label column (it
-// can be the bin's output). The features returned are the session's own: they hold until the next session starts.
+// Each step first chooses between stopping (option 0) and continuing (option 1); only on continuing does it choose
+// which of the primitives with an application witness to apply. Keeping the step a two-way choice keeps MCTS's
+// branching small there. The session also stops at the cap, once no primitive has a witness, or once a feature's
+// column is the label column (it can be the bin's output). The features returned are the session's own: they hold
+// until the next session starts.
 template<
     typename IStartSession,
     typename ICountApplications,
     typename IFindPrimitiveOptions,
     typename IChooseStep,
+    typename IChoosePrimitive,
     typename IApplyChosenPrimitive,
     typename IGetFeatures,
     typename IFindOutput>
@@ -25,6 +28,7 @@ struct feature_synthesizer {
         ICountApplications& count_applications,
         IFindPrimitiveOptions& find_primitive_options,
         IChooseStep& choose_step,
+        IChoosePrimitive& choose_primitive,
         IApplyChosenPrimitive& apply_chosen_primitive,
         IGetFeatures& get_features,
         IFindOutput& find_output,
@@ -35,15 +39,18 @@ private:
     ICountApplications& count_applications_;
     IFindPrimitiveOptions& find_primitive_options_;
     IChooseStep& choose_step_;
+    IChoosePrimitive& choose_primitive_;
     IApplyChosenPrimitive& apply_chosen_primitive_;
     IGetFeatures& get_features_;
     IFindOutput& find_output_;
     size_t max_applications_;
 };
 
-#define FEATURE_SYNTHESIZER_TEMPLATE \
-    template<typename ISS, typename ICA, typename IFPO, typename ICS, typename IACP, typename IGF, typename IFO>
-#define FEATURE_SYNTHESIZER feature_synthesizer<ISS, ICA, IFPO, ICS, IACP, IGF, IFO>
+#define FEATURE_SYNTHESIZER_TEMPLATE                                                                              \
+    template<                                                                                                     \
+        typename ISS, typename ICA, typename IFPO, typename ICS, typename ICP, typename IACP, typename IGF,       \
+        typename IFO>
+#define FEATURE_SYNTHESIZER feature_synthesizer<ISS, ICA, IFPO, ICS, ICP, IACP, IGF, IFO>
 
 FEATURE_SYNTHESIZER_TEMPLATE
 FEATURE_SYNTHESIZER::feature_synthesizer(
@@ -51,6 +58,7 @@ FEATURE_SYNTHESIZER::feature_synthesizer(
     ICA& count_applications,
     IFPO& find_primitive_options,
     ICS& choose_step,
+    ICP& choose_primitive,
     IACP& apply_chosen_primitive,
     IGF& get_features,
     IFO& find_output,
@@ -59,6 +67,7 @@ FEATURE_SYNTHESIZER::feature_synthesizer(
     , count_applications_(count_applications)
     , find_primitive_options_(find_primitive_options)
     , choose_step_(choose_step)
+    , choose_primitive_(choose_primitive)
     , apply_chosen_primitive_(apply_chosen_primitive)
     , get_features_(get_features)
     , find_output_(find_output)
@@ -73,10 +82,11 @@ const std::vector<candidate>& FEATURE_SYNTHESIZER::synthesize(const bin& data) {
         const std::vector<prim_id> options = find_primitive_options_.find();
         if (options.empty())
             break;
-        const size_t step = choose_step_.choose(options.size() + 1);
-        if (step == 0)
+        const bool stop = choose_step_.choose(2) == 0;
+        if (stop)
             break;
-        apply_chosen_primitive_.apply(options.at(step - 1), data.labels.cells.size());
+        const size_t chosen = choose_primitive_.choose(options.size());
+        apply_chosen_primitive_.apply(options.at(chosen), data.labels.cells.size());
     }
     return get_features_.candidates();
 }

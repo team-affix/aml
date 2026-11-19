@@ -69,11 +69,13 @@ using primitive_applier_t = primitive_applier<
 using synthesis_starter_t =
     synthesis_starter<cheapest_feature_index, application_log, variable_candidate_finder_t, cheapest_feature_index>;
 using feature_synthesizer_t = feature_synthesizer<
-    synthesis_starter_t, application_log, primitive_option_finder_t, chooser_t, primitive_applier_t,
+    synthesis_starter_t, application_log, primitive_option_finder_t, chooser_t, chooser_t, primitive_applier_t,
     cheapest_feature_index, output_finder>;
 
 // XOR over two boolean inputs, with boolean equality as the only primitive and false, true, red and green as constants.
-// Until something is derived, an argument's options are false, true, x0 and x1, in that order. `unreachable` has the
+// Each step is a choice between stopping and continuing (2 options); continuing then chooses the primitive among the
+// one there is (1 option). Until something is derived, an argument's options are false, true, x0 and x1, in that
+// order. `unreachable` has the
 // same inputs but labels of another type, so no feature can be its output and a session only stops by choice, cap or
 // running out of witnesses.
 struct FeatureSynthesisIntegrationTest : public ::testing::Test {
@@ -168,8 +170,8 @@ FeatureSynthesisIntegrationTest::FeatureSynthesisIntegrationTest()
 
 feature_synthesizer_t FeatureSynthesisIntegrationTest::make(size_t max_applications) {
     return feature_synthesizer_t{
-        synthesis_starter, applications, primitive_option_finder, chooser, primitive_applier, feature_candidates,
-        outputs, max_applications};
+        synthesis_starter, applications, primitive_option_finder, chooser, chooser, primitive_applier,
+        feature_candidates, outputs, max_applications};
 }
 
 }
@@ -187,6 +189,7 @@ TEST_F(FeatureSynthesisIntegrationTest, ChoosingEqualityOfTheInputsDerivesItAtCo
     feature_synthesizer_t synthesizer = make(10);
     InSequence order;
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(1));
+    EXPECT_CALL(chooser, choose(1)).WillOnce(Return(0));
     EXPECT_CALL(chooser, choose(4)).WillOnce(Return(2));
     EXPECT_CALL(chooser, choose(4)).WillOnce(Return(3));
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(0));
@@ -202,6 +205,7 @@ TEST_F(FeatureSynthesisIntegrationTest, ATupleOfConstantsIsNeverOffered) {
     feature_synthesizer_t synthesizer = make(10);
     InSequence order;
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(1));
+    EXPECT_CALL(chooser, choose(1)).WillOnce(Return(0));
     EXPECT_CALL(chooser, choose(4)).WillOnce(Return(0));
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(0));
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(0));
@@ -248,9 +252,11 @@ TEST_F(FeatureSynthesisIntegrationTest, DerivingTheLabelsEndsTheSessionWithThemA
     feature_synthesizer_t synthesizer = make(10);
     InSequence order;
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(1));
+    EXPECT_CALL(chooser, choose(1)).WillOnce(Return(0));
     EXPECT_CALL(chooser, choose(4)).WillOnce(Return(2));
     EXPECT_CALL(chooser, choose(4)).WillOnce(Return(3));
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(1));
+    EXPECT_CALL(chooser, choose(1)).WillOnce(Return(0));
     EXPECT_CALL(chooser, choose(5)).WillOnce(Return(4));
     EXPECT_CALL(chooser, choose(5)).WillOnce(Return(0));
     const std::vector<candidate>& candidates = synthesizer.synthesize(training);

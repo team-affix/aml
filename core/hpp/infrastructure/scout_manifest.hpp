@@ -101,11 +101,11 @@ struct scout_manifest {
             cheapest_feature_index>::synthesis_starter;
     };
     struct feature_synthesizer_t : feature_synthesizer<
-        synthesis_starter_t, application_log, primitive_option_finder_t, first_option_chooser, primitive_applier_t,
-        cheapest_feature_index, output_finder> {
+        synthesis_starter_t, application_log, primitive_option_finder_t, first_option_chooser, first_option_chooser,
+        primitive_applier_t, cheapest_feature_index, output_finder> {
         using feature_synthesizer<
-            synthesis_starter_t, application_log, primitive_option_finder_t, first_option_chooser, primitive_applier_t,
-            cheapest_feature_index, output_finder>::feature_synthesizer;
+            synthesis_starter_t, application_log, primitive_option_finder_t, first_option_chooser, first_option_chooser,
+            primitive_applier_t, cheapest_feature_index, output_finder>::feature_synthesizer;
     };
     struct leaf_detector_t : leaf_detector<feature_pool, uniform_value_finder, feature_pool> {
         using leaf_detector<feature_pool, uniform_value_finder, feature_pool>::leaf_detector;

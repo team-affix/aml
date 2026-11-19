@@ -32,9 +32,10 @@ and are minimal in symbolic description length. Fit comes first; among models th
 - **Synthesis session (`feature_synthesizer`):** nothing is enumerated exhaustively. Operands are the constants (read
   from `constant_store` by reference, never laid out as columns) then the session's heterogeneous features (the
   variables first). `operand_table` alone knows that numbering; both stores also list their positions by type. Each
-  step chooses stop (option 0) or a primitive with an application witness (an untried, type-correct operand tuple
-  holding at least one heterogeneous feature), then its arguments one at a time, each keeping a witness. A
-  heterogeneous result joins the features. The cap is `max_applications` per session; the session also ends when no
+  step is a two-way choice, stop (option 0) or continue (option 1), so MCTS's branching stays small there; continuing
+  chooses a primitive with an application witness (an untried, type-correct operand tuple holding at least one
+  heterogeneous feature), then its arguments one at a time, each keeping a witness. A heterogeneous result joins the
+  features. The cap is `max_applications` per session; the session also ends when no
   primitive has a witness or once a feature equals the labels.
 - **Cost:** a match costs 1 + its scrutinee's size, a leaf its output's size, empty 0. A feature's size is 1 per
   variable and per primitive application, and a constant's own size.
