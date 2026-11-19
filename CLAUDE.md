@@ -82,7 +82,7 @@ docs/                                      design notes (see docs/continuous-doc
   - **Hawk** (`hawk_*`): Razor with best-path memory, the `mcts` submodule's `best_path_grafter`: an episode whose
     cost is at most the cheapest so far adds its whole path, rollout included, to the tree, so it is never forgotten
     (CadiaPlayer's single-agent enhancement). Selection and backups stay UCT's.
-  - **Kite** (`kite_*`): Hawk with order-tiered choices. A feature's order is 0 for a variable or a constant and one
+  - **Kite** (`kite_*`): Razor with order-tiered choices. A feature's order is 0 for a variable or a constant and one
     more than its highest-order argument for an application. Each primitive argument and each match's feature is
     chosen highest order first: a two-way choice takes the highest order present or descends to the next, then that
     order's options are split as usual. A rollout so builds on the highest-order feature half the time.
