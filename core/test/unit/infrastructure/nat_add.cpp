@@ -30,10 +30,10 @@ struct NatAddTest : public ::testing::Test {
 };
 
 NatAddTest::NatAddTest()
-    : zero{.ctor = 0, .fields = {}}
-    , one{.ctor = 1, .fields = {&zero}}
-    , two{.ctor = 1, .fields = {&one}}
-    , three{.ctor = 1, .fields = {&two}}
+    : zero{.ctor = 0, .args = {}}
+    , one{.ctor = 1, .args = {&zero}}
+    , two{.ctor = 1, .args = {&one}}
+    , three{.ctor = 1, .args = {&two}}
     , make_value() {}
 
 }

@@ -43,8 +43,8 @@ struct PrimitiveCallerTest : public ::testing::Test {
 };
 
 PrimitiveCallerTest::PrimitiveCallerTest()
-    : zero{.ctor = 0, .fields = {}}
-    , one{.ctor = 1, .fields = {&zero}}
+    : zero{.ctor = 0, .args = {}}
+    , one{.ctor = 1, .args = {&zero}}
     , first()
     , second()
     , first_entry(&first)

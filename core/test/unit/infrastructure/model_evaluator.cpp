@@ -51,12 +51,12 @@ struct ModelEvaluatorTest : public ::testing::Test {
 };
 
 ModelEvaluatorTest::ModelEvaluatorTest()
-    : zero_decl{.type = 0, .tag = 0, .field_types = {}}
-    , suc_decl{.type = 0, .tag = 1, .field_types = {0}}
-    , zero{.ctor = 0, .fields = {}}
-    , one{.ctor = 1, .fields = {&zero}}
-    , two{.ctor = 1, .fields = {&one}}
-    , falsity{.ctor = 2, .fields = {}}
+    : zero_decl{.type = 0, .tag = 0, .arg_types = {}}
+    , suc_decl{.type = 0, .tag = 1, .arg_types = {0}}
+    , zero{.ctor = 0, .args = {}}
+    , one{.ctor = 1, .args = {&zero}}
+    , two{.ctor = 1, .args = {&one}}
+    , falsity{.ctor = 2, .args = {}}
     , input{feature::var{.index = 0}}
     , predecessor{feature::var{.index = 1}}
     , second_predecessor{feature::var{.index = 2}}
@@ -85,7 +85,7 @@ TEST_F(ModelEvaluatorTest, AMatchDescendsIntoTheMatchedConstructorsBranch) {
     EXPECT_EQ(evaluator.evaluate(&outer, {&zero}), std::optional<const value*>(&falsity));
 }
 
-TEST_F(ModelEvaluatorTest, EachMatchBindsItsConstructorsFieldsBeforeDescending) {
+TEST_F(ModelEvaluatorTest, EachMatchBindsItsConstructorsArgumentsBeforeDescending) {
     EXPECT_CALL(evaluate_feature, evaluate(&input, std::vector<const value*>{&two})).WillOnce(Return(&two));
     EXPECT_CALL(evaluate_feature, evaluate(&predecessor, std::vector<const value*>{&two, &one}))
         .WillOnce(Return(&one));

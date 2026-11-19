@@ -11,7 +11,7 @@
 #include "debug_assert.hpp"
 
 // Splits a bin by a one-layer case on a scrutinee column: one child per constructor of the scrutinee's type, in tag
-// order. A child holds the rows whose scrutinee has its constructor, with that constructor's fields bound as new
+// order. A child holds the rows whose scrutinee has its constructor, with that constructor's arguments bound as new
 // variables after the parent's scope. A constructor no row has gives an empty child.
 template<typename IGetTypeCtors, typename IGetCtorDecl>
 struct bin_splitter {
@@ -38,8 +38,8 @@ std::vector<bin> BIN_SPLITTER::split(const bin& parent, const typed_column& scru
         bin child;
         for (const typed_column& variable : parent.scope)
             child.scope.push_back(typed_column{.type = variable.type, .cells = {}});
-        for (const type_id field_type : get_ctor_decl_.decl(ctor).field_types)
-            child.scope.push_back(typed_column{.type = field_type, .cells = {}});
+        for (const type_id arg_type : get_ctor_decl_.decl(ctor).arg_types)
+            child.scope.push_back(typed_column{.type = arg_type, .cells = {}});
         children.push_back(child);
     }
 
@@ -48,8 +48,8 @@ std::vector<bin> BIN_SPLITTER::split(const bin& parent, const typed_column& scru
         bin& child = children[get_ctor_decl_.decl(matched->ctor).tag];
         for (size_t index = 0; index < parent.scope.size(); ++index)
             child.scope[index].cells.push_back(parent.scope[index].cells[row]);
-        for (size_t field = 0; field < matched->fields.size(); ++field)
-            child.scope[parent.scope.size() + field].cells.push_back(matched->fields[field]);
+        for (size_t argument = 0; argument < matched->args.size(); ++argument)
+            child.scope[parent.scope.size() + argument].cells.push_back(matched->args[argument]);
         child.labels.push_back(parent.labels[row]);
     }
     return children;

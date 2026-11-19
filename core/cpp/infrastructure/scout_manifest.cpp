@@ -36,10 +36,10 @@ scout_manifest::scout_manifest(
           feature_candidates_, output_finder_, options.max_applications)
     , leaf_detector_(features_, uniform_value_finder_, features_)
     , bin_splitter_(schema_, schema_)
-    , field_chooser_(variable_candidate_finder_, option_chooser_)
+    , bound_argument_chooser_(variable_candidate_finder_, option_chooser_)
     , model_builder_(
-          leaf_detector_, feature_synthesizer_, output_finder_, option_chooser_, field_chooser_, bin_splitter_, nodes_,
-          nodes_, nodes_)
+          leaf_detector_, feature_synthesizer_, output_finder_, option_chooser_, bound_argument_chooser_,
+          bin_splitter_, nodes_, nodes_, nodes_)
     , best_model_tracker_()
     , model_episode_(model_builder_, model_sizer_, best_model_tracker_)
     , feature_evaluator_(primitive_caller_)

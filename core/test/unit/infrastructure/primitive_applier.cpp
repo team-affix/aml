@@ -57,8 +57,8 @@ struct PrimitiveApplierTest : public ::testing::Test {
 };
 
 PrimitiveApplierTest::PrimitiveApplierTest()
-    : falsity{.ctor = 0, .fields = {}}
-    , truth{.ctor = 1, .fields = {}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
     , application{feature::app{.prim = 5, .args = {}}}
     , application_candidate{
           .expression = &application, .cost = 3, .observed = typed_column{.type = 4, .cells = {&truth, &falsity}}}

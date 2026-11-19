@@ -27,8 +27,8 @@ struct BoolAndTest : public ::testing::Test {
 };
 
 BoolAndTest::BoolAndTest()
-    : falsity{.ctor = 0, .fields = {}}
-    , truth{.ctor = 1, .fields = {}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
     , make_value() {}
 
 }

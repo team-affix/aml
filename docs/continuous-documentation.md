@@ -11,7 +11,7 @@ Do not infer, interpret, or extrapolate. If something was not directly said, do 
 This includes:
 - Causal relationships ("X happens because Y") — ask unless stated.
 - Sequencing ("X happens before Y") — ask unless stated.
-- Method names, field names, entity names — ask if you did not see them used explicitly.
+- Method names, argument names, entity names — ask if you did not see them used explicitly.
 - Analogies to other systems (e.g. "this is like SAT-CDCL") — flag as your interpretation before including.
 
 ---

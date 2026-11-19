@@ -67,16 +67,16 @@ ConstantEnumeratorTest::ConstantEnumeratorTest()
     : bool_ctors{0, 1}
     , nat_ctors{2, 3}
     , pair_ctors{4}
-    , false_decl{.type = 0, .tag = 0, .field_types = {}}
-    , true_decl{.type = 0, .tag = 1, .field_types = {}}
-    , zero_decl{.type = 1, .tag = 0, .field_types = {}}
-    , suc_decl{.type = 1, .tag = 1, .field_types = {1}}
-    , pair_decl{.type = 2, .tag = 0, .field_types = {0, 0}}
-    , falsity{.ctor = 0, .fields = {}}
-    , truth{.ctor = 1, .fields = {}}
-    , zero{.ctor = 2, .fields = {}}
-    , one{.ctor = 3, .fields = {&zero}}
-    , two{.ctor = 3, .fields = {&one}}
+    , false_decl{.type = 0, .tag = 0, .arg_types = {}}
+    , true_decl{.type = 0, .tag = 1, .arg_types = {}}
+    , zero_decl{.type = 1, .tag = 0, .arg_types = {}}
+    , suc_decl{.type = 1, .tag = 1, .arg_types = {1}}
+    , pair_decl{.type = 2, .tag = 0, .arg_types = {0, 0}}
+    , falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
+    , zero{.ctor = 2, .args = {}}
+    , one{.ctor = 3, .args = {&zero}}
+    , two{.ctor = 3, .args = {&one}}
     , get_type_ctors()
     , get_ctor_decl()
     , make_value() {}
@@ -95,7 +95,7 @@ TEST_F(ConstantEnumeratorTest, ASizeZeroEnumeratesNothing) {
     EXPECT_TRUE(enumerator.enumerate(1, 0).empty());
 }
 
-TEST_F(ConstantEnumeratorTest, EveryCombinationOfFieldsThatFitsTheSizeIsMade) {
+TEST_F(ConstantEnumeratorTest, EveryCombinationOfArgumentsThatFitsTheSizeIsMade) {
     EXPECT_CALL(make_value, make(_, _)).Times(AnyNumber());
     EXPECT_CALL(make_value, make(4, std::vector<const value*>{&falsity, &falsity}));
     EXPECT_CALL(make_value, make(4, std::vector<const value*>{&falsity, &truth}));
@@ -104,7 +104,7 @@ TEST_F(ConstantEnumeratorTest, EveryCombinationOfFieldsThatFitsTheSizeIsMade) {
     EXPECT_EQ(enumerator.enumerate(2, 3).size(), 4u);
 }
 
-TEST_F(ConstantEnumeratorTest, AValueWhoseFieldsCannotFitIsNotMade) {
+TEST_F(ConstantEnumeratorTest, AValueWhoseArgumentsCannotFitIsNotMade) {
     EXPECT_CALL(make_value, make(4, _)).Times(0);
     EXPECT_TRUE(enumerator.enumerate(2, 2).empty());
 }

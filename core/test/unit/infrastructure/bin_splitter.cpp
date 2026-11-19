@@ -40,19 +40,19 @@ struct BinSplitterTest : public ::testing::Test {
 
 BinSplitterTest::BinSplitterTest()
     : nat_ctors{2, 3}
-    , zero_decl{.type = 1, .tag = 0, .field_types = {}}
-    , suc_decl{.type = 1, .tag = 1, .field_types = {1}}
-    , falsity{.ctor = 0, .fields = {}}
-    , truth{.ctor = 1, .fields = {}}
-    , zero{.ctor = 2, .fields = {}}
-    , one{.ctor = 3, .fields = {&zero}}
-    , two{.ctor = 3, .fields = {&one}}
+    , zero_decl{.type = 1, .tag = 0, .arg_types = {}}
+    , suc_decl{.type = 1, .tag = 1, .arg_types = {1}}
+    , falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
+    , zero{.ctor = 2, .args = {}}
+    , one{.ctor = 3, .args = {&zero}}
+    , two{.ctor = 3, .args = {&one}}
     , get_type_ctors()
     , get_ctor_decl() {}
 
 }
 
-TEST_F(BinSplitterTest, RowsGoToTheirConstructorsChildWithItsFieldsBound) {
+TEST_F(BinSplitterTest, RowsGoToTheirConstructorsChildWithItsArgumentsBound) {
     const bin parent{
         .scope = {typed_column{.type = 1, .cells = {&zero, &one, &two}},
                   typed_column{.type = 0, .cells = {&truth, &falsity, &truth}}},

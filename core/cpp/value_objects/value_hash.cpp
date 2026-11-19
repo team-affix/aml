@@ -4,9 +4,9 @@
 
 size_t value_hash::operator()(const value& term) const noexcept {
     size_t seed = std::hash<ctor_id>{}(term.ctor);
-    seed = hash_combine(seed, std::hash<size_t>{}(term.fields.size()));
-    for (const value* field : term.fields)
-        seed = hash_combine(seed, std::hash<const value*>{}(field));
+    seed = hash_combine(seed, std::hash<size_t>{}(term.args.size()));
+    for (const value* argument : term.args)
+        seed = hash_combine(seed, std::hash<const value*>{}(argument));
     return seed;
 }
 

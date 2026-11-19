@@ -15,8 +15,8 @@ struct constant_enumerator {
     std::vector<const value*> enumerate(type_id type, size_t max_size);
 private:
     std::vector<const value*> enumerate_exact(type_id type, size_t size);
-    std::vector<std::vector<const value*>> enumerate_fields(
-        const std::vector<type_id>& field_types, size_t first_field, size_t size);
+    std::vector<std::vector<const value*>> enumerate_args(
+        const std::vector<type_id>& arg_types, size_t first_argument, size_t size);
 
     IGetTypeCtors& get_type_ctors_;
     IGetCtorDecl& get_ctor_decl_;
@@ -48,31 +48,31 @@ std::vector<const value*> CONSTANT_ENUMERATOR::enumerate_exact(type_id type, siz
     std::vector<const value*> values;
     for (const ctor_id ctor : get_type_ctors_.ctors(type)) {
         const ctor_decl& decl = get_ctor_decl_.decl(ctor);
-        for (const std::vector<const value*>& fields : enumerate_fields(decl.field_types, 0, size - 1))
-            values.push_back(make_value_.make(ctor, fields));
+        for (const std::vector<const value*>& arguments : enumerate_args(decl.arg_types, 0, size - 1))
+            values.push_back(make_value_.make(ctor, arguments));
     }
     return values;
 }
 
 CONSTANT_ENUMERATOR_TEMPLATE
-std::vector<std::vector<const value*>> CONSTANT_ENUMERATOR::enumerate_fields(
-    const std::vector<type_id>& field_types, size_t first_field, size_t size) {
+std::vector<std::vector<const value*>> CONSTANT_ENUMERATOR::enumerate_args(
+    const std::vector<type_id>& arg_types, size_t first_argument, size_t size) {
     std::vector<std::vector<const value*>> combinations;
-    const size_t remaining_fields = field_types.size() - first_field;
-    if (remaining_fields == 0) {
+    const size_t remaining_arguments = arg_types.size() - first_argument;
+    if (remaining_arguments == 0) {
         if (size == 0)
             combinations.emplace_back();
         return combinations;
     }
-    if (size < remaining_fields)
+    if (size < remaining_arguments)
         return combinations;
-    const size_t largest_first = size - (remaining_fields - 1);
+    const size_t largest_first = size - (remaining_arguments - 1);
     for (size_t first_size = 1; first_size <= largest_first; ++first_size) {
         const std::vector<std::vector<const value*>> rests =
-            enumerate_fields(field_types, first_field + 1, size - first_size);
+            enumerate_args(arg_types, first_argument + 1, size - first_size);
         if (rests.empty())
             continue;
-        for (const value* first : enumerate_exact(field_types[first_field], first_size)) {
+        for (const value* first : enumerate_exact(arg_types[first_argument], first_size)) {
             for (const std::vector<const value*>& rest : rests) {
                 std::vector<const value*> combination{first};
                 combination.insert(combination.end(), rest.begin(), rest.end());

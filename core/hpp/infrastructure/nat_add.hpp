@@ -35,7 +35,7 @@ NAT_ADD_TEMPLATE
 const value* NAT_ADD::apply(const std::vector<const value*>& args) const {
     DEBUG_ASSERT(args.size() == 2);
     const value* sum = args[0];
-    for (const value* rest = args[1]; rest->ctor == nats_.suc_ctor; rest = rest->fields[0])
+    for (const value* rest = args[1]; rest->ctor == nats_.suc_ctor; rest = rest->args[0])
         sum = make_value_.make(nats_.suc_ctor, {sum});
     return sum;
 }

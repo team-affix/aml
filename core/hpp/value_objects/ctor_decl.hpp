@@ -9,7 +9,7 @@
 struct ctor_decl {
     type_id type;
     size_t tag;
-    std::vector<type_id> field_types;
+    std::vector<type_id> arg_types;
     auto operator<=>(const ctor_decl&) const = default;
 };
 
