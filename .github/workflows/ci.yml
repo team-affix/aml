@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      # Test builds keep their asserts (-DDEBUG) but skip debug info and most optimization.
+      CI_DEBUG_FAST_CXXFLAGS: -DDEBUG -O1
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+
+      - name: Build core tests
+        run: make core_debug_fast DEBUG_FAST_CXXFLAGS="$CI_DEBUG_FAST_CXXFLAGS"
+
+      - name: Run core tests
+        run: ./build/core_debug_fast

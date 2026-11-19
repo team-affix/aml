@@ -1,9 +1,6 @@
-[submodule "atlas"]
-	path = atlas
-	url = git@github.com:team-affix/atlas.git
+[submodule "mcts"]
+	path = mcts
+	url = git@github.com:team-affix/mcts.git
 [submodule "googletest"]
 	path = googletest
 	url = https://github.com/google/googletest.git
-[submodule "CLI11"]
-	path = CLI11
-	url = git@github.com:team-affix/CLI11.git
