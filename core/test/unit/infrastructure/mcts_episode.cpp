@@ -32,8 +32,8 @@ struct MctsEpisodeTest : public ::testing::Test {
 };
 
 MctsEpisodeTest::MctsEpisodeTest()
-    : label{.ctor = {.type = 0, .tag = 0}, .args = {}}
-    , training{.inputs = {}, .labels = {&label}}
+    : label{.tag = 0, .args = {}}
+    , training{.inputs = {}, .labels = typed_column{.type = 0, .cells = {&label}}}
     , run_episode()
     , set_reward()
     , terminate() {}

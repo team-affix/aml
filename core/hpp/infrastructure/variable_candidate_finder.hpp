@@ -1,32 +1,30 @@
 #ifndef VARIABLE_CANDIDATE_FINDER_HPP
 #define VARIABLE_CANDIDATE_FINDER_HPP
 
+#include <cstddef>
+#include <utility>
 #include <vector>
 #include "value_objects/bin.hpp"
 #include "value_objects/candidate.hpp"
+#include "value_objects/feature.hpp"
 #include "value_objects/var_id.hpp"
 
 // Finds the variables from `first_var` on that are heterogeneous over a bin, each as a candidate.
-template<typename IMakeVarFeature, typename ISizeFeature, typename IFindUniformValue>
+template<typename ISizeFeature, typename IFindUniformValue>
 struct variable_candidate_finder {
-    variable_candidate_finder(
-        IMakeVarFeature& make_var_feature, ISizeFeature& size_feature, IFindUniformValue& find_uniform_value);
+    variable_candidate_finder(ISizeFeature& size_feature, IFindUniformValue& find_uniform_value);
     std::vector<candidate> find(const bin& data, var_id first_var) const;
 private:
-    IMakeVarFeature& make_var_feature_;
     ISizeFeature& size_feature_;
     IFindUniformValue& find_uniform_value_;
 };
 
-#define VARIABLE_CANDIDATE_FINDER_TEMPLATE \
-    template<typename IMakeVarFeature, typename ISizeFeature, typename IFindUniformValue>
-#define VARIABLE_CANDIDATE_FINDER variable_candidate_finder<IMakeVarFeature, ISizeFeature, IFindUniformValue>
+#define VARIABLE_CANDIDATE_FINDER_TEMPLATE template<typename ISizeFeature, typename IFindUniformValue>
+#define VARIABLE_CANDIDATE_FINDER          variable_candidate_finder<ISizeFeature, IFindUniformValue>
 
 VARIABLE_CANDIDATE_FINDER_TEMPLATE
-VARIABLE_CANDIDATE_FINDER::variable_candidate_finder(
-    IMakeVarFeature& make_var_feature, ISizeFeature& size_feature, IFindUniformValue& find_uniform_value)
-    : make_var_feature_(make_var_feature)
-    , size_feature_(size_feature)
+VARIABLE_CANDIDATE_FINDER::variable_candidate_finder(ISizeFeature& size_feature, IFindUniformValue& find_uniform_value)
+    : size_feature_(size_feature)
     , find_uniform_value_(find_uniform_value) {}
 
 VARIABLE_CANDIDATE_FINDER_TEMPLATE
@@ -35,9 +33,10 @@ std::vector<candidate> VARIABLE_CANDIDATE_FINDER::find(const bin& data, var_id f
     for (var_id index = first_var; index < data.inputs.size(); ++index) {
         if (find_uniform_value_.find(data.inputs[index].cells).has_value())
             continue;
-        const feature* expression = make_var_feature_.make_var(index);
-        candidates.push_back(candidate{
-            .expression = expression, .cost = size_feature_.size(expression), .observed = data.inputs[index]});
+        feature expression{feature::var{.index = index}};
+        const size_t cost = size_feature_.size(expression);
+        candidates.push_back(
+            candidate{.expression = std::move(expression), .cost = cost, .observed = data.inputs[index]});
     }
     return candidates;
 }

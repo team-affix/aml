@@ -3,17 +3,17 @@
 #include <limits>
 
 best_model_tracker::best_model_tracker()
-    : best_model_(nullptr)
+    : best_model_()
     , best_cost_(std::numeric_limits<size_t>::max()) {}
 
-void best_model_tracker::try_record(const model_node* model, size_t cost) {
+void best_model_tracker::try_record(const model_node& model, size_t cost) {
     if (cost >= best_cost_)
         return;
     best_model_ = model;
     best_cost_ = cost;
 }
 
-const model_node* best_model_tracker::best_model() const {
+const std::optional<model_node>& best_model_tracker::best_model() const {
     return best_model_;
 }
 

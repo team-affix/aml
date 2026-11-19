@@ -11,8 +11,8 @@ struct UniformValueFinderTest : public ::testing::Test {
 };
 
 UniformValueFinderTest::UniformValueFinderTest()
-    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
-    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
+    : falsity{.tag = 0, .args = {}}
+    , truth{.tag = 1, .args = {}}
     , finder() {}
 
 }
@@ -38,6 +38,6 @@ TEST_F(UniformValueFinderTest, ADifferenceInTheLastCellGivesNone) {
 }
 
 TEST_F(UniformValueFinderTest, ValuesAreComparedByPointer) {
-    const value other_truth{.ctor = {.type = 0, .tag = 1}, .args = {}};
+    const value other_truth{.tag = 1, .args = {}};
     EXPECT_FALSE(finder.find(column{&truth, &other_truth}).has_value());
 }

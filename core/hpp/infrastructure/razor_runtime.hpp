@@ -10,6 +10,7 @@
 #include "value_objects/bin.hpp"
 #include "value_objects/model_node.hpp"
 #include "value_objects/razor_options.hpp"
+#include "value_objects/typed_constant.hpp"
 #include "value_objects/typed_primitive.hpp"
 #include "value_objects/value.hpp"
 
@@ -18,10 +19,11 @@ struct razor_runtime {
         schema& types,
         value_pool& values,
         const std::vector<typed_primitive>& primitives,
+        const std::vector<typed_constant>& constants,
         const bin& training,
         const razor_options& options);
     void next();
-    const model_node* best_model() const;
+    const std::optional<model_node>& best_model() const;
     size_t best_cost() const;
     std::optional<const value*> infer(const std::vector<const value*>& inputs) const;
 private:

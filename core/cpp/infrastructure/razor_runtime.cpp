@@ -5,18 +5,19 @@ razor_runtime::razor_runtime(
     schema& types,
     value_pool& values,
     const std::vector<typed_primitive>& primitives,
+    const std::vector<typed_constant>& constants,
     const bin& training,
     const razor_options& options)
     : manifest_(types, values, primitives, options)
     , training_(training) {
-    manifest_.constant_seeder_.seed(options.max_constant_size);
+    manifest_.constant_seeder_.seed(constants);
 }
 
 void razor_runtime::next() {
     manifest_.mcts_episode_.run(training_);
 }
 
-const model_node* razor_runtime::best_model() const {
+const std::optional<model_node>& razor_runtime::best_model() const {
     return manifest_.best_model_tracker_.best_model();
 }
 
@@ -25,6 +26,6 @@ size_t razor_runtime::best_cost() const {
 }
 
 std::optional<const value*> razor_runtime::infer(const std::vector<const value*>& inputs) const {
-    DEBUG_ASSERT(best_model() != nullptr);
-    return manifest_.model_evaluator_.evaluate(best_model(), inputs);
+    DEBUG_ASSERT(best_model().has_value());
+    return manifest_.model_evaluator_.evaluate(best_model().value(), inputs);
 }

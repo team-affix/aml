@@ -7,7 +7,7 @@
 
 // A feature together with its cost and the values it takes over a bin's rows.
 struct candidate {
-    const feature* expression;
+    feature expression;
     size_t cost;
     typed_column observed;
     auto operator<=>(const candidate&) const = default;

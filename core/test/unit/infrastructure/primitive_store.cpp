@@ -22,8 +22,8 @@ struct PrimitiveStoreTest : public ::testing::Test {
 };
 
 PrimitiveStoreTest::PrimitiveStoreTest()
-    : zero{.ctor = {.type = 0, .tag = 0}, .args = {}}
-    , one{.ctor = {.type = 0, .tag = 1}, .args = {&zero}}
+    : zero{.tag = 0, .args = {}}
+    , one{.tag = 1, .args = {&zero}}
     , unary{.arg_types = {0}, .result_type = 0}
     , binary{.arg_types = {0, 1}, .result_type = 2}
     , store(std::vector<typed_primitive>{

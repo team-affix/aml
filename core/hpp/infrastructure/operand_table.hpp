@@ -23,7 +23,7 @@ struct operand_table {
     size_t count_of_type(type_id type) const;
     size_t constant_count_of_type(type_id type) const;
     size_t operand_of_type(type_id type, size_t position) const;
-    const feature* expression(size_t operand) const;
+    const feature& expression(size_t operand) const;
     const value* cell(size_t operand, size_t row) const;
 private:
     IGetConstants& get_constants_;
@@ -69,7 +69,7 @@ size_t OPERAND_TABLE::operand_of_type(type_id type, size_t position) const {
 }
 
 OPERAND_TABLE_TEMPLATE
-const feature* OPERAND_TABLE::expression(size_t operand) const {
+const feature& OPERAND_TABLE::expression(size_t operand) const {
     const std::vector<constant_operand>& constants = get_constants_.constants();
     if (operand < constants.size())
         return constants[operand].expression;

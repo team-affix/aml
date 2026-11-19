@@ -7,7 +7,7 @@
 
 // A constant available as a primitive argument during synthesis.
 struct constant_operand {
-    const feature* expression;
+    feature expression;
     const value* literal;
     type_id type;
     auto operator<=>(const constant_operand&) const = default;

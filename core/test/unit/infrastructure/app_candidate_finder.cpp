@@ -7,6 +7,7 @@
 using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::ReturnRef;
 
 namespace {
 
@@ -19,22 +20,17 @@ struct MockFindUniformValue {
 };
 
 struct MockGetOperandExpression {
-    MOCK_METHOD(const feature*, expression, (size_t), (const));
-};
-
-struct MockMakeAppFeature {
-    MOCK_METHOD(const feature*, make_app, (prim_id, const std::vector<const feature*>&));
+    MOCK_METHOD(const feature&, expression, (size_t), (const));
 };
 
 struct MockSizeFeature {
-    MOCK_METHOD(size_t, size, (const feature*), (const));
+    MOCK_METHOD(size_t, size, (const feature&), (const));
 };
 
 using finder_t = app_candidate_finder<
     NiceMock<MockApplyPrimitiveToOperands>,
     NiceMock<MockFindUniformValue>,
     NiceMock<MockGetOperandExpression>,
-    NiceMock<MockMakeAppFeature>,
     NiceMock<MockSizeFeature>>;
 
 // Operand 0 is the constant true and operand 1 the variable x0. Primitive 2 applied to them over two rows gives a
@@ -50,33 +46,28 @@ struct AppCandidateFinderTest : public ::testing::Test {
     NiceMock<MockApplyPrimitiveToOperands> apply_primitive_to_operands;
     NiceMock<MockFindUniformValue> find_uniform_value;
     NiceMock<MockGetOperandExpression> get_operand_expression;
-    NiceMock<MockMakeAppFeature> make_app_feature;
     NiceMock<MockSizeFeature> size_feature;
-    finder_t finder{
-        apply_primitive_to_operands, find_uniform_value, get_operand_expression, make_app_feature, size_feature};
+    finder_t finder{apply_primitive_to_operands, find_uniform_value, get_operand_expression, size_feature};
 
     void SetUp() override {
         ON_CALL(apply_primitive_to_operands, apply(2, _, _)).WillByDefault(Return(result));
         ON_CALL(find_uniform_value, find(_)).WillByDefault(Return(std::nullopt));
-        ON_CALL(get_operand_expression, expression(0)).WillByDefault(Return(&true_constant));
-        ON_CALL(get_operand_expression, expression(1)).WillByDefault(Return(&variable));
-        ON_CALL(make_app_feature, make_app(2, std::vector<const feature*>{&true_constant, &variable}))
-            .WillByDefault(Return(&application));
-        ON_CALL(size_feature, size(&application)).WillByDefault(Return(3));
+        ON_CALL(get_operand_expression, expression(0)).WillByDefault(ReturnRef(true_constant));
+        ON_CALL(get_operand_expression, expression(1)).WillByDefault(ReturnRef(variable));
+        ON_CALL(size_feature, size(application)).WillByDefault(Return(3));
     }
 };
 
 AppCandidateFinderTest::AppCandidateFinderTest()
-    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
-    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
+    : falsity{.tag = 0, .args = {}}
+    , truth{.tag = 1, .args = {}}
     , true_constant{feature::constant{.literal = &truth}}
     , variable{feature::var{.index = 0}}
-    , application{feature::app{.prim = 2, .args = {&true_constant, &variable}}}
+    , application{feature::app{.prim = 2, .args = {true_constant, variable}}}
     , result{&falsity, &truth}
     , apply_primitive_to_operands()
     , find_uniform_value()
     , get_operand_expression()
-    , make_app_feature()
     , size_feature() {}
 
 }
@@ -88,26 +79,25 @@ TEST_F(AppCandidateFinderTest, ThePrimitiveIsAppliedToTheOperandsOverTheRows) {
 
 TEST_F(AppCandidateFinderTest, AHeterogeneousApplicationIsACandidateOverTheOperandsExpressions) {
     EXPECT_EQ(finder.find(2, 5, {0, 1}, 2),
-              (candidate{.expression = &application, .cost = 3, .observed = typed_column{.type = 5, .cells = result}}));
+              (candidate{.expression = application, .cost = 3, .observed = typed_column{.type = 5, .cells = result}}));
 }
 
-TEST_F(AppCandidateFinderTest, AHomogeneousApplicationGivesNoCandidateAndMakesNoFeature) {
+TEST_F(AppCandidateFinderTest, AHomogeneousApplicationGivesNoCandidateAndReadsNoExpression) {
     ON_CALL(find_uniform_value, find(result)).WillByDefault(Return(&truth));
-    EXPECT_CALL(make_app_feature, make_app(_, _)).Times(0);
+    EXPECT_CALL(get_operand_expression, expression(_)).Times(0);
+    EXPECT_CALL(size_feature, size(_)).Times(0);
     EXPECT_FALSE(finder.find(2, 5, {0, 1}, 2).has_value());
 }
 
 TEST_F(AppCandidateFinderTest, TheResultsCostIsItsFeaturesSize) {
-    EXPECT_CALL(size_feature, size(&application)).WillOnce(Return(11));
+    EXPECT_CALL(size_feature, size(application)).WillOnce(Return(11));
     EXPECT_EQ(finder.find(2, 5, {0, 1}, 2).value().cost, 11u);
 }
 
 TEST_F(AppCandidateFinderTest, TheFeatureIsMadeFromTheOperandsExpressionsInOrder) {
-    ON_CALL(get_operand_expression, expression(0)).WillByDefault(Return(&variable));
-    ON_CALL(get_operand_expression, expression(1)).WillByDefault(Return(&true_constant));
-    EXPECT_CALL(make_app_feature, make_app(2, std::vector<const feature*>{&true_constant, &variable}))
-        .WillOnce(Return(&application));
-    finder.find(2, 5, {1, 0}, 2);
+    ON_CALL(get_operand_expression, expression(0)).WillByDefault(ReturnRef(variable));
+    ON_CALL(get_operand_expression, expression(1)).WillByDefault(ReturnRef(true_constant));
+    EXPECT_EQ(finder.find(2, 5, {1, 0}, 2).value().expression, application);
 }
 
 TEST_F(AppCandidateFinderTest, HomogeneityIsJudgedOnTheAppliedColumn) {

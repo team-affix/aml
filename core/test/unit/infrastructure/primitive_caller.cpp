@@ -41,8 +41,8 @@ struct PrimitiveCallerTest : public ::testing::Test {
 };
 
 PrimitiveCallerTest::PrimitiveCallerTest()
-    : zero{.ctor = {.type = 0, .tag = 0}, .args = {}}
-    , one{.ctor = {.type = 0, .tag = 1}, .args = {&zero}}
+    : zero{.tag = 0, .args = {}}
+    , one{.tag = 1, .args = {&zero}}
     , first(&first_argument)
     , last(&last_argument)
     , get_primitive_function() {}
