@@ -65,7 +65,7 @@ const value* GeneralizationIntegrationTest::pair_of(const value* first, const va
 
 bin GeneralizationIntegrationTest::unary_training(
     const std::vector<const value*>& inputs, const std::vector<const value*>& labels) {
-    return bin{.scope = {typed_column{.type = types.decl(inputs.front()->ctor).type, .cells = inputs}},
+    return bin{.inputs = {typed_column{.type = types.decl(inputs.front()->ctor).type, .cells = inputs}},
                .labels = labels};
 }
 
@@ -112,7 +112,7 @@ TEST_F(GeneralizationIntegrationTest, TheOtherProjectionPicksTheOtherArgument) {
 
 TEST_F(GeneralizationIntegrationTest, ASecondInputIsChosenOverAConstantWhenItIsTheOutput) {
     const bin training{
-        .scope = {typed_column{.type = nat, .cells = {number(0), number(1), number(2)}},
+        .inputs = {typed_column{.type = nat, .cells = {number(0), number(1), number(2)}},
                   typed_column{.type = nat, .cells = {number(3), number(3), number(3)}}},
         .labels = {number(3), number(3), number(3)}};
     scout_runtime runtime(types, values, {}, training, scout_settings);
@@ -135,7 +135,7 @@ TEST_F(GeneralizationIntegrationTest, RazorDoublesByAddingTheInputToItself) {
 
 TEST_F(GeneralizationIntegrationTest, RazorAddsTwoInputs) {
     const bin training{
-        .scope = {typed_column{.type = nat, .cells = {number(0), number(1), number(2), number(1)}},
+        .inputs = {typed_column{.type = nat, .cells = {number(0), number(1), number(2), number(1)}},
                   typed_column{.type = nat, .cells = {number(2), number(0), number(1), number(3)}}},
         .labels = {number(2), number(1), number(3), number(4)}};
     razor_runtime runtime(types, values, {&addition}, training, razor_settings);

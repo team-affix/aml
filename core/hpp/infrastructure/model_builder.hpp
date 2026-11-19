@@ -109,7 +109,7 @@ const model_node* MODEL_BUILDER::build_match(const bin& data, const candidate& s
     DEBUG_ASSERT(occupied_count > 0);
     const bool funnels = occupied_count == 1;
 
-    const var_id first_bound_argument = static_cast<var_id>(data.scope.size());
+    const var_id first_bound_argument = static_cast<var_id>(data.inputs.size());
     std::vector<const model_node*> branches;
     for (const bin& child : children) {
         if (!funnels || child.labels.empty()) {

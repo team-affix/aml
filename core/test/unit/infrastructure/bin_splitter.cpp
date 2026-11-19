@@ -54,30 +54,30 @@ BinSplitterTest::BinSplitterTest()
 
 TEST_F(BinSplitterTest, RowsGoToTheirConstructorsChildWithItsArgumentsBound) {
     const bin parent{
-        .scope = {typed_column{.type = 1, .cells = {&zero, &one, &two}},
+        .inputs = {typed_column{.type = 1, .cells = {&zero, &one, &two}},
                   typed_column{.type = 0, .cells = {&truth, &falsity, &truth}}},
         .labels = {&falsity, &truth, &truth}};
     const bin zero_child{
-        .scope = {typed_column{.type = 1, .cells = {&zero}}, typed_column{.type = 0, .cells = {&truth}}},
+        .inputs = {typed_column{.type = 1, .cells = {&zero}}, typed_column{.type = 0, .cells = {&truth}}},
         .labels = {&falsity}};
     const bin suc_child{
-        .scope = {typed_column{.type = 1, .cells = {&one, &two}},
+        .inputs = {typed_column{.type = 1, .cells = {&one, &two}},
                   typed_column{.type = 0, .cells = {&falsity, &truth}},
                   typed_column{.type = 1, .cells = {&zero, &one}}},
         .labels = {&truth, &truth}};
-    EXPECT_EQ(splitter.split(parent, parent.scope[0]), (std::vector<bin>{zero_child, suc_child}));
+    EXPECT_EQ(splitter.split(parent, parent.inputs[0]), (std::vector<bin>{zero_child, suc_child}));
 }
 
 TEST_F(BinSplitterTest, AConstructorNoRowHasGivesAnEmptyChildWithItsScopeTyped) {
-    const bin parent{.scope = {typed_column{.type = 1, .cells = {&zero, &zero}}}, .labels = {&falsity, &truth}};
+    const bin parent{.inputs = {typed_column{.type = 1, .cells = {&zero, &zero}}}, .labels = {&falsity, &truth}};
     const bin suc_child{
-        .scope = {typed_column{.type = 1, .cells = {}}, typed_column{.type = 1, .cells = {}}}, .labels = {}};
-    EXPECT_EQ(splitter.split(parent, parent.scope[0]).back(), suc_child);
+        .inputs = {typed_column{.type = 1, .cells = {}}, typed_column{.type = 1, .cells = {}}}, .labels = {}};
+    EXPECT_EQ(splitter.split(parent, parent.inputs[0]).back(), suc_child);
 }
 
 TEST_F(BinSplitterTest, ThereIsOneChildPerConstructorInTagOrder) {
-    const bin parent{.scope = {typed_column{.type = 1, .cells = {&one, &zero}}}, .labels = {&truth, &falsity}};
-    const std::vector<bin> children = splitter.split(parent, parent.scope[0]);
+    const bin parent{.inputs = {typed_column{.type = 1, .cells = {&one, &zero}}}, .labels = {&truth, &falsity}};
+    const std::vector<bin> children = splitter.split(parent, parent.inputs[0]);
     ASSERT_EQ(children.size(), 2u);
     EXPECT_EQ(children[0].labels, (column{&falsity}));
     EXPECT_EQ(children[1].labels, (column{&truth}));
@@ -85,30 +85,30 @@ TEST_F(BinSplitterTest, ThereIsOneChildPerConstructorInTagOrder) {
 
 TEST_F(BinSplitterTest, RowsKeepTheirOrderWithinAChild) {
     const bin parent{
-        .scope = {typed_column{.type = 1, .cells = {&two, &zero, &one}}}, .labels = {&truth, &falsity, &falsity}};
-    const std::vector<bin> children = splitter.split(parent, parent.scope[0]);
-    EXPECT_EQ(children[1].scope[0].cells, (column{&two, &one}));
+        .inputs = {typed_column{.type = 1, .cells = {&two, &zero, &one}}}, .labels = {&truth, &falsity, &falsity}};
+    const std::vector<bin> children = splitter.split(parent, parent.inputs[0]);
+    EXPECT_EQ(children[1].inputs[0].cells, (column{&two, &one}));
     EXPECT_EQ(children[1].labels, (column{&truth, &falsity}));
-    EXPECT_EQ(children[1].scope[1].cells, (column{&one, &zero}));
+    EXPECT_EQ(children[1].inputs[1].cells, (column{&one, &zero}));
 }
 
 TEST_F(BinSplitterTest, TheScrutineeNeedNotBeAVariableInScope) {
-    const bin parent{.scope = {typed_column{.type = 0, .cells = {&truth, &falsity}}}, .labels = {&truth, &falsity}};
+    const bin parent{.inputs = {typed_column{.type = 0, .cells = {&truth, &falsity}}}, .labels = {&truth, &falsity}};
     const typed_column derived{.type = 1, .cells = {&one, &zero}};
-    const bin zero_child{.scope = {typed_column{.type = 0, .cells = {&falsity}}}, .labels = {&falsity}};
+    const bin zero_child{.inputs = {typed_column{.type = 0, .cells = {&falsity}}}, .labels = {&falsity}};
     const bin suc_child{
-        .scope = {typed_column{.type = 0, .cells = {&truth}}, typed_column{.type = 1, .cells = {&zero}}},
+        .inputs = {typed_column{.type = 0, .cells = {&truth}}, typed_column{.type = 1, .cells = {&zero}}},
         .labels = {&truth}};
     EXPECT_EQ(splitter.split(parent, derived), (std::vector<bin>{zero_child, suc_child}));
 }
 
 TEST_F(BinSplitterTest, EveryChildKeepsTheParentsVariablesFirst) {
     const bin parent{
-        .scope = {typed_column{.type = 0, .cells = {&truth, &falsity}},
+        .inputs = {typed_column{.type = 0, .cells = {&truth, &falsity}},
                   typed_column{.type = 1, .cells = {&one, &zero}}},
         .labels = {&truth, &falsity}};
-    for (const bin& child : splitter.split(parent, parent.scope[1])) {
-        EXPECT_EQ(child.scope[0].type, 0u);
-        EXPECT_EQ(child.scope[1].type, 1u);
+    for (const bin& child : splitter.split(parent, parent.inputs[1])) {
+        EXPECT_EQ(child.inputs[0].type, 0u);
+        EXPECT_EQ(child.inputs[1].type, 1u);
     }
 }

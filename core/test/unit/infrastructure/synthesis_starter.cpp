@@ -50,8 +50,8 @@ struct SynthesisStarterTest : public ::testing::Test {
 SynthesisStarterTest::SynthesisStarterTest()
     : truth{.ctor = 1, .args = {}}
     , variable{feature::var{.index = 0}}
-    , data{.scope = {typed_column{.type = 0, .cells = {&truth}}}, .labels = {&truth}}
-    , variable_candidate{.expression = &variable, .cost = 1, .observed = data.scope[0]}
+    , data{.inputs = {typed_column{.type = 0, .cells = {&truth}}}, .labels = {&truth}}
+    , variable_candidate{.expression = &variable, .cost = 1, .observed = data.inputs[0]}
     , clear_feature_candidates()
     , clear_applications()
     , find_variable_candidates()
@@ -78,7 +78,7 @@ TEST_F(SynthesisStarterTest, VariablesAreSoughtFromTheFirstVariable) {
 }
 
 TEST_F(SynthesisStarterTest, EveryHeterogeneousVariableIsInsertedInOrder) {
-    const candidate second{.expression = &variable, .cost = 2, .observed = data.scope[0]};
+    const candidate second{.expression = &variable, .cost = 2, .observed = data.inputs[0]};
     ON_CALL(find_variable_candidates, find(data, 0))
         .WillByDefault(Return(std::vector<candidate>{variable_candidate, second}));
     InSequence order;

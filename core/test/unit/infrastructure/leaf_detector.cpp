@@ -56,18 +56,18 @@ LeafDetectorTest::LeafDetectorTest()
 }
 
 TEST_F(LeafDetectorTest, LabelsThatAgreeGiveTheirLabelAsAConstant) {
-    const bin data{.scope = {typed_column{.type = 0, .cells = {&truth, &falsity}}}, .labels = {&truth, &truth}};
+    const bin data{.inputs = {typed_column{.type = 0, .cells = {&truth, &falsity}}}, .labels = {&truth, &truth}};
     EXPECT_EQ(detector.detect(data), std::optional<const feature*>(&true_constant));
 }
 
 TEST_F(LeafDetectorTest, LabelsThatDisagreeAndMatchNoVariableGiveNothing) {
-    const bin data{.scope = {typed_column{.type = 0, .cells = {&truth, &truth}}}, .labels = {&truth, &falsity}};
+    const bin data{.inputs = {typed_column{.type = 0, .cells = {&truth, &truth}}}, .labels = {&truth, &falsity}};
     EXPECT_FALSE(detector.detect(data).has_value());
 }
 
 TEST_F(LeafDetectorTest, AVariableWhoseColumnIsTheLabelsIsTheOutput) {
     const bin data{
-        .scope = {typed_column{.type = 0, .cells = {&truth, &truth}},
+        .inputs = {typed_column{.type = 0, .cells = {&truth, &truth}},
                   typed_column{.type = 0, .cells = {&falsity, &truth}}},
         .labels = {&falsity, &truth}};
     EXPECT_EQ(detector.detect(data), std::optional<const feature*>(&second_variable));
@@ -75,19 +75,19 @@ TEST_F(LeafDetectorTest, AVariableWhoseColumnIsTheLabelsIsTheOutput) {
 
 TEST_F(LeafDetectorTest, TheFirstMatchingVariableWins) {
     const bin data{
-        .scope = {typed_column{.type = 0, .cells = {&falsity, &truth}},
+        .inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}},
                   typed_column{.type = 0, .cells = {&falsity, &truth}}},
         .labels = {&falsity, &truth}};
     EXPECT_EQ(detector.detect(data), std::optional<const feature*>(&first_variable));
 }
 
 TEST_F(LeafDetectorTest, AMatchingVariableIsPreferredToAgreeingLabels) {
-    const bin data{.scope = {typed_column{.type = 0, .cells = {&truth, &truth}}}, .labels = {&truth, &truth}};
+    const bin data{.inputs = {typed_column{.type = 0, .cells = {&truth, &truth}}}, .labels = {&truth, &truth}};
     EXPECT_CALL(make_constant_feature, make_constant(_)).Times(0);
     EXPECT_EQ(detector.detect(data), std::optional<const feature*>(&first_variable));
 }
 
 TEST_F(LeafDetectorTest, ABinWithoutVariablesCanStillBeAConstantLeaf) {
-    const bin data{.scope = {}, .labels = {&truth, &truth}};
+    const bin data{.inputs = {}, .labels = {&truth, &truth}};
     EXPECT_EQ(detector.detect(data), std::optional<const feature*>(&true_constant));
 }

@@ -81,7 +81,7 @@ struct FeatureSynthesizerTest : public ::testing::Test {
 FeatureSynthesizerTest::FeatureSynthesizerTest()
     : falsity{.ctor = 0, .args = {}}
     , truth{.ctor = 1, .args = {}}
-    , data{.scope = {typed_column{.type = 0, .cells = {&falsity, &truth}}}, .labels = {&falsity, &truth}}
+    , data{.inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}}}, .labels = {&falsity, &truth}}
     , features()
     , truth_output{feature::constant{.literal = &truth}} {}
 

@@ -68,9 +68,10 @@ docs/                                      design notes (see docs/continuous-doc
 
 ### Per-bin columns
 
-A `bin` is columns aligned by row: `scope[v]` is variable v's column (inputs first, then arguments bound by the
-matches above), and `labels`. Synthesis applies primitives row-wise to operands (`operand_applier`); observational
-equivalence keeps the cheapest feature per column (`cheapest_feature_index`). Raw data points are never re-read.
+A `bin` is columns aligned by row: `inputs[v]` is variable v's column (the data points' own inputs first, then
+arguments bound by the matches above), and `labels`. Synthesis applies primitives row-wise to operands
+(`operand_applier`); observational equivalence keeps the cheapest feature per column (`cheapest_feature_index`). Raw
+data points are never re-read.
 
 ### Components (one mechanism each)
 

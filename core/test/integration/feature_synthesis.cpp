@@ -136,10 +136,10 @@ FeatureSynthesisIntegrationTest::FeatureSynthesisIntegrationTest()
     , green(values.make(types.declare_ctor(colour, {}), {}))
     , equality(values, boolean, boolean_encoding{.type = boolean, .false_ctor = false_ctor, .true_ctor = true_ctor})
     , training{
-          .scope = {typed_column{.type = boolean, .cells = {falsity, falsity, truth, truth}},
+          .inputs = {typed_column{.type = boolean, .cells = {falsity, falsity, truth, truth}},
                     typed_column{.type = boolean, .cells = {falsity, truth, falsity, truth}}},
           .labels = {falsity, truth, truth, falsity}}
-    , unreachable{.scope = training.scope, .labels = {red, green, green, red}}
+    , unreachable{.inputs = training.inputs, .labels = {red, green, green, red}}
     , features()
     , constants()
     , feature_candidates()
@@ -264,7 +264,7 @@ TEST_F(FeatureSynthesisIntegrationTest, DerivingTheLabelsEndsTheSessionWithThemA
 
 TEST_F(FeatureSynthesisIntegrationTest, AnInputThatIsAlreadyTheOutputStopsTheSessionUnasked) {
     feature_synthesizer_t synthesizer = make(10);
-    const bin copy_first{.scope = training.scope, .labels = training.scope[0].cells};
+    const bin copy_first{.inputs = training.inputs, .labels = training.inputs[0].cells};
     EXPECT_CALL(chooser, choose(_)).Times(0);
     synthesizer.synthesize(copy_first);
     EXPECT_EQ(applications.count(), 0u);
@@ -275,7 +275,7 @@ TEST_F(FeatureSynthesisIntegrationTest, EveryFeaturesColumnIsWhatEvaluatingItOnE
     ON_CALL(chooser, choose(_)).WillByDefault(Invoke(&last_option));
     for (const candidate& entry : synthesizer.synthesize(unreachable)) {
         for (size_t row = 0; row < unreachable.labels.size(); ++row) {
-            const std::vector<const value*> inputs{unreachable.scope[0].cells[row], unreachable.scope[1].cells[row]};
+            const std::vector<const value*> inputs{unreachable.inputs[0].cells[row], unreachable.inputs[1].cells[row]};
             EXPECT_EQ(evaluator.evaluate(entry.expression, inputs), entry.observed.cells[row]);
         }
     }

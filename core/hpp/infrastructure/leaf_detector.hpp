@@ -34,8 +34,8 @@ LEAF_DETECTOR::leaf_detector(IMVF& make_var_feature, IFUV& find_uniform_value, I
 
 LEAF_DETECTOR_TEMPLATE
 std::optional<const feature*> LEAF_DETECTOR::detect(const bin& data) const {
-    for (var_id index = 0; index < data.scope.size(); ++index) {
-        if (data.scope[index].cells != data.labels)
+    for (var_id index = 0; index < data.inputs.size(); ++index) {
+        if (data.inputs[index].cells != data.labels)
             continue;
         return make_var_feature_.make_var(index);
     }

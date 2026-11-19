@@ -133,20 +133,20 @@ ModelBuilderTest::ModelBuilderTest()
     , output_leaf{model_node::leaf{.output = &second_feature}}
     , inner_match{model_node::match{.scrutinee = &second_argument, .branches = {}}}
     , outer_match{model_node::match{.scrutinee = &first_feature, .branches = {}}}
-    , root{.scope = {typed_column{.type = 0, .cells = {&falsity, &truth}}}, .labels = {&truth, &falsity}}
-    , false_child{.scope = {typed_column{.type = 0, .cells = {&falsity}}}, .labels = {&falsity}}
-    , true_child{.scope = {typed_column{.type = 0, .cells = {&truth}}}, .labels = {&truth}}
-    , no_rows_child{.scope = {typed_column{.type = 0, .cells = {}}}, .labels = {}}
+    , root{.inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}}}, .labels = {&truth, &falsity}}
+    , false_child{.inputs = {typed_column{.type = 0, .cells = {&falsity}}}, .labels = {&falsity}}
+    , true_child{.inputs = {typed_column{.type = 0, .cells = {&truth}}}, .labels = {&truth}}
+    , no_rows_child{.inputs = {typed_column{.type = 0, .cells = {}}}, .labels = {}}
     , funnel_child{
-          .scope = {typed_column{.type = 0, .cells = {&falsity, &truth}},
+          .inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}},
                     typed_column{.type = 0, .cells = {&truth, &truth}},
                     typed_column{.type = 0, .cells = {&truth, &falsity}}},
           .labels = {&truth, &falsity}}
-    , first_candidate{.expression = &first_feature, .cost = 1, .observed = root.scope[0]}
+    , first_candidate{.expression = &first_feature, .cost = 1, .observed = root.inputs[0]}
     , second_candidate{
           .expression = &second_feature, .cost = 2, .observed = typed_column{.type = 0, .cells = {&truth, &falsity}}}
-    , first_bound_argument_candidate{.expression = &first_bound_argument, .cost = 1, .observed = funnel_child.scope[1]}
-    , second_argument_candidate{.expression = &second_argument, .cost = 1, .observed = funnel_child.scope[2]}
+    , first_bound_argument_candidate{.expression = &first_bound_argument, .cost = 1, .observed = funnel_child.inputs[1]}
+    , second_argument_candidate{.expression = &second_argument, .cost = 1, .observed = funnel_child.inputs[2]}
     , features{first_candidate, second_candidate} {}
 
 }
@@ -241,7 +241,7 @@ TEST_F(ModelBuilderTest, AFunnelledBinWithADetectedOutputBecomesALeafInsteadOfMa
 
 TEST_F(ModelBuilderTest, ArgumentsAreChosenFromThoseTheMatchJustBound) {
     const bin wide_root{
-        .scope = {typed_column{.type = 0, .cells = {&falsity, &truth}},
+        .inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}},
                   typed_column{.type = 0, .cells = {&truth, &falsity}}},
         .labels = {&truth, &falsity}};
     ON_CALL(split_bin, split(wide_root, first_candidate.observed))

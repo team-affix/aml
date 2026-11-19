@@ -47,7 +47,7 @@ RazorIntegrationTest::RazorIntegrationTest()
 void RazorIntegrationTest::expect_fit(const razor_runtime& runtime, const bin& training) {
     for (size_t row = 0; row < training.labels.size(); ++row) {
         std::vector<const value*> inputs;
-        for (const typed_column& input : training.scope)
+        for (const typed_column& input : training.inputs)
             inputs.push_back(input.cells[row]);
         EXPECT_EQ(runtime.infer(inputs), std::optional<const value*>(training.labels[row]));
     }
@@ -55,17 +55,17 @@ void RazorIntegrationTest::expect_fit(const razor_runtime& runtime, const bin& t
 
 bin RazorIntegrationTest::xor_training() {
     return bin{
-        .scope = {typed_column{.type = boolean, .cells = {falsity, falsity, truth, truth}},
+        .inputs = {typed_column{.type = boolean, .cells = {falsity, falsity, truth, truth}},
                   typed_column{.type = boolean, .cells = {falsity, truth, falsity, truth}}},
         .labels = {falsity, truth, truth, falsity}};
 }
 
 bin RazorIntegrationTest::is_even_training(size_t count) {
-    bin training{.scope = {typed_column{.type = nat, .cells = {}}}, .labels = {}};
+    bin training{.inputs = {typed_column{.type = nat, .cells = {}}}, .labels = {}};
     const value* number = values.make(zero_ctor, {});
     for (size_t index = 0; index < count; ++index) {
         const bool even = (index % 2) == 0;
-        training.scope[0].cells.push_back(number);
+        training.inputs[0].cells.push_back(number);
         training.labels.push_back(even ? truth : falsity);
         number = values.make(suc_ctor, {number});
     }

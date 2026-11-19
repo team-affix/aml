@@ -53,7 +53,7 @@ const value* ModelBuildingIntegrationTest::number(size_t count) {
 void ModelBuildingIntegrationTest::expect_fit(const model_node* model, const bin& training) {
     for (size_t row = 0; row < training.labels.size(); ++row) {
         std::vector<const value*> inputs;
-        for (const typed_column& input : training.scope)
+        for (const typed_column& input : training.inputs)
             inputs.push_back(input.cells[row]);
         EXPECT_EQ(manifest.model_evaluator_.evaluate(model, inputs), std::optional<const value*>(training.labels[row]));
     }
@@ -62,7 +62,7 @@ void ModelBuildingIntegrationTest::expect_fit(const model_node* model, const bin
 }
 
 TEST_F(ModelBuildingIntegrationTest, AgreeingLabelsBuildAConstantLeaf) {
-    const bin training{.scope = {typed_column{.type = boolean, .cells = {falsity, truth}}}, .labels = {truth, truth}};
+    const bin training{.inputs = {typed_column{.type = boolean, .cells = {falsity, truth}}}, .labels = {truth, truth}};
     const model_node* model = manifest.model_builder_.build(training);
     EXPECT_EQ(model, manifest.nodes_.make_leaf(manifest.features_.make_constant(truth)));
     EXPECT_EQ(manifest.model_sizer_.size(model), 1u);
@@ -70,14 +70,15 @@ TEST_F(ModelBuildingIntegrationTest, AgreeingLabelsBuildAConstantLeaf) {
 
 TEST_F(ModelBuildingIntegrationTest, AnInputEqualToTheLabelsBuildsAVariableLeaf) {
     const bin training{
-        .scope = {typed_column{.type = boolean, .cells = {truth, truth}},
+        .inputs = {typed_column{.type = boolean, .cells = {truth, truth}},
                   typed_column{.type = boolean, .cells = {falsity, truth}}},
         .labels = {falsity, truth}};
     EXPECT_EQ(manifest.model_builder_.build(training), manifest.nodes_.make_leaf(manifest.features_.make_var(1)));
 }
 
 TEST_F(ModelBuildingIntegrationTest, NegationIsAMatchWithConstantLeaves) {
-    const bin training{.scope = {typed_column{.type = boolean, .cells = {falsity, truth}}}, .labels = {truth, falsity}};
+    const bin training{
+        .inputs = {typed_column{.type = boolean, .cells = {falsity, truth}}}, .labels = {truth, falsity}};
     const model_node* model = manifest.model_builder_.build(training);
     const model_node* expected = manifest.nodes_.make_match(
         manifest.features_.make_var(0),
@@ -90,7 +91,7 @@ TEST_F(ModelBuildingIntegrationTest, NegationIsAMatchWithConstantLeaves) {
 
 TEST_F(ModelBuildingIntegrationTest, AConstructorNoRowHasBecomesAnEmptyBranch) {
     const bin training{
-        .scope = {typed_column{.type = nat, .cells = {number(1), number(2)}}}, .labels = {truth, falsity}};
+        .inputs = {typed_column{.type = nat, .cells = {number(1), number(2)}}}, .labels = {truth, falsity}};
     const model_node* model = manifest.model_builder_.build(training);
     const model_node::match& root = std::get<model_node::match>(model->content);
     EXPECT_EQ(root.branches[0], manifest.nodes_.make_empty());
@@ -100,10 +101,10 @@ TEST_F(ModelBuildingIntegrationTest, AConstructorNoRowHasBecomesAnEmptyBranch) {
 
 TEST_F(ModelBuildingIntegrationTest, BuiltModelsFitTheirTrainingData) {
     const bin parity{
-        .scope = {typed_column{.type = nat, .cells = {number(0), number(1), number(2), number(3), number(4)}}},
+        .inputs = {typed_column{.type = nat, .cells = {number(0), number(1), number(2), number(3), number(4)}}},
         .labels = {truth, falsity, truth, falsity, truth}};
     const bin conjunction{
-        .scope = {typed_column{.type = boolean, .cells = {falsity, falsity, truth, truth}},
+        .inputs = {typed_column{.type = boolean, .cells = {falsity, falsity, truth, truth}},
                   typed_column{.type = boolean, .cells = {falsity, truth, falsity, truth}}},
         .labels = {falsity, falsity, falsity, truth}};
     expect_fit(manifest.model_builder_.build(parity), parity);
@@ -112,7 +113,7 @@ TEST_F(ModelBuildingIntegrationTest, BuiltModelsFitTheirTrainingData) {
 
 TEST_F(ModelBuildingIntegrationTest, ConjunctionOutputsTheSecondInputWhereTheFirstIsTrue) {
     const bin training{
-        .scope = {typed_column{.type = boolean, .cells = {falsity, falsity, truth, truth}},
+        .inputs = {typed_column{.type = boolean, .cells = {falsity, falsity, truth, truth}},
                   typed_column{.type = boolean, .cells = {falsity, truth, falsity, truth}}},
         .labels = {falsity, falsity, falsity, truth}};
     const model_node* model = manifest.model_builder_.build(training);
@@ -125,13 +126,14 @@ TEST_F(ModelBuildingIntegrationTest, ConjunctionOutputsTheSecondInputWhereTheFir
 }
 
 TEST_F(ModelBuildingIntegrationTest, BuildingTheSameDataTwiceGivesTheSameInternedModel) {
-    const bin training{.scope = {typed_column{.type = boolean, .cells = {falsity, truth}}}, .labels = {truth, falsity}};
+    const bin training{
+        .inputs = {typed_column{.type = boolean, .cells = {falsity, truth}}}, .labels = {truth, falsity}};
     EXPECT_EQ(manifest.model_builder_.build(training), manifest.model_builder_.build(training));
 }
 
 TEST_F(ModelBuildingIntegrationTest, AnAgreeingLabelNeedNotBeASeededConstant) {
     const bin training{
-        .scope = {typed_column{.type = boolean, .cells = {falsity, truth}}}, .labels = {number(5), number(5)}};
+        .inputs = {typed_column{.type = boolean, .cells = {falsity, truth}}}, .labels = {number(5), number(5)}};
     const model_node* model = manifest.model_builder_.build(training);
     // Only zero is seeded at size one, yet the leaf outputs five.
     EXPECT_EQ(manifest.constants_.constants_of_type(nat).size(), 1u);
