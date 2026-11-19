@@ -36,7 +36,8 @@ razor_manifest::razor_manifest(
     , visits_()
     , rewards_()
     , random_(options.seed)
-    , tree_walker_()
+    , in_rollout_()
+    , tree_walker_(in_rollout_)
     , rollout_(random_)
     , exploration_constant_(options.exploration_constant)
     , value_delta_()
@@ -46,7 +47,6 @@ razor_manifest::razor_manifest(
     , visit_creditor_(backprop_path_, visits_, visits_)
     , value_creditor_(visit_creditor_, backprop_path_, value_update_)
     , policy_(visits_, rewards_, tree_walker_, exploration_constant_)
-    , in_rollout_()
     , mcts_chooser_(
           visits_, tree_walker_, policy_, rollout_, cursor_, cursor_, backprop_path_, in_rollout_, in_rollout_)
     , terminator_(backprop_path_, value_creditor_, backprop_path_, backprop_path_, cursor_, in_rollout_, k_root)

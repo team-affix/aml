@@ -98,18 +98,21 @@ struct razor_manifest {
     struct value_creditor_t : monte_carlo::uct_value_creditor<visit_creditor_t, backprop_path_t, value_update_t> {
         using monte_carlo::uct_value_creditor<visit_creditor_t, backprop_path_t, value_update_t>::uct_value_creditor;
     };
+    struct tree_walker_t : tree_walker<monte_carlo::in_rollout_flag> {
+        using tree_walker<monte_carlo::in_rollout_flag>::tree_walker;
+    };
     struct policy_t : monte_carlo::ucb1<
-        mcts_tree_node_id, mcts_choice, double, visits_table_t, value_table_t, tree_walker, exploration_constant_t,
+        mcts_tree_node_id, mcts_choice, double, visits_table_t, value_table_t, tree_walker_t, exploration_constant_t,
         option_range, option_range> {
         using monte_carlo::ucb1<
-            mcts_tree_node_id, mcts_choice, double, visits_table_t, value_table_t, tree_walker,
+            mcts_tree_node_id, mcts_choice, double, visits_table_t, value_table_t, tree_walker_t,
             exploration_constant_t, option_range, option_range>::ucb1;
     };
     struct mcts_chooser_t : monte_carlo::uct_chooser<
-        mcts_tree_node_id, mcts_choice, visits_table_t, tree_walker, option_range, option_range, policy_t, rollout_t,
+        mcts_tree_node_id, mcts_choice, visits_table_t, tree_walker_t, option_range, option_range, policy_t, rollout_t,
         cursor_t, cursor_t, backprop_path_t, monte_carlo::in_rollout_flag, monte_carlo::in_rollout_flag> {
         using monte_carlo::uct_chooser<
-            mcts_tree_node_id, mcts_choice, visits_table_t, tree_walker, option_range, option_range, policy_t,
+            mcts_tree_node_id, mcts_choice, visits_table_t, tree_walker_t, option_range, option_range, policy_t,
             rollout_t, cursor_t, cursor_t, backprop_path_t, monte_carlo::in_rollout_flag,
             monte_carlo::in_rollout_flag>::uct_chooser;
     };
@@ -250,7 +253,8 @@ struct razor_manifest {
     visits_table_t               visits_;
     value_table_t                rewards_;
     std::mt19937                 random_;
-    tree_walker                  tree_walker_;
+    monte_carlo::in_rollout_flag in_rollout_;
+    tree_walker_t                tree_walker_;
     rollout_t                    rollout_;
     exploration_constant_t       exploration_constant_;
     value_delta_t                value_delta_;
@@ -260,7 +264,6 @@ struct razor_manifest {
     visit_creditor_t             visit_creditor_;
     value_creditor_t             value_creditor_;
     policy_t                     policy_;
-    monte_carlo::in_rollout_flag in_rollout_;
     mcts_chooser_t               mcts_chooser_;
     terminator_t                 terminator_;
     option_chooser_t             option_chooser_;
