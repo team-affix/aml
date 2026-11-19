@@ -89,6 +89,10 @@ docs/                                      design notes (see docs/continuous-doc
     more than its highest-order argument for an application. Each primitive argument and each match's feature is
     chosen highest order first: a two-way choice takes the highest order present or descends to the next, then that
     order's options are split as usual. A rollout so builds on the highest-order feature half the time.
+  - **Osprey** (`osprey_*`): Kite with commitments from the `mcts` submodule. Once the frontier (the root at first)
+    gathers `commit_visits` visits since becoming the frontier, the search commits to its most visited child, takes
+    that choice in every later episode and searches only below it (`commitment_store`, `committing_policy`,
+    `committed_policy`, `visit_threshold`). Commitments are never undone.
 
 ### Per-bin columns
 
