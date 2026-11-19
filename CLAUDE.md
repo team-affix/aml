@@ -16,9 +16,10 @@ and are minimal in symbolic description length. Fit comes first; among models th
 - **Learning (`model_builder`):** an empty bin becomes `empty`. `leaf_detector` makes a leaf of a variable whose
   column is the label column (cost 1, preferred) or of labels that all agree (a constant). Otherwise a synthesis
   session runs; a synthesized feature equal to the labels becomes the leaf's output (`output_finder`, cheapest
-  first), and failing that the bin is matched on a chosen session feature, copied out of the session. While every row
-  falls into one constructor the match funnels: a detected output becomes a leaf, else `field_chooser` picks a
-  heterogeneous field that constructor just bound.
+  first), and failing that the bin is matched on a chosen session feature, copied out of the session. A **funnel** is
+  a match whose rows all land in one branch (every other branch is `empty`); it only binds that constructor's fields.
+  A funnel's branch decomposes eagerly, with no synthesis: a detected output becomes a leaf, else `field_chooser`
+  picks a heterogeneous field that constructor just bound to match on next.
 - **Synthesis session (`feature_synthesizer`):** nothing is enumerated exhaustively. Operands are the constants (read
   from `constant_store` by reference, never laid out as columns) then the session's heterogeneous features (the
   variables first). `operand_table` alone knows that numbering; both stores also list their positions by type. Each
@@ -73,12 +74,13 @@ equivalence keeps the cheapest feature per column (`cheapest_feature_index`). Ra
 
 ### Components (one mechanism each)
 
-- Stores: `schema`, `value_pool`, `feature_pool`, `model_node_pool`, `constant_store`, `cheapest_feature_index`
-  (a session's features), `application_log`, `best_model_tracker`, `tree_walker`; `operand_table` is a read-only
-  view over the constant and feature stores.
+- Stores: `schema`, `value_pool`, `feature_pool`, `model_node_pool`, `constant_store`, `primitive_store`,
+  `cheapest_feature_index` (a session's features), `application_log`, `best_model_tracker`, `tree_walker`;
+  `operand_table` is a read-only view over the constant and feature stores.
 - Synthesis: `constant_enumerator` + `constant_seeder`, `synthesis_starter`, `variable_candidate_finder`,
   `witness_detector`, `primitive_option_finder`, `argument_option_finder`, `argument_chooser`,
-  `primitive_dispatcher`, `operand_applier`, `app_candidate_finder`, `primitive_applier`, `feature_synthesizer`.
+  `primitive_signature_reader`, `primitive_caller`, `operand_applier`, `app_candidate_finder`, `primitive_applier`,
+  `feature_synthesizer`.
 - Partition: `leaf_detector`, `output_finder`, `uniform_value_finder`, `field_chooser`, `bin_splitter`, `model_builder`.
 - Choices: `first_option_chooser`, `mcts_option_chooser`; each chooses an index among `option_count` options.
   MCTS sees them as an `option_range` (a count, not a vector).
@@ -102,7 +104,11 @@ Core of it in one breath: simplest thing that works. `struct` only. Collaborator
 template params named per invoked capability**. The only inheritance is the manifest naming trick. No lambdas
 (except a genuinely generic `std::visit`) or `std::function`, no overloads, no default args, no default member
 initializers. Every infrastructure struct supports one mechanism: a store, or one job; extra behavior goes into
-another struct.
+another struct. A store (passive: holds data) may have several accessors and mutators and is named as a noun
+(`_store`, `_pool`, `_index`, `_log`, `_table`). Active infrastructure has exactly one public function besides its
+constructor and is named after its job (`_finder`, `_chooser`, `_reader`, `_caller`, ...); never mix the two, and
+avoid jargon names that don't say what the struct does. The runtimes are the one exception: public facades, as in
+Atlas. Native primitives expose `signature()` and `apply()`: their signature is fixed data about their one job.
 
 ## Conventions observed in the code
 

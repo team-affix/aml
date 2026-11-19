@@ -7,20 +7,20 @@
 #include "value_objects/value.hpp"
 
 // Evaluates a feature on one row, given the values of the variables in scope.
-template<typename IApplyPrimitive>
+template<typename ICallPrimitive>
 struct feature_evaluator {
-    feature_evaluator(IApplyPrimitive& apply_primitive);
+    feature_evaluator(ICallPrimitive& call_primitive);
     const value* evaluate(const feature* expression, const std::vector<const value*>& scope) const;
 private:
-    IApplyPrimitive& apply_primitive_;
+    ICallPrimitive& call_primitive_;
 };
 
-#define FEATURE_EVALUATOR_TEMPLATE template<typename IApplyPrimitive>
-#define FEATURE_EVALUATOR          feature_evaluator<IApplyPrimitive>
+#define FEATURE_EVALUATOR_TEMPLATE template<typename ICallPrimitive>
+#define FEATURE_EVALUATOR          feature_evaluator<ICallPrimitive>
 
 FEATURE_EVALUATOR_TEMPLATE
-FEATURE_EVALUATOR::feature_evaluator(IApplyPrimitive& apply_primitive)
-    : apply_primitive_(apply_primitive) {}
+FEATURE_EVALUATOR::feature_evaluator(ICallPrimitive& call_primitive)
+    : call_primitive_(call_primitive) {}
 
 FEATURE_EVALUATOR_TEMPLATE
 const value* FEATURE_EVALUATOR::evaluate(const feature* expression, const std::vector<const value*>& scope) const {
@@ -32,7 +32,7 @@ const value* FEATURE_EVALUATOR::evaluate(const feature* expression, const std::v
     std::vector<const value*> args;
     for (const feature* arg : application.args)
         args.push_back(evaluate(arg, scope));
-    return apply_primitive_.apply(application.prim, args);
+    return call_primitive_.call(application.prim, args);
 }
 
 #undef FEATURE_EVALUATOR

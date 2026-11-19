@@ -15,8 +15,8 @@ struct MockGetOperandCell {
     MOCK_METHOD(const value*, cell, (size_t, size_t), (const));
 };
 
-struct MockApplyPrimitive {
-    MOCK_METHOD(const value*, apply, (prim_id, const std::vector<const value*>&), (const));
+struct MockCallPrimitive {
+    MOCK_METHOD(const value*, call, (prim_id, const std::vector<const value*>&), (const));
 };
 
 // Operand 4 is false then true; operand 7 is true then false.
@@ -25,9 +25,9 @@ struct OperandApplierTest : public ::testing::Test {
     value falsity;
     value truth;
     NiceMock<MockGetOperandCell> get_operand_cell;
-    NiceMock<MockApplyPrimitive> apply_primitive;
-    operand_applier<NiceMock<MockGetOperandCell>, NiceMock<MockApplyPrimitive>> applier{
-        get_operand_cell, apply_primitive};
+    NiceMock<MockCallPrimitive> call_primitive;
+    operand_applier<NiceMock<MockGetOperandCell>, NiceMock<MockCallPrimitive>> applier{
+        get_operand_cell, call_primitive};
 
     void SetUp() override {
         ON_CALL(get_operand_cell, cell(4, 0)).WillByDefault(Return(&falsity));
@@ -41,32 +41,32 @@ OperandApplierTest::OperandApplierTest()
     : falsity{.ctor = 0, .fields = {}}
     , truth{.ctor = 1, .fields = {}}
     , get_operand_cell()
-    , apply_primitive() {}
+    , call_primitive() {}
 
 }
 
 TEST_F(OperandApplierTest, ThePrimitiveIsAppliedToEachRowsOperandCells) {
     InSequence order;
-    EXPECT_CALL(apply_primitive, apply(2, std::vector<const value*>{&falsity, &truth})).WillOnce(Return(&falsity));
-    EXPECT_CALL(apply_primitive, apply(2, std::vector<const value*>{&truth, &falsity})).WillOnce(Return(&truth));
+    EXPECT_CALL(call_primitive, call(2, std::vector<const value*>{&falsity, &truth})).WillOnce(Return(&falsity));
+    EXPECT_CALL(call_primitive, call(2, std::vector<const value*>{&truth, &falsity})).WillOnce(Return(&truth));
     EXPECT_EQ(applier.apply(2, {4, 7}, 2), (column{&falsity, &truth}));
 }
 
 TEST_F(OperandApplierTest, NoRowsGiveAnEmptyColumn) {
-    EXPECT_CALL(apply_primitive, apply(_, _)).Times(0);
+    EXPECT_CALL(call_primitive, call(_, _)).Times(0);
     EXPECT_TRUE(applier.apply(0, {4}, 0).empty());
 }
 
 TEST_F(OperandApplierTest, AUnaryApplicationReadsOneOperandPerRow) {
     InSequence order;
-    EXPECT_CALL(apply_primitive, apply(1, std::vector<const value*>{&falsity})).WillOnce(Return(&truth));
-    EXPECT_CALL(apply_primitive, apply(1, std::vector<const value*>{&truth})).WillOnce(Return(&falsity));
+    EXPECT_CALL(call_primitive, call(1, std::vector<const value*>{&falsity})).WillOnce(Return(&truth));
+    EXPECT_CALL(call_primitive, call(1, std::vector<const value*>{&truth})).WillOnce(Return(&falsity));
     EXPECT_EQ(applier.apply(1, {4}, 2), (column{&truth, &falsity}));
 }
 
 TEST_F(OperandApplierTest, AnOperandMayFillSeveralPositions) {
-    EXPECT_CALL(apply_primitive, apply(3, std::vector<const value*>{&falsity, &falsity}));
-    EXPECT_CALL(apply_primitive, apply(3, std::vector<const value*>{&truth, &truth}));
+    EXPECT_CALL(call_primitive, call(3, std::vector<const value*>{&falsity, &falsity}));
+    EXPECT_CALL(call_primitive, call(3, std::vector<const value*>{&truth, &truth}));
     applier.apply(3, {4, 4}, 2);
 }
 
