@@ -30,12 +30,14 @@
 #include "infrastructure/model_sizer.hpp"
 #include "infrastructure/operand_applier.hpp"
 #include "infrastructure/operand_table.hpp"
-#include "infrastructure/output_finder.hpp"
 #include "infrastructure/option_range.hpp"
+#include "infrastructure/output_finder.hpp"
 #include "infrastructure/primitive.hpp"
 #include "infrastructure/primitive_applier.hpp"
-#include "infrastructure/primitive_dispatcher.hpp"
+#include "infrastructure/primitive_caller.hpp"
 #include "infrastructure/primitive_option_finder.hpp"
+#include "infrastructure/primitive_signature_reader.hpp"
+#include "infrastructure/primitive_store.hpp"
 #include "infrastructure/random_rollout.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/synthesis_starter.hpp"
@@ -131,8 +133,14 @@ struct razor_manifest {
     struct model_sizer_t : model_sizer<feature_sizer_t> {
         using model_sizer<feature_sizer_t>::model_sizer;
     };
-    struct primitive_dispatcher_t : primitive_dispatcher<primitive> {
-        using primitive_dispatcher<primitive>::primitive_dispatcher;
+    struct primitive_store_t : primitive_store<primitive> {
+        using primitive_store<primitive>::primitive_store;
+    };
+    struct signature_reader_t : primitive_signature_reader<primitive_store_t> {
+        using primitive_signature_reader<primitive_store_t>::primitive_signature_reader;
+    };
+    struct primitive_caller_t : primitive_caller<primitive_store_t> {
+        using primitive_caller<primitive_store_t>::primitive_caller;
     };
     struct variable_candidate_finder_t
         : variable_candidate_finder<feature_pool, feature_sizer_t, uniform_value_finder> {
@@ -149,8 +157,8 @@ struct razor_manifest {
         using operand_table<
             constant_store, constant_store, cheapest_feature_index, cheapest_feature_index>::operand_table;
     };
-    struct operand_applier_t : operand_applier<operand_table_t, primitive_dispatcher_t> {
-        using operand_applier<operand_table_t, primitive_dispatcher_t>::operand_applier;
+    struct operand_applier_t : operand_applier<operand_table_t, primitive_caller_t> {
+        using operand_applier<operand_table_t, primitive_caller_t>::operand_applier;
     };
     struct app_candidate_finder_t : app_candidate_finder<
         operand_applier_t, uniform_value_finder, operand_table_t, feature_pool, feature_sizer_t> {
@@ -163,9 +171,9 @@ struct razor_manifest {
         using witness_detector<operand_table_t, operand_table_t, operand_table_t, application_log>::witness_detector;
     };
     struct primitive_option_finder_t
-        : primitive_option_finder<primitive_dispatcher_t, primitive_dispatcher_t, witness_detector_t> {
+        : primitive_option_finder<primitive_store_t, signature_reader_t, witness_detector_t> {
         using primitive_option_finder<
-            primitive_dispatcher_t, primitive_dispatcher_t, witness_detector_t>::primitive_option_finder;
+            primitive_store_t, signature_reader_t, witness_detector_t>::primitive_option_finder;
     };
     struct argument_option_finder_t
         : argument_option_finder<operand_table_t, operand_table_t, witness_detector_t> {
@@ -175,9 +183,9 @@ struct razor_manifest {
         using argument_chooser<argument_option_finder_t, option_chooser_t>::argument_chooser;
     };
     struct primitive_applier_t : primitive_applier<
-        primitive_dispatcher_t, argument_chooser_t, application_log, app_candidate_finder_t, cheapest_feature_index> {
+        signature_reader_t, argument_chooser_t, application_log, app_candidate_finder_t, cheapest_feature_index> {
         using primitive_applier<
-            primitive_dispatcher_t, argument_chooser_t, application_log, app_candidate_finder_t,
+            signature_reader_t, argument_chooser_t, application_log, app_candidate_finder_t,
             cheapest_feature_index>::primitive_applier;
     };
     struct synthesis_starter_t : synthesis_starter<
@@ -215,8 +223,8 @@ struct razor_manifest {
     struct mcts_episode_t : mcts_episode<model_episode_t, value_delta_t, terminator_t> {
         using mcts_episode<model_episode_t, value_delta_t, terminator_t>::mcts_episode;
     };
-    struct feature_evaluator_t : feature_evaluator<primitive_dispatcher_t> {
-        using feature_evaluator<primitive_dispatcher_t>::feature_evaluator;
+    struct feature_evaluator_t : feature_evaluator<primitive_caller_t> {
+        using feature_evaluator<primitive_caller_t>::feature_evaluator;
     };
     struct model_evaluator_t : model_evaluator<feature_evaluator_t, schema> {
         using model_evaluator<feature_evaluator_t, schema>::model_evaluator;
@@ -237,7 +245,9 @@ struct razor_manifest {
     value_sizer                  value_sizer_;
     feature_sizer_t              feature_sizer_;
     model_sizer_t                model_sizer_;
-    primitive_dispatcher_t       primitive_dispatcher_;
+    primitive_store_t            primitive_store_;
+    signature_reader_t           signature_reader_;
+    primitive_caller_t           primitive_caller_;
     variable_candidate_finder_t  variable_candidate_finder_;
     constant_enumerator_t        constant_enumerator_;
     constant_seeder_t            constant_seeder_;
