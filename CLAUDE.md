@@ -111,11 +111,11 @@ Core of it in one breath: simplest thing that works. `struct` only. Collaborator
 template params named per invoked capability**. The only inheritance is the manifest naming trick. No lambdas
 (except a genuinely generic `std::visit`), no `std::function` (except `primitive`), no overloads, no default args,
 no default member initializers. Every infrastructure struct supports one mechanism: a store, or one job; extra
-behavior goes into another struct. A store (passive: holds data) may have several accessors and mutators and is named as a noun
-(`_store`, `_pool`, `_index`, `_log`, `_table`). Active infrastructure has exactly one public function besides its
-constructor and is named after its job (`_finder`, `_chooser`, `_applier`, `_caller`, ...); never mix the two, and
-avoid jargon names that don't say what the struct does. The runtimes are the one exception: public facades, as in
-Atlas. Test primitives are function objects whose one public function is `operator()`.
+behavior goes into another struct. A store (passive: holds data) may have several accessors and mutators and is
+named as a noun (`_store`, `_pool`, `_index`, `_log`, `_table`). Active infrastructure has exactly one public
+function besides its constructor and is named after its job (`_finder`, `_chooser`, `_applier`, `_caller`, ...);
+never mix the two, and avoid jargon names that don't say what the struct does. The runtimes are the one exception:
+public facades, as in Atlas. Test primitives are function objects whose one public function is `operator()`.
 
 ## Conventions observed in the code
 
