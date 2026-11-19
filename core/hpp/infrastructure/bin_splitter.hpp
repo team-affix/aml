@@ -30,10 +30,10 @@ BIN_SPLITTER::bin_splitter(IGetTypeDef& get_type_def)
 
 BIN_SPLITTER_TEMPLATE
 std::vector<bin> BIN_SPLITTER::split(const bin& parent, const typed_column& scrutinee) const {
-    DEBUG_ASSERT(scrutinee.cells.size() == parent.labels.size());
+    DEBUG_ASSERT(scrutinee.cells.size() == parent.labels.cells.size());
     std::vector<bin> children;
     for (const ctor_def& ctor : get_type_def_.def(scrutinee.type).ctors) {
-        bin child;
+        bin child{.inputs = {}, .labels = typed_column{.type = parent.labels.type, .cells = {}}};
         for (const typed_column& variable : parent.inputs)
             child.inputs.push_back(typed_column{.type = variable.type, .cells = {}});
         for (const type_id arg_type : ctor.arg_types)
@@ -41,15 +41,14 @@ std::vector<bin> BIN_SPLITTER::split(const bin& parent, const typed_column& scru
         children.push_back(child);
     }
 
-    for (size_t row = 0; row < parent.labels.size(); ++row) {
+    for (size_t row = 0; row < parent.labels.cells.size(); ++row) {
         const value* matched = scrutinee.cells[row];
-        DEBUG_ASSERT(matched->ctor.type == scrutinee.type);
-        bin& child = children.at(matched->ctor.tag);
+        bin& child = children.at(matched->tag);
         for (size_t index = 0; index < parent.inputs.size(); ++index)
             child.inputs[index].cells.push_back(parent.inputs[index].cells[row]);
         for (size_t argument = 0; argument < matched->args.size(); ++argument)
             child.inputs[parent.inputs.size() + argument].cells.push_back(matched->args[argument]);
-        child.labels.push_back(parent.labels[row]);
+        child.labels.cells.push_back(parent.labels.cells[row]);
     }
     return children;
 }

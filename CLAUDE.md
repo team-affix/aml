@@ -6,13 +6,16 @@ AML (abstractive machine learning) learns models of noiseless, functional data t
 and are minimal in symbolic description length. Fit comes first; among models that fit, cheaper is better.
 
 - **Data:** each data point is an input tuple (bound to variables x0..xn-1) and a label. Values are interned
-  constructor terms: `value{ctor, args}`, where `ctor_ref{type, tag}` names a constructor by its type and position.
+  constructor terms, `value{tag, args}`, where `tag` is the constructor's position in its type. A value carries no
+  type: columns do (`typed_column`, for the inputs and the labels), so comparisons that must respect types compare
+  typed columns.
 - **User types are data, never C++ types.** A user type is a `type_def`: its constructors (`ctor_def`), each with its
   argument types. `schema` is built once from all of them; a type's id is its position, so types can be recursive.
   Core knows no particular user type (no bool, no nat); anything specific to one lives with the user (the tests).
-- **Primitives:** a `primitive` is a `std::function` from argument values to a result value, made through the
-  solver's value pool; a `typed_primitive` pairs it with its `primitive_type` (argument and result types). Solvers
-  receive them at construction. They are user code: the ones the tests use live in `core/test/support/`.
+- **Primitives and constants:** a `primitive` is a `std::function` from argument values to a result value, made
+  through the solver's value pool; a `typed_primitive` pairs it with its `primitive_type` (argument and result
+  types). The constants synthesis may use as arguments are `typed_constant`s the user offers. Solvers receive both at
+  construction; nothing is enumerated. They are user code: the ones the tests use live in `core/test/support/`.
 - **Features:** a variable, a primitive application, or a constant. A feature is heterogeneous over a bin when its
   values there are not all equal.
 - **Model:** three node types (`model_node`): `match` (an exhaustive one-layer case on a feature; each branch sees
@@ -85,7 +88,7 @@ data points are never re-read.
 - Stores: `schema`, `value_pool`, `feature_pool`, `model_node_pool`, `constant_store`, `primitive_store`,
   `cheapest_feature_index` (a session's features), `application_log`, `best_model_tracker`, `tree_walker`;
   `operand_table` is a read-only view over the constant and feature stores.
-- Synthesis: `constant_enumerator` + `constant_seeder`, `synthesis_starter`, `variable_candidate_finder`,
+- Synthesis: `constant_seeder`, `synthesis_starter`, `variable_candidate_finder`,
   `witness_detector`, `primitive_option_finder`, `argument_option_finder`, `argument_chooser`,
   `primitive_caller`, `operand_applier`, `app_candidate_finder`, `primitive_applier`,
   `feature_synthesizer`.

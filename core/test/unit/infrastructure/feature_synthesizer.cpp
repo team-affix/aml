@@ -39,7 +39,7 @@ struct MockGetFeatures {
 };
 
 struct MockFindOutput {
-    MOCK_METHOD(std::optional<const feature*>, find, (const std::vector<candidate>&, const column&), (const));
+    MOCK_METHOD(std::optional<const feature*>, find, (const std::vector<candidate>&, const typed_column&), (const));
 };
 
 using synthesizer_t = feature_synthesizer<
@@ -79,9 +79,10 @@ struct FeatureSynthesizerTest : public ::testing::Test {
 };
 
 FeatureSynthesizerTest::FeatureSynthesizerTest()
-    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
-    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
-    , data{.inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}}}, .labels = {&falsity, &truth}}
+    : falsity{.tag = 0, .args = {}}
+    , truth{.tag = 1, .args = {}}
+    , data{.inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}}},
+           .labels = typed_column{.type = 0, .cells = {&falsity, &truth}}}
     , features()
     , truth_output{feature::constant{.literal = &truth}} {}
 

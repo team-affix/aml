@@ -15,7 +15,7 @@ void cheapest_feature_index::clear() {
 }
 
 void cheapest_feature_index::try_insert(candidate entry) {
-    const auto [slot, inserted] = slots_.try_emplace(entry.observed.cells, candidates_.size());
+    const auto [slot, inserted] = slots_.try_emplace(entry.observed, candidates_.size());
     if (inserted) {
         const type_id type = entry.observed.type;
         if (type >= by_type_.size())

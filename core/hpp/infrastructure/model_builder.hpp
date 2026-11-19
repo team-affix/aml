@@ -81,7 +81,7 @@ MODEL_BUILDER::model_builder(
 
 MODEL_BUILDER_TEMPLATE
 const model_node* MODEL_BUILDER::build(const bin& data) {
-    if (data.labels.empty())
+    if (data.labels.cells.empty())
         return make_empty_.make_empty();
     const std::optional<const feature*> detected = detect_leaf_.detect(data);
     if (detected.has_value())
@@ -102,7 +102,7 @@ const model_node* MODEL_BUILDER::build_match(const bin& data, const candidate& s
     const std::vector<bin> children = split_bin_.split(data, scrutinee.observed);
     size_t occupied_count = 0;
     for (const bin& child : children) {
-        if (child.labels.empty())
+        if (child.labels.cells.empty())
             continue;
         ++occupied_count;
     }
@@ -112,7 +112,7 @@ const model_node* MODEL_BUILDER::build_match(const bin& data, const candidate& s
     const var_id first_bound_argument = static_cast<var_id>(data.inputs.size());
     std::vector<const model_node*> branches;
     for (const bin& child : children) {
-        if (!funnels || child.labels.empty()) {
+        if (!funnels || child.labels.cells.empty()) {
             branches.push_back(build(child));
             continue;
         }

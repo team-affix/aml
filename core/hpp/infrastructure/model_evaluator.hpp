@@ -33,7 +33,7 @@ std::optional<const value*> MODEL_EVALUATOR::evaluate(
     while (const model_node::match* match = std::get_if<model_node::match>(&node->content)) {
         const value* matched = evaluate_feature_.evaluate(match->scrutinee, scope);
         scope.insert(scope.end(), matched->args.begin(), matched->args.end());
-        node = match->branches.at(matched->ctor.tag);
+        node = match->branches.at(matched->tag);
     }
     if (const model_node::leaf* leaf = std::get_if<model_node::leaf>(&node->content))
         return evaluate_feature_.evaluate(leaf->output, scope);

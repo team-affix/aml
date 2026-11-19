@@ -15,8 +15,8 @@ struct CheapestFeatureIndexTest : public ::testing::Test {
 };
 
 CheapestFeatureIndexTest::CheapestFeatureIndexTest()
-    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
-    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
+    : falsity{.tag = 0, .args = {}}
+    , truth{.tag = 1, .args = {}}
     , first{feature::var{.index = 0}}
     , second{feature::var{.index = 1}}
     , index() {}
@@ -98,4 +98,10 @@ TEST_F(CheapestFeatureIndexTest, AReplacementDoesNotAddAPosition) {
     EXPECT_EQ(index.candidates().size(), 1u);
     EXPECT_EQ(index.features_of_type(0).size(), 1u);
     EXPECT_EQ(index.candidates()[0].cost, 1u);
+}
+
+TEST_F(CheapestFeatureIndexTest, IdenticalCellsOfDifferentTypesAreDifferentColumns) {
+    index.try_insert(make_typed(&first, 0, {&falsity, &truth}));
+    index.try_insert(make_typed(&second, 1, {&falsity, &truth}));
+    EXPECT_EQ(index.candidates().size(), 2u);
 }

@@ -23,11 +23,11 @@ struct PrimitivesIntegrationTest : public ::testing::Test {
     schema types;
     value_pool values;
     type_id boolean;
-    ctor_ref false_ctor;
-    ctor_ref true_ctor;
+    size_t false_ctor;
+    size_t true_ctor;
     type_id nat;
-    ctor_ref zero_ctor;
-    ctor_ref suc_ctor;
+    size_t zero_ctor;
+    size_t suc_ctor;
     const value* falsity;
     const value* truth;
     primitive_type unary_boolean;
@@ -46,11 +46,11 @@ PrimitivesIntegrationTest::PrimitivesIntegrationTest()
               type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {1}}}}})
     , values()
     , boolean(0)
-    , false_ctor{.type = boolean, .tag = 0}
-    , true_ctor{.type = boolean, .tag = 1}
+    , false_ctor(0)
+    , true_ctor(1)
     , nat(1)
-    , zero_ctor{.type = nat, .tag = 0}
-    , suc_ctor{.type = nat, .tag = 1}
+    , zero_ctor(0)
+    , suc_ctor(1)
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
     , unary_boolean{.arg_types = {boolean}, .result_type = boolean}

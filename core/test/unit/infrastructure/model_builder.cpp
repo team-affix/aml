@@ -22,7 +22,7 @@ struct MockSynthesizeFeatures {
 };
 
 struct MockFindOutput {
-    MOCK_METHOD(std::optional<const feature*>, find, (const std::vector<candidate>&, const column&), (const));
+    MOCK_METHOD(std::optional<const feature*>, find, (const std::vector<candidate>&, const typed_column&), (const));
 };
 
 struct MockChooseFeature {
@@ -119,8 +119,8 @@ struct ModelBuilderTest : public ::testing::Test {
 };
 
 ModelBuilderTest::ModelBuilderTest()
-    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
-    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
+    : falsity{.tag = 0, .args = {}}
+    , truth{.tag = 1, .args = {}}
     , first_feature{feature::var{.index = 0}}
     , second_feature{feature::app{.prim = 0, .args = {&first_feature}}}
     , first_bound_argument{feature::var{.index = 1}}
@@ -133,15 +133,18 @@ ModelBuilderTest::ModelBuilderTest()
     , output_leaf{model_node::leaf{.output = &second_feature}}
     , inner_match{model_node::match{.scrutinee = &second_argument, .branches = {}}}
     , outer_match{model_node::match{.scrutinee = &first_feature, .branches = {}}}
-    , root{.inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}}}, .labels = {&truth, &falsity}}
-    , false_child{.inputs = {typed_column{.type = 0, .cells = {&falsity}}}, .labels = {&falsity}}
-    , true_child{.inputs = {typed_column{.type = 0, .cells = {&truth}}}, .labels = {&truth}}
-    , no_rows_child{.inputs = {typed_column{.type = 0, .cells = {}}}, .labels = {}}
+    , root{.inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}}},
+           .labels = typed_column{.type = 0, .cells = {&truth, &falsity}}}
+    , false_child{.inputs = {typed_column{.type = 0, .cells = {&falsity}}},
+                  .labels = typed_column{.type = 0, .cells = {&falsity}}}
+    , true_child{.inputs = {typed_column{.type = 0, .cells = {&truth}}},
+                 .labels = typed_column{.type = 0, .cells = {&truth}}}
+    , no_rows_child{.inputs = {typed_column{.type = 0, .cells = {}}}, .labels = typed_column{.type = 0, .cells = {}}}
     , funnel_child{
           .inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}},
                     typed_column{.type = 0, .cells = {&truth, &truth}},
                     typed_column{.type = 0, .cells = {&truth, &falsity}}},
-          .labels = {&truth, &falsity}}
+          .labels = typed_column{.type = 0, .cells = {&truth, &falsity}}}
     , first_candidate{.expression = &first_feature, .cost = 1, .observed = root.inputs[0]}
     , second_candidate{
           .expression = &second_feature, .cost = 2, .observed = typed_column{.type = 0, .cells = {&truth, &falsity}}}
@@ -243,7 +246,7 @@ TEST_F(ModelBuilderTest, ArgumentsAreChosenFromThoseTheMatchJustBound) {
     const bin wide_root{
         .inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}},
                   typed_column{.type = 0, .cells = {&truth, &falsity}}},
-        .labels = {&truth, &falsity}};
+        .labels = typed_column{.type = 0, .cells = {&truth, &falsity}}};
     ON_CALL(split_bin, split(wide_root, first_candidate.observed))
         .WillByDefault(Return(std::vector<bin>{no_rows_child, funnel_child}));
     ON_CALL(split_bin, split(funnel_child, _)).WillByDefault(Return(std::vector<bin>{false_child, true_child}));

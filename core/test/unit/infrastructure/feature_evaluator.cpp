@@ -24,8 +24,8 @@ struct FeatureEvaluatorTest : public ::testing::Test {
 };
 
 FeatureEvaluatorTest::FeatureEvaluatorTest()
-    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
-    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
+    : falsity{.tag = 0, .args = {}}
+    , truth{.tag = 1, .args = {}}
     , second_var{feature::var{.index = 1}}
     , true_constant{feature::constant{.literal = &truth}}
     , call_primitive() {}

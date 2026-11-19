@@ -11,7 +11,6 @@
 #include "infrastructure/best_model_tracker.hpp"
 #include "infrastructure/bin_splitter.hpp"
 #include "infrastructure/cheapest_feature_index.hpp"
-#include "infrastructure/constant_enumerator.hpp"
 #include "infrastructure/constant_seeder.hpp"
 #include "infrastructure/constant_store.hpp"
 #include "infrastructure/feature_evaluator.hpp"
@@ -139,11 +138,8 @@ struct razor_manifest {
         : variable_candidate_finder<feature_pool, feature_sizer_t, uniform_value_finder> {
         using variable_candidate_finder<feature_pool, feature_sizer_t, uniform_value_finder>::variable_candidate_finder;
     };
-    struct constant_enumerator_t : constant_enumerator<schema, value_pool> {
-        using constant_enumerator<schema, value_pool>::constant_enumerator;
-    };
-    struct constant_seeder_t : constant_seeder<schema, constant_enumerator_t, feature_pool, constant_store> {
-        using constant_seeder<schema, constant_enumerator_t, feature_pool, constant_store>::constant_seeder;
+    struct constant_seeder_t : constant_seeder<feature_pool, constant_store> {
+        using constant_seeder<feature_pool, constant_store>::constant_seeder;
     };
     struct operand_table_t
         : operand_table<constant_store, constant_store, cheapest_feature_index, cheapest_feature_index> {
@@ -244,7 +240,6 @@ struct razor_manifest {
     primitive_store              primitive_store_;
     primitive_caller_t           primitive_caller_;
     variable_candidate_finder_t  variable_candidate_finder_;
-    constant_enumerator_t        constant_enumerator_;
     constant_seeder_t            constant_seeder_;
     operand_table_t              operand_table_;
     operand_applier_t            operand_applier_;

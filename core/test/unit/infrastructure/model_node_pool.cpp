@@ -13,7 +13,7 @@ struct ModelNodePoolTest : public ::testing::Test {
 };
 
 ModelNodePoolTest::ModelNodePoolTest()
-    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
+    : falsity{.tag = 0, .args = {}}
     , scrutinee{feature::var{.index = 0}}
     , false_output{feature::constant{.literal = &falsity}}
     , variable_output{feature::var{.index = 1}}

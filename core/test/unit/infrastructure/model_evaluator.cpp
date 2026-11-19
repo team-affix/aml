@@ -40,10 +40,10 @@ struct ModelEvaluatorTest : public ::testing::Test {
 };
 
 ModelEvaluatorTest::ModelEvaluatorTest()
-    : zero{.ctor = {.type = 0, .tag = 0}, .args = {}}
-    , one{.ctor = {.type = 0, .tag = 1}, .args = {&zero}}
-    , two{.ctor = {.type = 0, .tag = 1}, .args = {&one}}
-    , falsity{.ctor = {.type = 0, .tag = 2}, .args = {}}
+    : zero{.tag = 0, .args = {}}
+    , one{.tag = 1, .args = {&zero}}
+    , two{.tag = 1, .args = {&one}}
+    , falsity{.tag = 2, .args = {}}
     , input{feature::var{.index = 0}}
     , predecessor{feature::var{.index = 1}}
     , second_predecessor{feature::var{.index = 2}}
@@ -88,7 +88,7 @@ TEST_F(ModelEvaluatorTest, AnEmptyBranchGivesNothing) {
 }
 
 TEST_F(ModelEvaluatorTest, TheBranchIsTheMatchedValuesTag) {
-    const value other_zero{.ctor = {.type = 9, .tag = 0}, .args = {}};
+    const value other_zero{.tag = 0, .args = {}};
     ON_CALL(evaluate_feature, evaluate(&input, _)).WillByDefault(Return(&other_zero));
     EXPECT_EQ(evaluator.evaluate(&outer, {&zero}), std::optional<const value*>(&falsity));
 }

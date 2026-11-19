@@ -5,11 +5,12 @@ scout_runtime::scout_runtime(
     schema& types,
     value_pool& values,
     const std::vector<typed_primitive>& primitives,
+    const std::vector<typed_constant>& constants,
     const bin& training,
     const scout_options& options)
     : manifest_(types, values, primitives, options)
     , training_(training) {
-    manifest_.constant_seeder_.seed(options.max_constant_size);
+    manifest_.constant_seeder_.seed(constants);
 }
 
 void scout_runtime::next() {

@@ -7,6 +7,7 @@
 #include "infrastructure/scout_runtime.hpp"
 #include "infrastructure/value_pool.hpp"
 #include "support/nat_add.hpp"
+#include "value_objects/typed_constant.hpp"
 #include "value_objects/typed_primitive.hpp"
 
 namespace {
@@ -17,20 +18,22 @@ struct GeneralizationIntegrationTest : public ::testing::Test {
     GeneralizationIntegrationTest();
     const value* number(size_t count);
     const value* pair_of(const value* first, const value* second);
-    bin unary_training(const std::vector<const value*>& inputs, const std::vector<const value*>& labels);
+    bin unary_training(
+        type_id input_type, const column& inputs, type_id label_type, const column& labels);
     schema types;
     value_pool values;
     type_id boolean;
-    ctor_ref false_ctor;
-    ctor_ref true_ctor;
+    size_t false_ctor;
+    size_t true_ctor;
     type_id nat;
-    ctor_ref zero_ctor;
-    ctor_ref suc_ctor;
+    size_t zero_ctor;
+    size_t suc_ctor;
     type_id pair;
-    ctor_ref pair_ctor;
+    size_t pair_ctor;
     const value* falsity;
     const value* truth;
     typed_primitive addition;
+    std::vector<typed_constant> constants;
     scout_options scout_settings;
     razor_options razor_settings;
 };
@@ -42,20 +45,23 @@ GeneralizationIntegrationTest::GeneralizationIntegrationTest()
               type_def{.ctors = {ctor_def{.arg_types = {1, 0}}}}})
     , values()
     , boolean(0)
-    , false_ctor{.type = boolean, .tag = 0}
-    , true_ctor{.type = boolean, .tag = 1}
+    , false_ctor(0)
+    , true_ctor(1)
     , nat(1)
-    , zero_ctor{.type = nat, .tag = 0}
-    , suc_ctor{.type = nat, .tag = 1}
+    , zero_ctor(0)
+    , suc_ctor(1)
     , pair(2)
-    , pair_ctor{.type = pair, .tag = 0}
+    , pair_ctor(0)
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
     , addition{
           .type = primitive_type{.arg_types = {nat, nat}, .result_type = nat},
           .apply = nat_add<value_pool>(values, suc_ctor)}
-    , scout_settings{.max_applications = 2, .max_constant_size = 1}
-    , razor_settings{.max_applications = 1, .max_constant_size = 1, .exploration_constant = 3.0, .seed = 11} {}
+    , constants{
+          typed_constant{.type = boolean, .literal = falsity}, typed_constant{.type = boolean, .literal = truth},
+          typed_constant{.type = nat, .literal = values.make(zero_ctor, {})}}
+    , scout_settings{.max_applications = 2}
+    , razor_settings{.max_applications = 1, .exploration_constant = 3.0, .seed = 11} {}
 
 const value* GeneralizationIntegrationTest::number(size_t count) {
     const value* result = values.make(zero_ctor, {});
@@ -69,16 +75,16 @@ const value* GeneralizationIntegrationTest::pair_of(const value* first, const va
 }
 
 bin GeneralizationIntegrationTest::unary_training(
-    const std::vector<const value*>& inputs, const std::vector<const value*>& labels) {
-    return bin{.inputs = {typed_column{.type = inputs.front()->ctor.type, .cells = inputs}},
-               .labels = labels};
+    type_id input_type, const column& inputs, type_id label_type, const column& labels) {
+    return bin{.inputs = {typed_column{.type = input_type, .cells = inputs}},
+               .labels = typed_column{.type = label_type, .cells = labels}};
 }
 
 }
 
 TEST_F(GeneralizationIntegrationTest, IdentityIsOneVariableLeafAndHoldsForUnseenInputs) {
-    const bin training = unary_training({number(0), number(1), number(2)}, {number(0), number(1), number(2)});
-    scout_runtime runtime(types, values, {}, training, scout_settings);
+    const bin training = unary_training(nat, {number(0), number(1), number(2)}, nat, {number(0), number(1), number(2)});
+    scout_runtime runtime(types, values, {}, constants, training, scout_settings);
     runtime.next();
     EXPECT_EQ(runtime.best_cost(), 1u);
     EXPECT_EQ(runtime.infer({number(25)}), std::optional<const value*>(number(25)));
@@ -86,8 +92,8 @@ TEST_F(GeneralizationIntegrationTest, IdentityIsOneVariableLeafAndHoldsForUnseen
 
 TEST_F(GeneralizationIntegrationTest, PredecessorOutputsTheBoundArgumentAndHoldsForUnseenInputs) {
     const bin training = unary_training(
-        {number(0), number(1), number(2), number(3)}, {number(0), number(0), number(1), number(2)});
-    scout_runtime runtime(types, values, {}, training, scout_settings);
+        nat, {number(0), number(1), number(2), number(3)}, nat, {number(0), number(0), number(1), number(2)});
+    scout_runtime runtime(types, values, {}, constants, training, scout_settings);
     runtime.next();
     // match x0 (2) + [zero: leaf x0 (1)] + [suc: leaf x1 (1)]
     EXPECT_EQ(runtime.best_cost(), 4u);
@@ -97,9 +103,9 @@ TEST_F(GeneralizationIntegrationTest, PredecessorOutputsTheBoundArgumentAndHolds
 
 TEST_F(GeneralizationIntegrationTest, AProjectionFunnelsIntoTheArgumentThatIsTheOutput) {
     const bin training = unary_training(
-        {pair_of(number(0), truth), pair_of(number(2), falsity), pair_of(number(1), truth)},
-        {number(0), number(2), number(1)});
-    scout_runtime runtime(types, values, {}, training, scout_settings);
+        pair, {pair_of(number(0), truth), pair_of(number(2), falsity), pair_of(number(1), truth)},
+        nat, {number(0), number(2), number(1)});
+    scout_runtime runtime(types, values, {}, constants, training, scout_settings);
     runtime.next();
     // match x0 (2) + [pair: leaf x1 (1)]
     EXPECT_EQ(runtime.best_cost(), 3u);
@@ -108,8 +114,9 @@ TEST_F(GeneralizationIntegrationTest, AProjectionFunnelsIntoTheArgumentThatIsThe
 
 TEST_F(GeneralizationIntegrationTest, TheOtherProjectionPicksTheOtherArgument) {
     const bin training = unary_training(
-        {pair_of(number(0), truth), pair_of(number(2), falsity), pair_of(number(1), truth)}, {truth, falsity, truth});
-    scout_runtime runtime(types, values, {}, training, scout_settings);
+        pair, {pair_of(number(0), truth), pair_of(number(2), falsity), pair_of(number(1), truth)},
+        boolean, {truth, falsity, truth});
+    scout_runtime runtime(types, values, {}, constants, training, scout_settings);
     runtime.next();
     EXPECT_EQ(runtime.best_cost(), 3u);
     EXPECT_EQ(runtime.infer({pair_of(number(40), falsity)}), std::optional<const value*>(falsity));
@@ -119,8 +126,8 @@ TEST_F(GeneralizationIntegrationTest, ASecondInputIsChosenOverAConstantWhenItIsT
     const bin training{
         .inputs = {typed_column{.type = nat, .cells = {number(0), number(1), number(2)}},
                   typed_column{.type = nat, .cells = {number(3), number(3), number(3)}}},
-        .labels = {number(3), number(3), number(3)}};
-    scout_runtime runtime(types, values, {}, training, scout_settings);
+        .labels = typed_column{.type = nat, .cells = {number(3), number(3), number(3)}}};
+    scout_runtime runtime(types, values, {}, constants, training, scout_settings);
     runtime.next();
     EXPECT_EQ(runtime.best_cost(), 1u);
     EXPECT_EQ(runtime.infer({number(5), number(8)}), std::optional<const value*>(number(8)));
@@ -128,8 +135,8 @@ TEST_F(GeneralizationIntegrationTest, ASecondInputIsChosenOverAConstantWhenItIsT
 
 TEST_F(GeneralizationIntegrationTest, RazorDoublesByAddingTheInputToItself) {
     const bin training = unary_training(
-        {number(0), number(1), number(2), number(3)}, {number(0), number(2), number(4), number(6)});
-    razor_runtime runtime(types, values, {addition}, training, razor_settings);
+        nat, {number(0), number(1), number(2), number(3)}, nat, {number(0), number(2), number(4), number(6)});
+    razor_runtime runtime(types, values, {addition}, constants, training, razor_settings);
     for (size_t episode = 0; episode < 200; ++episode)
         runtime.next();
     // leaf add(x0, x0): 1 + 1 + 1
@@ -142,8 +149,8 @@ TEST_F(GeneralizationIntegrationTest, RazorAddsTwoInputs) {
     const bin training{
         .inputs = {typed_column{.type = nat, .cells = {number(0), number(1), number(2), number(1)}},
                   typed_column{.type = nat, .cells = {number(2), number(0), number(1), number(3)}}},
-        .labels = {number(2), number(1), number(3), number(4)}};
-    razor_runtime runtime(types, values, {addition}, training, razor_settings);
+        .labels = typed_column{.type = nat, .cells = {number(2), number(1), number(3), number(4)}}};
+    razor_runtime runtime(types, values, {addition}, constants, training, razor_settings);
     for (size_t episode = 0; episode < 200; ++episode)
         runtime.next();
     EXPECT_EQ(runtime.best_cost(), 3u);

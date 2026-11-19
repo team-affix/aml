@@ -47,8 +47,8 @@ struct VariableCandidateFinderTest : public ::testing::Test {
 };
 
 VariableCandidateFinderTest::VariableCandidateFinderTest()
-    : falsity{.ctor = {.type = 0, .tag = 0}, .args = {}}
-    , truth{.ctor = {.type = 0, .tag = 1}, .args = {}}
+    : falsity{.tag = 0, .args = {}}
+    , truth{.tag = 1, .args = {}}
     , first{feature::var{.index = 0}}
     , third{feature::var{.index = 2}}
     , data{
@@ -56,7 +56,7 @@ VariableCandidateFinderTest::VariableCandidateFinderTest()
               typed_column{.type = 0, .cells = {&falsity, &truth}},
               typed_column{.type = 0, .cells = {&truth, &truth}},
               typed_column{.type = 3, .cells = {&truth, &falsity}}},
-          .labels = {&falsity, &truth}}
+          .labels = typed_column{.type = 0, .cells = {&falsity, &truth}}}
     , make_var_feature()
     , size_feature()
     , find_uniform_value() {}
@@ -89,6 +89,6 @@ TEST_F(VariableCandidateFinderTest, ACandidateKeepsItsVariablesType) {
 }
 
 TEST_F(VariableCandidateFinderTest, AnEmptyScopeFindsNothing) {
-    const bin no_variables{.inputs = {}, .labels = {&falsity, &truth}};
+    const bin no_variables{.inputs = {}, .labels = typed_column{.type = 0, .cells = {&falsity, &truth}}};
     EXPECT_TRUE(finder.find(no_variables, 0).empty());
 }

@@ -76,7 +76,7 @@ const std::vector<candidate>& FEATURE_SYNTHESIZER::synthesize(const bin& data) {
         const size_t step = choose_step_.choose(options.size() + 1);
         if (step == 0)
             break;
-        apply_chosen_primitive_.apply(options.at(step - 1), data.labels.size());
+        apply_chosen_primitive_.apply(options.at(step - 1), data.labels.cells.size());
     }
     return get_features_.candidates();
 }
