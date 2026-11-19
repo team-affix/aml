@@ -86,8 +86,7 @@ bin HawkIntegrationTest::is_even_training(size_t count) {
 TEST_F(HawkIntegrationTest, XorIsFoundAsOneSynthesizedOutput) {
     const bin training = xor_training();
     hawk_runtime runtime(types, values, {bool_equality}, constants, training, options);
-    // Seed 7 takes Hawk 352 episodes (Razor 11); over seeds 1-20 Hawk averages 104 and Razor 263.
-    for (size_t episode = 0; episode < 500; ++episode)
+    for (size_t episode = 0; episode < 200; ++episode)
         runtime.next();
     // leaf eq(eq(x0, x1), false): 1 + (1 + 1 + 1) + 1
     EXPECT_EQ(runtime.best_cost(), 5u);

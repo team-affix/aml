@@ -33,6 +33,7 @@ hawk_manifest::hawk_manifest(
     , argument_option_finder_(operand_table_, operand_table_, witness_detector_)
     , visits_()
     , rewards_()
+    , reward_bounds_()
     , random_(options.seed)
     , in_rollout_()
     , tree_walker_(in_rollout_)
@@ -46,7 +47,7 @@ hawk_manifest::hawk_manifest(
     , backprop_path_(k_root)
     , visit_creditor_(backprop_path_, visits_, visits_)
     , value_creditor_(visit_creditor_, backprop_path_, value_update_)
-    , policy_(visits_, rewards_, tree_walker_, exploration_constant_)
+    , policy_(visits_, rewards_, reward_bounds_, reward_bounds_, tree_walker_, exploration_constant_)
     , mcts_chooser_(
           visits_, tree_walker_, policy_, rollout_logger_, cursor_, cursor_, backprop_path_, in_rollout_, in_rollout_)
     , grafter_(in_rollout_, value_delta_, choice_log_, choice_log_, backprop_path_, tree_walker_, backprop_path_)

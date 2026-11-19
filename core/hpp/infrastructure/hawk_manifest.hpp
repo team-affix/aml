@@ -53,6 +53,7 @@
 #include "infrastructure/uniform_value_delta.hpp"
 #include "infrastructure/uniform_value_finder.hpp"
 #include "infrastructure/uniform_value_update.hpp"
+#include "infrastructure/value_bounds.hpp"
 #include "infrastructure/value_pool.hpp"
 #include "infrastructure/value_sizer.hpp"
 #include "infrastructure/value_table.hpp"
@@ -87,6 +88,9 @@ struct hawk_manifest {
         using monte_carlo::rollout_choice_logger<
             mcts_choice, option_range, option_range, rollout_t, choice_log_t>::rollout_choice_logger;
     };
+    struct value_bounds_t : monte_carlo::value_bounds<double> {
+        using monte_carlo::value_bounds<double>::value_bounds;
+    };
     struct exploration_constant_t : monte_carlo::uniform_exploration_constant<double> {
         using monte_carlo::uniform_exploration_constant<double>::uniform_exploration_constant;
     };
@@ -116,11 +120,11 @@ struct hawk_manifest {
         using tree_walker<monte_carlo::in_rollout_flag>::tree_walker;
     };
     struct policy_t : monte_carlo::ucb1<
-        mcts_tree_node_id, mcts_choice, double, visits_table_t, value_table_t, tree_walker_t, exploration_constant_t,
-        option_range, option_range> {
+        mcts_tree_node_id, mcts_choice, double, visits_table_t, value_table_t, value_bounds_t, value_bounds_t,
+        tree_walker_t, exploration_constant_t, option_range, option_range> {
         using monte_carlo::ucb1<
-            mcts_tree_node_id, mcts_choice, double, visits_table_t, value_table_t, tree_walker_t,
-            exploration_constant_t, option_range, option_range>::ucb1;
+            mcts_tree_node_id, mcts_choice, double, visits_table_t, value_table_t, value_bounds_t, value_bounds_t,
+            tree_walker_t, exploration_constant_t, option_range, option_range>::ucb1;
     };
     struct mcts_chooser_t : monte_carlo::uct_chooser<
         mcts_tree_node_id, mcts_choice, visits_table_t, tree_walker_t, option_range, option_range, policy_t,
@@ -276,6 +280,7 @@ struct hawk_manifest {
     argument_option_finder_t     argument_option_finder_;
     visits_table_t               visits_;
     value_table_t                rewards_;
+    value_bounds_t               reward_bounds_;
     std::mt19937                 random_;
     monte_carlo::in_rollout_flag in_rollout_;
     tree_walker_t                tree_walker_;
