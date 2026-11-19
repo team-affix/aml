@@ -77,7 +77,8 @@ docs/                                      design notes (see docs/continuous-doc
   - **Scout** (`scout_*`): one episode, the first option at every choice (so synthesis stops at once and only
     variables or constants become leaf outputs).
   - **Razor** (`razor_*`): UCT over every choice, its parts from the `mcts` submodule wired one by one in
-    `razor_manifest`; each episode builds a fresh model and is rewarded with its negated cost.
+    `razor_manifest`; each episode builds a fresh model and is rewarded with its negated cost. `binary_option_chooser`
+    splits every choice into two-way choices (halving the options' indices), so MCTS's branching is at most two.
 
 ### Per-bin columns
 
@@ -97,8 +98,8 @@ data points are never re-read.
   `feature_synthesizer`.
 - Partition: `leaf_detector`, `output_finder`, `uniform_value_finder`, `bound_argument_chooser`, `bin_splitter`,
   `model_builder`.
-- Choices: `first_option_chooser`, `mcts_option_chooser`; each chooses an index among `option_count` options.
-  MCTS sees them as an `option_range` (a count, not a vector).
+- Choices: `first_option_chooser`, `mcts_option_chooser`, `binary_option_chooser`; each chooses an index among
+  `option_count` options. MCTS sees them as an `option_range` (a count, not a vector).
 - Cost and inference: `value_sizer`, `feature_sizer`, `model_sizer`, `feature_evaluator`, `model_evaluator`.
 - Episodes: `model_episode`, `mcts_episode`.
 

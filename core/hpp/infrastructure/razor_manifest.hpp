@@ -9,6 +9,7 @@
 #include "infrastructure/argument_chooser.hpp"
 #include "infrastructure/argument_option_finder.hpp"
 #include "infrastructure/best_model_tracker.hpp"
+#include "infrastructure/binary_option_chooser.hpp"
 #include "infrastructure/bin_splitter.hpp"
 #include "infrastructure/cheapest_feature_index.hpp"
 #include "infrastructure/constant_seeder.hpp"
@@ -60,7 +61,8 @@
 #include "value_objects/typed_primitive.hpp"
 
 // Razor: Monte Carlo tree search over every choice a model build makes (the feature each partition matches on and
-// the argument each funnel step descends into), rewarding each episode with its negated model cost.
+// the argument each funnel step descends into), rewarding each episode with its negated model cost. Every choice is
+// split into two-way choices, so no MCTS node has more than two children.
 struct razor_manifest {
     struct visits_table_t : monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map> {
         using monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map>::visits_table;
@@ -125,6 +127,9 @@ struct razor_manifest {
     struct option_chooser_t : mcts_option_chooser<mcts_chooser_t> {
         using mcts_option_chooser<mcts_chooser_t>::mcts_option_chooser;
     };
+    struct binary_option_chooser_t : binary_option_chooser<option_chooser_t> {
+        using binary_option_chooser<option_chooser_t>::binary_option_chooser;
+    };
 
     struct feature_sizer_t : feature_sizer<value_sizer> {
         using feature_sizer<value_sizer>::feature_sizer;
@@ -167,8 +172,8 @@ struct razor_manifest {
         : argument_option_finder<operand_table_t, operand_table_t, witness_detector_t> {
         using argument_option_finder<operand_table_t, operand_table_t, witness_detector_t>::argument_option_finder;
     };
-    struct argument_chooser_t : argument_chooser<argument_option_finder_t, option_chooser_t> {
-        using argument_chooser<argument_option_finder_t, option_chooser_t>::argument_chooser;
+    struct argument_chooser_t : argument_chooser<argument_option_finder_t, binary_option_chooser_t> {
+        using argument_chooser<argument_option_finder_t, binary_option_chooser_t>::argument_chooser;
     };
     struct primitive_applier_t : primitive_applier<
         primitive_store, argument_chooser_t, application_log, app_candidate_finder_t, cheapest_feature_index> {
@@ -183,11 +188,11 @@ struct razor_manifest {
             cheapest_feature_index>::synthesis_starter;
     };
     struct feature_synthesizer_t : feature_synthesizer<
-        synthesis_starter_t, application_log, primitive_option_finder_t, option_chooser_t, option_chooser_t,
-        primitive_applier_t, cheapest_feature_index, output_finder> {
+        synthesis_starter_t, application_log, primitive_option_finder_t, binary_option_chooser_t,
+        binary_option_chooser_t, primitive_applier_t, cheapest_feature_index, output_finder> {
         using feature_synthesizer<
-            synthesis_starter_t, application_log, primitive_option_finder_t, option_chooser_t, option_chooser_t,
-            primitive_applier_t, cheapest_feature_index, output_finder>::feature_synthesizer;
+            synthesis_starter_t, application_log, primitive_option_finder_t, binary_option_chooser_t,
+            binary_option_chooser_t, primitive_applier_t, cheapest_feature_index, output_finder>::feature_synthesizer;
     };
     struct leaf_detector_t : leaf_detector<uniform_value_finder> {
         using leaf_detector<uniform_value_finder>::leaf_detector;
@@ -195,14 +200,14 @@ struct razor_manifest {
     struct bin_splitter_t : bin_splitter<schema> {
         using bin_splitter<schema>::bin_splitter;
     };
-    struct bound_argument_chooser_t : bound_argument_chooser<variable_candidate_finder_t, option_chooser_t> {
-        using bound_argument_chooser<variable_candidate_finder_t, option_chooser_t>::bound_argument_chooser;
+    struct bound_argument_chooser_t : bound_argument_chooser<variable_candidate_finder_t, binary_option_chooser_t> {
+        using bound_argument_chooser<variable_candidate_finder_t, binary_option_chooser_t>::bound_argument_chooser;
     };
     struct model_builder_t : model_builder<
-        leaf_detector_t, feature_synthesizer_t, output_finder, option_chooser_t, bound_argument_chooser_t,
+        leaf_detector_t, feature_synthesizer_t, output_finder, binary_option_chooser_t, bound_argument_chooser_t,
         bin_splitter_t> {
         using model_builder<
-            leaf_detector_t, feature_synthesizer_t, output_finder, option_chooser_t, bound_argument_chooser_t,
+            leaf_detector_t, feature_synthesizer_t, output_finder, binary_option_chooser_t, bound_argument_chooser_t,
             bin_splitter_t>::model_builder;
     };
     struct model_episode_t : model_episode<model_builder_t, model_sizer_t, best_model_tracker> {
@@ -261,6 +266,7 @@ struct razor_manifest {
     mcts_chooser_t               mcts_chooser_;
     terminator_t                 terminator_;
     option_chooser_t             option_chooser_;
+    binary_option_chooser_t      binary_option_chooser_;
     argument_chooser_t           argument_chooser_;
     primitive_applier_t          primitive_applier_;
     synthesis_starter_t          synthesis_starter_;
