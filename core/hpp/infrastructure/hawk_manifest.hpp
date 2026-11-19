@@ -9,6 +9,8 @@
 #include "infrastructure/argument_chooser.hpp"
 #include "infrastructure/argument_option_finder.hpp"
 #include "infrastructure/best_model_tracker.hpp"
+#include "infrastructure/best_path_grafter.hpp"
+#include "infrastructure/best_path_terminator.hpp"
 #include "infrastructure/binary_option_chooser.hpp"
 #include "infrastructure/bin_splitter.hpp"
 #include "infrastructure/cheapest_feature_index.hpp"
@@ -20,8 +22,6 @@
 #include "infrastructure/bound_argument_chooser.hpp"
 #include "infrastructure/in_rollout_flag.hpp"
 #include "infrastructure/leaf_detector.hpp"
-#include "infrastructure/max_ucb1.hpp"
-#include "infrastructure/max_value_update.hpp"
 #include "infrastructure/mcts_episode.hpp"
 #include "infrastructure/mcts_option_chooser.hpp"
 #include "infrastructure/model_builder.hpp"
@@ -37,9 +37,12 @@
 #include "infrastructure/primitive_option_finder.hpp"
 #include "infrastructure/primitive_store.hpp"
 #include "infrastructure/random_rollout.hpp"
+#include "infrastructure/rollout_choice_log.hpp"
+#include "infrastructure/rollout_choice_logger.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/synthesis_starter.hpp"
 #include "infrastructure/tree_walker.hpp"
+#include "infrastructure/ucb1.hpp"
 #include "infrastructure/uct_backprop_path.hpp"
 #include "infrastructure/uct_chooser.hpp"
 #include "infrastructure/uct_cursor.hpp"
@@ -49,6 +52,7 @@
 #include "infrastructure/uniform_exploration_constant.hpp"
 #include "infrastructure/uniform_value_delta.hpp"
 #include "infrastructure/uniform_value_finder.hpp"
+#include "infrastructure/uniform_value_update.hpp"
 #include "infrastructure/value_pool.hpp"
 #include "infrastructure/value_sizer.hpp"
 #include "infrastructure/value_table.hpp"
@@ -60,11 +64,11 @@
 #include "value_objects/hawk_options.hpp"
 #include "value_objects/typed_primitive.hpp"
 
-// Hawk: single-player Monte Carlo tree search over every choice a model build makes (the feature each partition matches
-// on and the argument each funnel step descends into), rewarding each episode with its negated model cost. A node's
-// value is the best reward ever backed up through it, and selection scores children by that best rather than by their
-// average (the mcts submodule's max_value_update and max_ucb1). Every choice is split into two-way choices, so no MCTS
-// node has more than two children.
+// Hawk: Monte Carlo tree search over every choice a model build makes (the feature each partition matches on and the
+// argument each funnel step descends into), rewarding each episode with its negated model cost. It is Razor with
+// best-path memory: an episode whose cost is at most the cheapest so far adds its whole path, rollout included, to the
+// tree (the mcts submodule's best_path_grafter), so a cheap model, once found, is never forgotten. Selection and
+// backups are UCT's. Every choice is split into two-way choices, so no MCTS node has more than two children.
 struct hawk_manifest {
     struct visits_table_t : monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map> {
         using monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map>::visits_table;
@@ -75,16 +79,24 @@ struct hawk_manifest {
     struct rollout_t : monte_carlo::random_rollout<mcts_choice, std::mt19937, option_range, option_range> {
         using monte_carlo::random_rollout<mcts_choice, std::mt19937, option_range, option_range>::random_rollout;
     };
+    struct choice_log_t : monte_carlo::rollout_choice_log<mcts_choice> {
+        using monte_carlo::rollout_choice_log<mcts_choice>::rollout_choice_log;
+    };
+    struct rollout_logger_t : monte_carlo::rollout_choice_logger<
+        mcts_choice, option_range, option_range, rollout_t, choice_log_t> {
+        using monte_carlo::rollout_choice_logger<
+            mcts_choice, option_range, option_range, rollout_t, choice_log_t>::rollout_choice_logger;
+    };
     struct exploration_constant_t : monte_carlo::uniform_exploration_constant<double> {
         using monte_carlo::uniform_exploration_constant<double>::uniform_exploration_constant;
     };
     struct value_delta_t : monte_carlo::uniform_value_delta<double> {
         using monte_carlo::uniform_value_delta<double>::uniform_value_delta;
     };
-    struct value_update_t : monte_carlo::max_value_update<
-        mcts_tree_node_id, visits_table_t, value_table_t, value_table_t, value_delta_t> {
-        using monte_carlo::max_value_update<
-            mcts_tree_node_id, visits_table_t, value_table_t, value_table_t, value_delta_t>::max_value_update;
+    struct value_update_t
+        : monte_carlo::uniform_value_update<mcts_tree_node_id, value_table_t, value_table_t, value_delta_t> {
+        using monte_carlo::uniform_value_update<
+            mcts_tree_node_id, value_table_t, value_table_t, value_delta_t>::uniform_value_update;
     };
     struct cursor_t : monte_carlo::uct_cursor<mcts_tree_node_id> {
         using monte_carlo::uct_cursor<mcts_tree_node_id>::uct_cursor;
@@ -103,27 +115,38 @@ struct hawk_manifest {
     struct tree_walker_t : tree_walker<monte_carlo::in_rollout_flag> {
         using tree_walker<monte_carlo::in_rollout_flag>::tree_walker;
     };
-    struct policy_t : monte_carlo::max_ucb1<
+    struct policy_t : monte_carlo::ucb1<
         mcts_tree_node_id, mcts_choice, double, visits_table_t, value_table_t, tree_walker_t, exploration_constant_t,
         option_range, option_range> {
-        using monte_carlo::max_ucb1<
+        using monte_carlo::ucb1<
             mcts_tree_node_id, mcts_choice, double, visits_table_t, value_table_t, tree_walker_t,
-            exploration_constant_t, option_range, option_range>::max_ucb1;
+            exploration_constant_t, option_range, option_range>::ucb1;
     };
     struct mcts_chooser_t : monte_carlo::uct_chooser<
-        mcts_tree_node_id, mcts_choice, visits_table_t, tree_walker_t, option_range, option_range, policy_t, rollout_t,
-        cursor_t, cursor_t, backprop_path_t, monte_carlo::in_rollout_flag, monte_carlo::in_rollout_flag> {
+        mcts_tree_node_id, mcts_choice, visits_table_t, tree_walker_t, option_range, option_range, policy_t,
+        rollout_logger_t, cursor_t, cursor_t, backprop_path_t, monte_carlo::in_rollout_flag,
+        monte_carlo::in_rollout_flag> {
         using monte_carlo::uct_chooser<
             mcts_tree_node_id, mcts_choice, visits_table_t, tree_walker_t, option_range, option_range, policy_t,
-            rollout_t, cursor_t, cursor_t, backprop_path_t, monte_carlo::in_rollout_flag,
+            rollout_logger_t, cursor_t, cursor_t, backprop_path_t, monte_carlo::in_rollout_flag,
             monte_carlo::in_rollout_flag>::uct_chooser;
     };
-    struct terminator_t : monte_carlo::uct_terminator<
+    struct grafter_t : monte_carlo::best_path_grafter<
+        mcts_tree_node_id, mcts_choice, double, monte_carlo::in_rollout_flag, value_delta_t, choice_log_t,
+        choice_log_t, backprop_path_t, tree_walker_t, backprop_path_t> {
+        using monte_carlo::best_path_grafter<
+            mcts_tree_node_id, mcts_choice, double, monte_carlo::in_rollout_flag, value_delta_t, choice_log_t,
+            choice_log_t, backprop_path_t, tree_walker_t, backprop_path_t>::best_path_grafter;
+    };
+    struct backprop_terminator_t : monte_carlo::uct_terminator<
         mcts_tree_node_id, backprop_path_t, value_creditor_t, backprop_path_t, backprop_path_t, cursor_t,
         monte_carlo::in_rollout_flag> {
         using monte_carlo::uct_terminator<
             mcts_tree_node_id, backprop_path_t, value_creditor_t, backprop_path_t, backprop_path_t, cursor_t,
             monte_carlo::in_rollout_flag>::uct_terminator;
+    };
+    struct terminator_t : monte_carlo::best_path_terminator<grafter_t, backprop_terminator_t> {
+        using monte_carlo::best_path_terminator<grafter_t, backprop_terminator_t>::best_path_terminator;
     };
 
     struct option_chooser_t : mcts_option_chooser<mcts_chooser_t> {
@@ -257,6 +280,8 @@ struct hawk_manifest {
     monte_carlo::in_rollout_flag in_rollout_;
     tree_walker_t                tree_walker_;
     rollout_t                    rollout_;
+    choice_log_t                 choice_log_;
+    rollout_logger_t             rollout_logger_;
     exploration_constant_t       exploration_constant_;
     value_delta_t                value_delta_;
     value_update_t               value_update_;
@@ -266,6 +291,8 @@ struct hawk_manifest {
     value_creditor_t             value_creditor_;
     policy_t                     policy_;
     mcts_chooser_t               mcts_chooser_;
+    grafter_t                    grafter_;
+    backprop_terminator_t        backprop_terminator_;
     terminator_t                 terminator_;
     option_chooser_t             option_chooser_;
     binary_option_chooser_t      binary_option_chooser_;
