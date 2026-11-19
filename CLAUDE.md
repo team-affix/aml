@@ -79,6 +79,9 @@ docs/                                      design notes (see docs/continuous-doc
   - **Razor** (`razor_*`): UCT over every choice, its parts from the `mcts` submodule wired one by one in
     `razor_manifest`; each episode builds a fresh model and is rewarded with its negated cost. `binary_option_chooser`
     splits every choice into two-way choices (halving the options' indices), so MCTS's branching is at most two.
+    `ucb1` scores children by their mean normalized to [0, 1] with the lowest and highest means seen (`value_bounds`,
+    owned by the manifest like the visit and value tables), so c is on that scale whatever the costs; above 1 it
+    favours exploration.
   - **Hawk** (`hawk_*`): Razor with best-path memory, the `mcts` submodule's `best_path_grafter`: an episode whose
     cost is at most the cheapest so far adds its whole path, rollout included, to the tree, so it is never forgotten
     (CadiaPlayer's single-agent enhancement). Selection and backups stay UCT's.
