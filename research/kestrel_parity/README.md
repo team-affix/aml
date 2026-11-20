@@ -16,7 +16,7 @@ root over 25 minutes. Kestrel, Kite with mixmax selection, builds them up to 8.
 
 ## Result
 
-`build/kestrel_parity`, about 400 episodes per second (1,258,909 episodes):
+`build/research/kestrel_parity`, about 400 episodes per second (1,258,909 episodes):
 
 | Minute | Best cost | Xors at the best model's root | Episodes in the last minute by root xors |
 |---|---|---|---|
@@ -78,11 +78,11 @@ worth that episode, and the search follows it.
 arguments. From the repository root:
 
 ```bash
-make kestrel_parity
+make research/kestrel_parity
 ```
 
 ```bash
-./build/kestrel_parity
+./build/research/kestrel_parity
 ```
 
 It runs for 3000 seconds. The episodes, and so every new best model and the episode that finds it, are the same on

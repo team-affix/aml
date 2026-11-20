@@ -6,8 +6,8 @@
 // machine.
 //
 // Build and run from the repository root:
-//   make kestrel_parity
-//   ./build/kestrel_parity
+//   make research/kestrel_parity
+//   ./build/research/kestrel_parity
 
 #include <algorithm>
 #include <chrono>
