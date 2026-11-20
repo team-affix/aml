@@ -8,6 +8,7 @@
 #include "infrastructure/kite_manifest.hpp"
 #include "infrastructure/value_pool.hpp"
 #include "value_objects/bin.hpp"
+#include "value_objects/episode_outcome.hpp"
 #include "value_objects/model_node.hpp"
 #include "value_objects/kite_options.hpp"
 #include "value_objects/typed_constant.hpp"
@@ -22,7 +23,7 @@ struct kite_runtime {
         const std::vector<typed_constant>& constants,
         const bin& training,
         const kite_options& options);
-    void next();
+    episode_outcome next();
     const std::optional<model_node>& best_model() const;
     size_t best_cost() const;
     std::optional<const value*> infer(const std::vector<const value*>& inputs) const;

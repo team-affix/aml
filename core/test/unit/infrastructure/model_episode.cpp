@@ -49,7 +49,7 @@ TEST_F(ModelEpisodeTest, TheBuiltModelIsSizedAndOfferedAsTheBest) {
     EXPECT_CALL(build_model, build(training)).WillOnce(Return(model));
     EXPECT_CALL(size_model, size(model)).WillOnce(Return(7));
     EXPECT_CALL(try_record_model, try_record(model, 7));
-    EXPECT_EQ(episode.run(training), 7u);
+    EXPECT_EQ(episode.run(training), (episode_outcome{.model = model, .cost = 7}));
 }
 
 TEST_F(ModelEpisodeTest, EveryRunBuildsAFreshModel) {
@@ -66,6 +66,6 @@ TEST_F(ModelEpisodeTest, EachRunsCostIsOfferedWithItsOwnModel) {
     InSequence order;
     EXPECT_CALL(try_record_model, try_record(model, 4));
     EXPECT_CALL(try_record_model, try_record(other, 0));
-    EXPECT_EQ(episode.run(training), 4u);
-    EXPECT_EQ(episode.run(training), 0u);
+    EXPECT_EQ(episode.run(training), (episode_outcome{.model = model, .cost = 4}));
+    EXPECT_EQ(episode.run(training), (episode_outcome{.model = other, .cost = 0}));
 }

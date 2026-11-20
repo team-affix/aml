@@ -39,19 +39,16 @@ struct GeneralizationIntegrationTest : public ::testing::Test {
 };
 
 GeneralizationIntegrationTest::GeneralizationIntegrationTest()
-    : types(std::vector<type_def>{
-              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}},
-              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {1}}}},
-              type_def{.ctors = {ctor_def{.arg_types = {1, 0}}}}})
+    : types()
     , values()
-    , boolean(0)
-    , false_ctor(0)
-    , true_ctor(1)
-    , nat(1)
-    , zero_ctor(0)
-    , suc_ctor(1)
-    , pair(2)
-    , pair_ctor(0)
+    , boolean(types.declare_type())
+    , false_ctor(types.declare_ctor(boolean, {}))
+    , true_ctor(types.declare_ctor(boolean, {}))
+    , nat(types.declare_type())
+    , zero_ctor(types.declare_ctor(nat, {}))
+    , suc_ctor(types.declare_ctor(nat, {nat}))
+    , pair(types.declare_type())
+    , pair_ctor(types.declare_ctor(pair, {nat, boolean}))
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
     , addition{

@@ -10,7 +10,10 @@ and are minimal in symbolic description length. Fit comes first; among models th
   type: columns do (`typed_column`, for the inputs and the labels), so comparisons that must respect types compare
   typed columns.
 - **User types are data, never C++ types.** A user type is a `type_def`: its constructors (`ctor_def`), each with its
-  argument types. `schema` is built once from all of them; a type's id is its position, so types can be recursive.
+  argument types. `schema` is the authority on type ids and constructor tags: `declare_type()` gives a type's id, then
+  `declare_ctor(type, arg_types)` gives each constructor's tag. Declaring types before their constructors allows
+  recursive and mutually recursive types. Code that sets up types (tests with real types, the probe) takes ids and tags
+  from the schema rather than writing them as literals.
   Core knows no particular user type (no bool, no nat); anything specific to one lives with the user (the tests).
 - **Primitives and constants:** a `primitive` is a `std::function` from argument values to a result value, made
   through the solver's value pool; a `typed_primitive` pairs it with its `primitive_type` (argument and result
@@ -43,7 +46,9 @@ and are minimal in symbolic description length. Fit comes first; among models th
   variable and per primitive application, and a constant's own size.
 - Design doc: "Partition Model: Structure" (Claude Doc, https://claude.ai/artifact/H1DWSUimtzBz38G4nrhi7e).
 
-Only `core/` exists. There is no CLI or parser yet; tests build their data in C++.
+The library is `core/`. There is no parser yet; tests build their data in C++. `probe/` is a developer's entry point for
+watching a solver run by hand (`make probe`, then `./build/probe`), outside the library and its tests; its example is
+meant to be swapped.
 
 ## Layout
 
@@ -55,6 +60,7 @@ core/test/support/                         user-level code the tests share (the 
 mcts/ googletest/                          git submodules, not ours to edit
 debug_assert.hpp                           DEBUG_ASSERT(cond): throws std::logic_error under -DDEBUG
 docs/                                      design notes (see docs/continuous-documentation.md)
+probe/                                     developer entry point outside the library (make probe); swappable example
 ```
 
 ## Architecture
@@ -62,7 +68,9 @@ docs/                                      design notes (see docs/continuous-doc
 ### Layering
 
 ```
-<solver>_runtime        core/: non-templated facade (.hpp/.cpp): next(), best_model(), best_cost(), infer().
+<solver>_runtime        core/: non-templated facade (.hpp/.cpp): next() (returns the episode's model and cost),
+                        best_model(), best_cost(), infer(). Only what users normally need; the probe reads a
+                        manifest directly for anything else.
                         Owns exactly one manifest_.
   <solver>_manifest     composition root: names the component types, owns every component by value,
                         wires them through constructor refs

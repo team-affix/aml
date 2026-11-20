@@ -1,4 +1,5 @@
 #include <limits>
+#include <optional>
 #include <variant>
 #include <vector>
 #include <gtest/gtest.h>
@@ -34,16 +35,14 @@ struct FalconIntegrationTest : public ::testing::Test {
 };
 
 FalconIntegrationTest::FalconIntegrationTest()
-    : types(std::vector<type_def>{
-              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}},
-              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {1}}}}})
+    : types()
     , values()
-    , boolean(0)
-    , false_ctor(0)
-    , true_ctor(1)
-    , nat(1)
-    , zero_ctor(0)
-    , suc_ctor(1)
+    , boolean(types.declare_type())
+    , false_ctor(types.declare_ctor(boolean, {}))
+    , true_ctor(types.declare_ctor(boolean, {}))
+    , nat(types.declare_type())
+    , zero_ctor(types.declare_ctor(nat, {}))
+    , suc_ctor(types.declare_ctor(nat, {nat}))
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
     , bool_equality{
@@ -249,5 +248,17 @@ TEST_F(FalconIntegrationTest, EveryCommitmentFollowsTheBestPath) {
     while (manifest.commitments_.find_commitment(node).has_value()) {
         EXPECT_EQ(manifest.commitments_.find_commitment(node), manifest.best_path_.find_step(node));
         node = manifest.tree_walker_.walk(node, manifest.commitments_.find_commitment(node).value());
+    }
+}
+
+TEST_F(FalconIntegrationTest, NextReturnsTheEpisodesModelAndItsCost) {
+    const bin training = xor_training();
+    falcon_runtime runtime(types, values, {bool_equality}, constants, training, options);
+    const episode_outcome first = runtime.next();
+    EXPECT_EQ(runtime.best_model(), std::optional<model_node>(first.model));
+    EXPECT_EQ(runtime.best_cost(), first.cost);
+    for (size_t episode = 0; episode < 50; ++episode) {
+        const episode_outcome outcome = runtime.next();
+        EXPECT_LE(runtime.best_cost(), outcome.cost);
     }
 }

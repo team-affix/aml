@@ -13,8 +13,8 @@ osprey_runtime::osprey_runtime(
     manifest_.constant_seeder_.seed(constants);
 }
 
-void osprey_runtime::next() {
-    manifest_.mcts_episode_.run(training_);
+episode_outcome osprey_runtime::next() {
+    return manifest_.mcts_episode_.run(training_);
 }
 
 const std::optional<model_node>& osprey_runtime::best_model() const {

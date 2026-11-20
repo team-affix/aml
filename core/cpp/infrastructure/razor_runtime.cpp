@@ -13,8 +13,8 @@ razor_runtime::razor_runtime(
     manifest_.constant_seeder_.seed(constants);
 }
 
-void razor_runtime::next() {
-    manifest_.mcts_episode_.run(training_);
+episode_outcome razor_runtime::next() {
+    return manifest_.mcts_episode_.run(training_);
 }
 
 const std::optional<model_node>& razor_runtime::best_model() const {

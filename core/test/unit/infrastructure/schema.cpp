@@ -1,62 +1,72 @@
+#include <stdexcept>
 #include <vector>
 #include <gtest/gtest.h>
 #include "infrastructure/schema.hpp"
 
 namespace {
 
-// Types: 0 = bool {false, true}, 1 = nat {zero, suc(nat)}, 2 = list of nat {nil, cons(nat, list)}.
 struct SchemaTest : public ::testing::Test {
-    SchemaTest();
-    type_def boolean;
-    type_def nat;
-    type_def list;
     schema types;
 };
 
-SchemaTest::SchemaTest()
-    : boolean{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}}
-    , nat{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {1}}}}
-    , list{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {1, 2}}}}
-    , types(std::vector<type_def>{boolean, nat, list}) {}
-
 }
 
-TEST_F(SchemaTest, CountsItsTypes) {
-    EXPECT_EQ(types.type_count(), 3u);
+TEST_F(SchemaTest, ASchemaStartsWithoutTypes) {
+    EXPECT_EQ(types.type_count(), 0u);
 }
 
-TEST_F(SchemaTest, ATypesIdIsItsPosition) {
-    EXPECT_EQ(types.def(0), boolean);
-    EXPECT_EQ(types.def(1), nat);
-    EXPECT_EQ(types.def(2), list);
+TEST_F(SchemaTest, EachDeclaredTypeGetsTheNextId) {
+    const type_id boolean = types.declare_type();
+    const type_id nat = types.declare_type();
+    EXPECT_EQ(boolean, 0u);
+    EXPECT_EQ(nat, 1u);
+    EXPECT_EQ(types.type_count(), 2u);
 }
 
-TEST_F(SchemaTest, ConstructorsKeepTheirTagOrderAndArgumentTypes) {
-    EXPECT_EQ(types.def(2).ctors.size(), 2u);
-    EXPECT_TRUE(types.def(2).ctors[0].arg_types.empty());
-    EXPECT_EQ(types.def(2).ctors[1].arg_types, (std::vector<type_id>{1, 2}));
+TEST_F(SchemaTest, ADeclaredTypeStartsWithoutConstructors) {
+    const type_id boolean = types.declare_type();
+    EXPECT_TRUE(types.def(boolean).ctors.empty());
 }
 
-TEST_F(SchemaTest, ATypeMayReferToItselfAndToLaterTypes) {
-    const schema forward(std::vector<type_def>{
-        type_def{.ctors = {ctor_def{.arg_types = {1}}, ctor_def{.arg_types = {0}}}},
-        type_def{.ctors = {ctor_def{.arg_types = {}}}}});
-    EXPECT_EQ(forward.def(0).ctors[0].arg_types, (std::vector<type_id>{1}));
+TEST_F(SchemaTest, EachConstructorGetsTheNextTagOfItsType) {
+    const type_id boolean = types.declare_type();
+    const type_id nat = types.declare_type();
+    EXPECT_EQ(types.declare_ctor(boolean, {}), 0u);
+    EXPECT_EQ(types.declare_ctor(nat, {}), 0u);
+    EXPECT_EQ(types.declare_ctor(boolean, {}), 1u);
+    EXPECT_EQ(types.def(boolean).ctors.size(), 2u);
+    EXPECT_EQ(types.def(nat).ctors.size(), 1u);
 }
 
-TEST_F(SchemaTest, ASchemaWithoutTypesIsEmpty) {
-    const schema empty(std::vector<type_def>{});
-    EXPECT_EQ(empty.type_count(), 0u);
+TEST_F(SchemaTest, ConstructorsKeepTheirArgumentTypes) {
+    const type_id nat = types.declare_type();
+    const type_id list = types.declare_type();
+    types.declare_ctor(list, {});
+    const size_t cons = types.declare_ctor(list, {nat, list});
+    EXPECT_EQ(types.def(list).ctors[cons].arg_types, (std::vector<type_id>{nat, list}));
 }
 
-TEST_F(SchemaTest, ATypeWithoutConstructorsIsAllowed) {
-    const schema uninhabited(std::vector<type_def>{type_def{.ctors = {}}});
-    EXPECT_TRUE(uninhabited.def(0).ctors.empty());
+TEST_F(SchemaTest, ATypeMayReferToItself) {
+    const type_id nat = types.declare_type();
+    types.declare_ctor(nat, {});
+    const size_t suc = types.declare_ctor(nat, {nat});
+    EXPECT_EQ(types.def(nat).ctors[suc].arg_types, (std::vector<type_id>{nat}));
 }
 
-TEST_F(SchemaTest, TheTypesAreHeldNotReferredTo) {
-    std::vector<type_def> given{boolean};
-    const schema held(given);
-    given[0].ctors.clear();
-    EXPECT_EQ(held.def(0), boolean);
+TEST_F(SchemaTest, TypesMayReferToEachOther) {
+    const type_id tree = types.declare_type();
+    const type_id forest = types.declare_type();
+    const size_t node = types.declare_ctor(tree, {forest});
+    const size_t cons = types.declare_ctor(forest, {tree, forest});
+    EXPECT_EQ(types.def(tree).ctors[node].arg_types, (std::vector<type_id>{forest}));
+    EXPECT_EQ(types.def(forest).ctors[cons].arg_types, (std::vector<type_id>{tree, forest}));
+}
+
+TEST_F(SchemaTest, AConstructorOfAnUndeclaredTypeIsRejected) {
+    EXPECT_THROW(types.declare_ctor(0, {}), std::logic_error);
+}
+
+TEST_F(SchemaTest, AnArgumentOfAnUndeclaredTypeIsRejected) {
+    const type_id boolean = types.declare_type();
+    EXPECT_THROW(types.declare_ctor(boolean, {1}), std::logic_error);
 }

@@ -13,8 +13,8 @@ falcon_runtime::falcon_runtime(
     manifest_.constant_seeder_.seed(constants);
 }
 
-void falcon_runtime::next() {
-    manifest_.mcts_episode_.run(training_);
+episode_outcome falcon_runtime::next() {
+    return manifest_.mcts_episode_.run(training_);
 }
 
 const std::optional<model_node>& falcon_runtime::best_model() const {

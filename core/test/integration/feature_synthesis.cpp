@@ -120,18 +120,16 @@ struct FeatureSynthesisIntegrationTest : public ::testing::Test {
 };
 
 FeatureSynthesisIntegrationTest::FeatureSynthesisIntegrationTest()
-    : types(std::vector<type_def>{
-              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}},
-              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}}})
+    : types()
     , values()
-    , boolean(0)
-    , false_ctor(0)
-    , true_ctor(1)
+    , boolean(types.declare_type())
+    , false_ctor(types.declare_ctor(boolean, {}))
+    , true_ctor(types.declare_ctor(boolean, {}))
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
-    , colour(1)
-    , red(values.make(0, {}))
-    , green(values.make(1, {}))
+    , colour(types.declare_type())
+    , red(values.make(types.declare_ctor(colour, {}), {}))
+    , green(values.make(types.declare_ctor(colour, {}), {}))
     , equality{
           .type = primitive_type{.arg_types = {boolean, boolean}, .result_type = boolean},
           .apply = value_equality<value_pool>(values, false_ctor, true_ctor)}

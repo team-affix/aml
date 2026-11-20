@@ -13,8 +13,8 @@ hawk_runtime::hawk_runtime(
     manifest_.constant_seeder_.seed(constants);
 }
 
-void hawk_runtime::next() {
-    manifest_.mcts_episode_.run(training_);
+episode_outcome hawk_runtime::next() {
+    return manifest_.mcts_episode_.run(training_);
 }
 
 const std::optional<model_node>& hawk_runtime::best_model() const {
