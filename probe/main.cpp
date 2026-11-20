@@ -24,9 +24,6 @@
 
 namespace {
 
-const size_t k_false_tag = 0;
-const size_t k_true_tag = 1;
-const type_id k_boolean = 0;
 const prim_id k_xor = 0;
 const char* const k_primitive_names[] = {"xor", "and", "or", "not"};
 const size_t k_xor_buckets = 6;
@@ -82,23 +79,23 @@ size_t count_xors(const feature& expression) {
     return total;
 }
 
-std::string show_feature(const feature& expression) {
+std::string show_feature(const feature& expression, size_t true_tag) {
     if (const feature::var* variable = std::get_if<feature::var>(&expression.content))
         return "x" + std::to_string(variable->index);
     if (const feature::constant* constant = std::get_if<feature::constant>(&expression.content))
-        return constant->literal->tag == k_true_tag ? "T" : "F";
+        return constant->literal->tag == true_tag ? "T" : "F";
     const feature::app& application = std::get<feature::app>(expression.content);
     std::string text = std::string(k_primitive_names[application.prim]) + "(";
     for (size_t index = 0; index < application.args.size(); ++index)
-        text += (index == 0 ? "" : ", ") + show_feature(application.args[index]);
+        text += (index == 0 ? "" : ", ") + show_feature(application.args[index], true_tag);
     return text + ")";
 }
 
-std::string show_root(const model_node& model) {
+std::string show_root(const model_node& model, size_t true_tag) {
     if (const model_node::match* match = std::get_if<model_node::match>(&model.content))
-        return "match " + show_feature(match->scrutinee);
+        return "match " + show_feature(match->scrutinee, true_tag);
     if (const model_node::leaf* leaf = std::get_if<model_node::leaf>(&model.content))
-        return "leaf " + show_feature(leaf->output);
+        return "leaf " + show_feature(leaf->output, true_tag);
     return "empty";
 }
 
@@ -109,23 +106,23 @@ size_t root_xors(const model_node& model) {
     return count_xors(match->scrutinee);
 }
 
-void print_model(const model_node& node, size_t depth, size_t max_lines, size_t& lines) {
+void print_model(const model_node& node, size_t true_tag, size_t depth, size_t max_lines, size_t& lines) {
     if (lines >= max_lines)
         return;
     const std::string indent(2 * depth + 2, ' ');
     ++lines;
     const model_node::match* match = std::get_if<model_node::match>(&node.content);
     if (match == nullptr) {
-        std::printf("%s%s\n", indent.c_str(), show_root(node).c_str());
+        std::printf("%s%s\n", indent.c_str(), show_root(node, true_tag).c_str());
         return;
     }
-    std::printf("%smatch %s\n", indent.c_str(), show_feature(match->scrutinee).c_str());
+    std::printf("%smatch %s\n", indent.c_str(), show_feature(match->scrutinee, true_tag).c_str());
     for (size_t branch = 0; branch < match->branches.size(); ++branch) {
         if (lines >= max_lines)
             return;
         ++lines;
-        std::printf("%s  %s ->\n", indent.c_str(), branch == k_true_tag ? "T" : "F");
-        print_model(match->branches[branch], depth + 2, max_lines, lines);
+        std::printf("%s  %s ->\n", indent.c_str(), branch == true_tag ? "T" : "F");
+        print_model(match->branches[branch], true_tag, depth + 2, max_lines, lines);
     }
 }
 
@@ -147,12 +144,10 @@ void print_tally(const root_tally& tally) {
                     100.0 * static_cast<double>(tally.by_xors[bucket]) / episodes);
 }
 
-bin parity_training(value_pool& values, size_t bits) {
-    const value* falsity = values.make(k_false_tag, {});
-    const value* truth = values.make(k_true_tag, {});
-    bin training{.inputs = {}, .labels = typed_column{.type = k_boolean, .cells = {}}};
+bin parity_training(type_id boolean, const value* falsity, const value* truth, size_t bits) {
+    bin training{.inputs = {}, .labels = typed_column{.type = boolean, .cells = {}}};
     for (size_t bit = 0; bit < bits; ++bit)
-        training.inputs.push_back(typed_column{.type = k_boolean, .cells = {}});
+        training.inputs.push_back(typed_column{.type = boolean, .cells = {}});
     for (size_t row = 0; row < (size_t{1} << bits); ++row) {
         bool parity = false;
         for (size_t bit = 0; bit < bits; ++bit) {
@@ -174,19 +169,25 @@ double seconds_since(std::chrono::steady_clock::time_point start) {
 int main() {
     const size_t commit_visits = k_commit_visits == 0 ? std::numeric_limits<size_t>::max() : k_commit_visits;
 
-    schema types(std::vector<type_def>{type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}}});
+    schema types;
+    const type_id boolean = types.declare_type();
+    const size_t false_tag = types.declare_ctor(boolean, {});
+    const size_t true_tag = types.declare_ctor(boolean, {});
+
     value_pool values;
-    const primitive_type binary{.arg_types = {k_boolean, k_boolean}, .result_type = k_boolean};
+    const value* falsity = values.make(false_tag, {});
+    const value* truth = values.make(true_tag, {});
+    const primitive_type binary{.arg_types = {boolean, boolean}, .result_type = boolean};
     const std::vector<typed_primitive> primitives{
-        {.type = binary, .apply = bool_xor<value_pool>(values, k_false_tag, k_true_tag)},
-        {.type = binary, .apply = bool_and<value_pool>(values, k_false_tag, k_true_tag)},
-        {.type = binary, .apply = bool_or<value_pool>(values, k_false_tag, k_true_tag)},
-        {.type = {.arg_types = {k_boolean}, .result_type = k_boolean},
-         .apply = bool_not<value_pool>(values, k_false_tag, k_true_tag)}};
+        {.type = binary, .apply = bool_xor<value_pool>(values, false_tag, true_tag)},
+        {.type = binary, .apply = bool_and<value_pool>(values, false_tag, true_tag)},
+        {.type = binary, .apply = bool_or<value_pool>(values, false_tag, true_tag)},
+        {.type = {.arg_types = {boolean}, .result_type = boolean},
+         .apply = bool_not<value_pool>(values, false_tag, true_tag)}};
     const std::vector<typed_constant> constants{
-        {.type = k_boolean, .literal = values.make(k_false_tag, {})},
-        {.type = k_boolean, .literal = values.make(k_true_tag, {})}};
-    const bin training = parity_training(values, k_bits);
+        {.type = boolean, .literal = falsity},
+        {.type = boolean, .literal = truth}};
+    const bin training = parity_training(boolean, falsity, truth, k_bits);
 
     // The manifest directly, not falcon_runtime: the probe also watches the commitments, which no runtime exposes.
     falcon_manifest manifest(types, values, primitives,
@@ -223,7 +224,7 @@ int main() {
         if (manifest.best_model_tracker_.best_cost() < best_cost) {
             best_cost = manifest.best_model_tracker_.best_cost();
             std::printf("  new best %zu at %.1fs (episode %zu): %s\n", best_cost, elapsed, episode,
-                        show_root(manifest.best_model_tracker_.best_model().value()).c_str());
+                        show_root(manifest.best_model_tracker_.best_model().value(), true_tag).c_str());
         }
         if (manifest.commitments_.commitment_count() != commitments) {
             commitments = manifest.commitments_.commitment_count();
@@ -265,7 +266,7 @@ int main() {
         return 0;
     std::printf("Best model, cost %zu:\n", manifest.best_model_tracker_.best_cost());
     size_t lines = 0;
-    print_model(manifest.best_model_tracker_.best_model().value(), 0, k_model_lines, lines);
+    print_model(manifest.best_model_tracker_.best_model().value(), true_tag, 0, k_model_lines, lines);
     if (lines >= k_model_lines)
         std::printf("  (cut at %zu lines; raise k_model_lines to show more)\n", k_model_lines);
     return 0;

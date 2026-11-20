@@ -10,7 +10,10 @@ and are minimal in symbolic description length. Fit comes first; among models th
   type: columns do (`typed_column`, for the inputs and the labels), so comparisons that must respect types compare
   typed columns.
 - **User types are data, never C++ types.** A user type is a `type_def`: its constructors (`ctor_def`), each with its
-  argument types. `schema` is built once from all of them; a type's id is its position, so types can be recursive.
+  argument types. `schema` is the authority on type ids and constructor tags: `declare_type()` gives a type's id, then
+  `declare_ctor(type, arg_types)` gives each constructor's tag. Declaring types before their constructors allows
+  recursive and mutually recursive types. Code that sets up types (tests with real types, the probe) takes ids and tags
+  from the schema rather than writing them as literals.
   Core knows no particular user type (no bool, no nat); anything specific to one lives with the user (the tests).
 - **Primitives and constants:** a `primitive` is a `std::function` from argument values to a result value, made
   through the solver's value pool; a `typed_primitive` pairs it with its `primitive_type` (argument and result

@@ -32,16 +32,14 @@ struct RazorIntegrationTest : public ::testing::Test {
 };
 
 RazorIntegrationTest::RazorIntegrationTest()
-    : types(std::vector<type_def>{
-              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}},
-              type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {1}}}}})
+    : types()
     , values()
-    , boolean(0)
-    , false_ctor(0)
-    , true_ctor(1)
-    , nat(1)
-    , zero_ctor(0)
-    , suc_ctor(1)
+    , boolean(types.declare_type())
+    , false_ctor(types.declare_ctor(boolean, {}))
+    , true_ctor(types.declare_ctor(boolean, {}))
+    , nat(types.declare_type())
+    , zero_ctor(types.declare_ctor(nat, {}))
+    , suc_ctor(types.declare_ctor(nat, {nat}))
     , falsity(values.make(false_ctor, {}))
     , truth(values.make(true_ctor, {}))
     , bool_equality{
