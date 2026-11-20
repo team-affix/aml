@@ -95,6 +95,9 @@ docs/                                      design notes (see docs/continuous-doc
     (`commitment_store`, `committing_policy`, `committed_policy`, `visit_threshold`; the best path from
     `choice_logger`, `episode_choice_log`, `best_path_recorder` and `best_path_store`, read by
     `best_path_child_finder`). Commitments are never undone.
+  - **Falcon** (`falcon_*`): Osprey without splitting choices: every choice (a primitive, each argument, a match's
+    feature, a funnel's bound argument) is one MCTS choice among all its options, with no two-way splitting and no
+    order tiers; stopping or continuing synthesis stays a two-way choice. Commits follow the best episode's path.
 
 ### Per-bin columns
 
