@@ -1,0 +1,205 @@
+beta 0.25, A 0.1, r 0.1
+Heron on 10-bit parity (1024 rows): max applications 9, c 4, seed 1
+  new best 2247 at 0.0s (episode 1): match x4
+  new best 2215 at 0.0s (episode 5): match x7
+  new best 2128 at 0.1s (episode 22): match x3
+  new best 2038 at 0.3s (episode 117): match xor(x9, x8)
+[    10s] episodes 3510 (351/s) | rss 7 MB | best 2038 | commitments 0 | last 10s: mean cost 2234 | root xors 0:99.3% 1:0.7% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+  new best 2013 at 19.6s (episode 6854): match xor(x6, x5)
+[    20s] episodes 6994 (350/s) | rss 8 MB | best 2013 | commitments 0 | last 10s: mean cost 2234 | root xors 0:99.7% 1:0.3% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+  new best 2004 at 21.2s (episode 7429): match x5
+[    30s] episodes 10501 (350/s) | rss 8 MB | best 2004 | commitments 0 | last 10s: mean cost 2234 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[    40s] episodes 13893 (347/s) | rss 9 MB | best 2004 | commitments 0 | last 10s: mean cost 2234 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[    50s] episodes 17365 (347/s) | rss 9 MB | best 2004 | commitments 0 | last 10s: mean cost 2234 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+  new best 1960 at 55.3s (episode 19220): match xor(x4, xor(x9, x2))
+[    60s] episodes 20854 (348/s) | rss 10 MB | best 1960 | commitments 0 | last 10s: mean cost 2233 | root xors 0:99.8% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[    70s] episodes 24254 (346/s) | rss 10 MB | best 1960 | commitments 0 | last 10s: mean cost 2235 | root xors 0:99.9% 1:0.1% 2:0.1% 3:0.0% 4:0.0% 5+:0.0%
+[    80s] episodes 27533 (344/s) | rss 11 MB | best 1960 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[    90s] episodes 30887 (343/s) | rss 12 MB | best 1960 | commitments 0 | last 10s: mean cost 2234 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   100s] episodes 34193 (342/s) | rss 12 MB | best 1960 | commitments 0 | last 10s: mean cost 2235 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   110s] episodes 37650 (342/s) | rss 13 MB | best 1960 | commitments 0 | last 10s: mean cost 2235 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   120s] episodes 41098 (342/s) | rss 14 MB | best 1960 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   130s] episodes 44566 (343/s) | rss 15 MB | best 1960 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   140s] episodes 48042 (343/s) | rss 15 MB | best 1960 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   150s] episodes 51395 (343/s) | rss 16 MB | best 1960 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   160s] episodes 54890 (343/s) | rss 16 MB | best 1960 | commitments 0 | last 10s: mean cost 2235 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   170s] episodes 58385 (343/s) | rss 17 MB | best 1960 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+  new best 1847 at 177.9s (episode 61117): match xor(x7, xor(x5, x1))
+[   180s] episodes 61841 (344/s) | rss 18 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:99.9% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   190s] episodes 65315 (344/s) | rss 19 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   200s] episodes 68772 (344/s) | rss 19 MB | best 1847 | commitments 0 | last 10s: mean cost 2234 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   210s] episodes 72108 (343/s) | rss 20 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   220s] episodes 75554 (343/s) | rss 20 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   230s] episodes 79056 (344/s) | rss 21 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   240s] episodes 82547 (344/s) | rss 22 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   250s] episodes 86025 (344/s) | rss 24 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   260s] episodes 89518 (344/s) | rss 24 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:99.9% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   270s] episodes 92966 (344/s) | rss 25 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   280s] episodes 96458 (344/s) | rss 26 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   290s] episodes 99942 (345/s) | rss 26 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   300s] episodes 103421 (345/s) | rss 27 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   310s] episodes 106903 (345/s) | rss 28 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   320s] episodes 110381 (345/s) | rss 29 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   330s] episodes 113856 (345/s) | rss 29 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   340s] episodes 117344 (345/s) | rss 30 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   350s] episodes 120815 (345/s) | rss 31 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   360s] episodes 124299 (345/s) | rss 31 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   370s] episodes 127788 (345/s) | rss 32 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   380s] episodes 131136 (345/s) | rss 33 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   390s] episodes 134447 (345/s) | rss 33 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   400s] episodes 137881 (345/s) | rss 34 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   410s] episodes 141344 (345/s) | rss 34 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   420s] episodes 144731 (345/s) | rss 35 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   430s] episodes 148049 (344/s) | rss 36 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   440s] episodes 151447 (344/s) | rss 36 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   450s] episodes 154755 (344/s) | rss 37 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   460s] episodes 158065 (344/s) | rss 38 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   470s] episodes 161511 (344/s) | rss 38 MB | best 1847 | commitments 0 | last 10s: mean cost 2235 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   480s] episodes 164824 (343/s) | rss 39 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   490s] episodes 168143 (343/s) | rss 39 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   500s] episodes 171455 (343/s) | rss 40 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   510s] episodes 174807 (343/s) | rss 43 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   520s] episodes 178141 (343/s) | rss 44 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   530s] episodes 181464 (342/s) | rss 44 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   540s] episodes 184783 (342/s) | rss 45 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   550s] episodes 188088 (342/s) | rss 46 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   560s] episodes 191425 (342/s) | rss 47 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   570s] episodes 194862 (342/s) | rss 48 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   580s] episodes 198177 (342/s) | rss 48 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   590s] episodes 201587 (342/s) | rss 49 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   600s] episodes 204957 (342/s) | rss 50 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   610s] episodes 208427 (342/s) | rss 50 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   620s] episodes 211920 (342/s) | rss 51 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   630s] episodes 215390 (342/s) | rss 51 MB | best 1847 | commitments 0 | last 10s: mean cost 2236 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   640s] episodes 218738 (342/s) | rss 52 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   650s] episodes 222229 (342/s) | rss 53 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   660s] episodes 225671 (342/s) | rss 53 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   670s] episodes 228990 (342/s) | rss 54 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   680s] episodes 232312 (342/s) | rss 55 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   690s] episodes 235700 (342/s) | rss 55 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   700s] episodes 239016 (341/s) | rss 56 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   710s] episodes 242383 (341/s) | rss 56 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   720s] episodes 245806 (341/s) | rss 57 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   730s] episodes 249118 (341/s) | rss 58 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   740s] episodes 252423 (341/s) | rss 58 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   750s] episodes 255738 (341/s) | rss 59 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   760s] episodes 259048 (341/s) | rss 59 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   770s] episodes 262458 (341/s) | rss 60 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   780s] episodes 265955 (341/s) | rss 61 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   790s] episodes 269453 (341/s) | rss 61 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   800s] episodes 272861 (341/s) | rss 62 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   810s] episodes 276174 (341/s) | rss 63 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   820s] episodes 279476 (341/s) | rss 63 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   830s] episodes 282798 (341/s) | rss 64 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   840s] episodes 286106 (341/s) | rss 65 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   850s] episodes 289425 (340/s) | rss 65 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   860s] episodes 292727 (340/s) | rss 66 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   870s] episodes 296030 (340/s) | rss 66 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   880s] episodes 299355 (340/s) | rss 67 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   890s] episodes 302828 (340/s) | rss 67 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   900s] episodes 306311 (340/s) | rss 68 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   910s] episodes 309728 (340/s) | rss 69 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   920s] episodes 313079 (340/s) | rss 69 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   930s] episodes 316550 (340/s) | rss 70 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   940s] episodes 320003 (340/s) | rss 71 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   950s] episodes 323460 (340/s) | rss 71 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   960s] episodes 326823 (340/s) | rss 72 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   970s] episodes 330131 (340/s) | rss 73 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   980s] episodes 333441 (340/s) | rss 73 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[   990s] episodes 336792 (340/s) | rss 74 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1000s] episodes 340189 (340/s) | rss 74 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1010s] episodes 343640 (340/s) | rss 75 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1020s] episodes 347042 (340/s) | rss 76 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1030s] episodes 350358 (340/s) | rss 76 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1040s] episodes 353648 (340/s) | rss 82 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1050s] episodes 357103 (340/s) | rss 83 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1060s] episodes 360520 (340/s) | rss 83 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1070s] episodes 363834 (340/s) | rss 84 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1080s] episodes 367133 (340/s) | rss 85 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1090s] episodes 370458 (340/s) | rss 85 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1100s] episodes 373750 (340/s) | rss 88 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1110s] episodes 377066 (340/s) | rss 88 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1120s] episodes 380372 (340/s) | rss 89 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1130s] episodes 383678 (340/s) | rss 89 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1140s] episodes 386987 (339/s) | rss 90 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1150s] episodes 390323 (339/s) | rss 91 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1160s] episodes 393630 (339/s) | rss 92 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1170s] episodes 396941 (339/s) | rss 92 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1180s] episodes 400234 (339/s) | rss 93 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1190s] episodes 403550 (339/s) | rss 93 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1200s] episodes 406841 (339/s) | rss 94 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1210s] episodes 410283 (339/s) | rss 94 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1220s] episodes 413772 (339/s) | rss 95 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1230s] episodes 417249 (339/s) | rss 96 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1240s] episodes 420728 (339/s) | rss 96 MB | best 1847 | commitments 0 | last 10s: mean cost 2238 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1250s] episodes 424199 (339/s) | rss 97 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1260s] episodes 427688 (339/s) | rss 98 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1270s] episodes 431164 (339/s) | rss 98 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1280s] episodes 434653 (340/s) | rss 99 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1290s] episodes 438129 (340/s) | rss 99 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1300s] episodes 441594 (340/s) | rss 100 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1310s] episodes 445069 (340/s) | rss 101 MB | best 1847 | commitments 0 | last 10s: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1320s] episodes 448517 (340/s) | rss 101 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1330s] episodes 451930 (340/s) | rss 102 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:99.9% 1:0.1% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1340s] episodes 455244 (340/s) | rss 103 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1350s] episodes 458544 (340/s) | rss 103 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1360s] episodes 461850 (340/s) | rss 104 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1370s] episodes 465158 (340/s) | rss 104 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1380s] episodes 468470 (339/s) | rss 105 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1390s] episodes 471786 (339/s) | rss 106 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1400s] episodes 475111 (339/s) | rss 106 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1410s] episodes 478425 (339/s) | rss 107 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1420s] episodes 481724 (339/s) | rss 107 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1430s] episodes 485014 (339/s) | rss 108 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1440s] episodes 488337 (339/s) | rss 109 MB | best 1847 | commitments 0 | last 10s: mean cost 2241 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1450s] episodes 491653 (339/s) | rss 109 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1460s] episodes 494963 (339/s) | rss 110 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1470s] episodes 498348 (339/s) | rss 111 MB | best 1847 | commitments 0 | last 10s: mean cost 2239 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1480s] episodes 501671 (339/s) | rss 111 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1490s] episodes 504992 (339/s) | rss 112 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+[  1500s] episodes 508308 (339/s) | rss 112 MB | best 1847 | commitments 0 | last 10s: mean cost 2240 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+
+Stopped (time limit) after 1500.0s: 508308 episodes, 0 commitments, rss 112 MB
+Whole run: mean cost 2237 | root xors 0:100.0% 1:0.0% 2:0.0% 3:0.0% 4:0.0% 5+:0.0%
+Best model, cost 1847:
+  match xor(x7, xor(x5, x1))
+    F ->
+      match x9
+        F ->
+          match x8
+            F ->
+              match x6
+                F ->
+                  match x4
+                    F ->
+                      match x2
+                        F ->
+                          match x1
+                            F ->
+                              match x5
+                                F ->
+                                  match not(x3)
+                                    F ->
+                                      match x0
+                                        F ->
+                                          leaf x3
+                                        T ->
+                                          leaf x1
+                                    T ->
+                                      leaf x0
+                                T ->
+                                  match x3
+                                    F ->
+                                      leaf x0
+                                    T ->
+                                      match x0
+                                        F ->
+                                          leaf x3
+                                        T ->
+                                          leaf x1
+                            T ->
+                              match x7
+                                F ->
+                                  match x0
+                                    F ->
+  (cut at 40 lines; raise k_model_lines to show more)

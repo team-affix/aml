@@ -56,15 +56,18 @@ first five minutes.
 |---|---|---|---|---|
 | Heron (β 0.25, A 0.01, r 0.5) | 4 | | 1 (100%) | 1667 |
 | Kestrel (5-minute run) | 2 | 1 | 3 (100%, from minute 2) | 771 |
-| Kestrel | 3 | 1 | 5 (100%, from minute 9) | 357 |
+| Kestrel | 3 | 1 | 5 (99.9%; 100% from minute 9) | 357 |
 | Kestrel | 4 | 1 | 5 (100%, from minute 12) | 274 |
 | Kestrel | 5 | 1 | 6 (47%), still moving | 103 |
 
 A larger c settles later and deeper.
 
+The whole investigation that led here, with every run and its log, is in [investigation.md](investigation.md).
+
 ## Why mixmax
 
-Building a deeper root takes a chain of choices: continue synthesis, pick xor, pick the chain so far, pick an unused
+This is an interpretation of the measurements in [investigation.md](investigation.md), not something tested on its
+own. Building a deeper root takes a chain of choices: continue synthesis, pick xor, pick the chain so far, pick an unused
 bit. Under plain UCT a node is read by its mean, so "continue synthesis" after a chain averages the one good extension
 with the many poor ones around it and loses to stopping, and the good extension is never visited enough to be found.
 Mixmax reads a node as (1 − w) · mean + w · best, so once one episode extends the chain, every node on its path is

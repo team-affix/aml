@@ -1,0 +1,65 @@
+best weight 1
+  new best 2283 at 0.0s (episode 1) [0 xors]: match x4
+  new best 2224 at 0.0s (episode 4) [0 xors]: match or(x0, and(x3, x5))
+  new best 2075 at 0.1s (episode 22) [1 xors]: match xor(x8, x0)
+  new best 1965 at 0.3s (episode 111) [1 xors]: match xor(x3, x2)
+  new best 1964 at 1.8s (episode 637) [3 xors]: match xor(xor(x0, xor(x5, x6)), x3)
+  new best 1928 at 3.1s (episode 1068) [1 xors]: match xor(x6, x2)
+  new best 1898 at 3.6s (episode 1252) [2 xors]: match xor(xor(x8, x0), x5)
+  new best 1897 at 5.4s (episode 1845) [1 xors]: match xor(x1, x9)
+  new best 1588 at 9.2s (episode 3133) [3 xors]: match xor(x1, xor(x9, xor(x6, x4)))
+[    60s] episodes 19390 (323/s) | rss 11 MB | best 1588 | commitments 0 | last 60s: mean cost 2233 | root xors 0:46.2% 1:41.2% 2:10.3% 3:1.9% 4:0.1% 5:0.2% 6:0.1% 7:0.0% 9:0.0%
+  new best 1471 at 72.8s (episode 23561) [3 xors]: match xor(x3, xor(x1, xor(x6, x4)))
+  new best 1390 at 76.9s (episode 24920) [4 xors]: match xor(xor(x0, xor(x1, xor(x6, x4))), x3)
+  new best 1274 at 99.9s (episode 32680) [4 xors]: match xor(xor(xor(x1, xor(x6, x4)), x5), x0)
+[   120s] episodes 39473 (329/s) | rss 16 MB | best 1274 | commitments 0 | last 60s: mean cost 2128 | root xors 0:18.5% 1:21.1% 2:32.4% 3:22.1% 4:2.0% 5:2.7% 6:0.5% 7:0.2% 8:0.3% 9:0.1% 10+:0.1%
+[   180s] episodes 59832 (332/s) | rss 23 MB | best 1274 | commitments 0 | last 60s: mean cost 2084 | root xors 0:13.1% 1:15.4% 2:25.7% 3:34.7% 4:4.2% 5:4.6% 6:0.7% 7:0.6% 8:0.5% 9:0.2% 10+:0.2%
+  new best 1241 at 217.8s (episode 72301) [3 xors]: match xor(xor(x1, xor(x6, x4)), x0)
+  new best 1181 at 232.0s (episode 77348) [4 xors]: match xor(x2, xor(xor(x1, xor(x6, x4)), x0))
+  new best 1048 at 238.7s (episode 79626) [4 xors]: match xor(x5, xor(xor(x1, xor(x6, x4)), x0))
+[   240s] episodes 80086 (334/s) | rss 28 MB | best 1048 | commitments 0 | last 60s: mean cost 1999 | root xors 0:7.2% 1:8.2% 2:18.4% 3:55.8% 4:4.3% 5:4.1% 6:0.7% 7:0.5% 8:0.4% 9:0.2% 10+:0.2%
+  new best 1007 at 277.6s (episode 93111) [4 xors]: match xor(x2, xor(xor(x1, xor(x6, x4)), x0))
+  new best 989 at 280.6s (episode 94175) [5 xors]: match xor(xor(x2, xor(xor(x1, xor(x6, x4)), x0)), x9)
+  new best 928 at 283.2s (episode 95103) [5 xors]: match xor(xor(x2, xor(xor(x1, xor(x6, x4)), x0)), x5)
+[   300s] episodes 101068 (337/s) | rss 35 MB | best 928 | commitments 0 | last 60s: mean cost 1926 | root xors 0:5.0% 1:5.6% 2:12.6% 3:31.6% 4:31.4% 5:5.5% 6:2.4% 7:3.7% 8:0.7% 9:0.4% 10+:1.0%
+[   360s] episodes 122508 (340/s) | rss 40 MB | best 928 | commitments 0 | last 60s: mean cost 1845 | root xors 0:3.4% 1:3.6% 2:7.9% 3:21.7% 4:51.9% 5:3.3% 6:2.2% 7:4.1% 8:0.4% 9:0.6% 10+:1.0%
+  new best 889 at 364.1s (episode 123982) [5 xors]: match xor(xor(x2, xor(xor(x1, xor(x6, x4)), x0)), x9)
+  new best 870 at 374.9s (episode 127796) [4 xors]: match xor(x2, xor(xor(x1, xor(x6, x4)), x0))
+[   420s] episodes 143556 (342/s) | rss 45 MB | best 870 | commitments 0 | last 60s: mean cost 1892 | root xors 0:4.9% 1:4.9% 2:11.2% 3:28.5% 4:35.7% 5:6.0% 6:2.6% 7:3.7% 8:0.7% 9:0.7% 10+:1.1%
+  new best 851 at 430.5s (episode 147067) [4 xors]: match xor(x3, xor(xor(x1, xor(x6, x4)), x0))
+  new best 765 at 460.3s (episode 157186) [5 xors]: match xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x5)
+[   480s] episodes 163928 (342/s) | rss 51 MB | best 765 | commitments 0 | last 60s: mean cost 1844 | root xors 0:2.9% 1:3.1% 2:7.1% 3:16.4% 4:42.1% 5:12.0% 6:4.4% 7:6.5% 8:1.1% 9:1.7% 10+:2.7%
+  new best 655 at 482.9s (episode 164920) [5 xors]: match xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x8)
+  new best 598 at 513.0s (episode 175664) [5 xors]: match xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x2)
+  new best 590 at 517.6s (episode 177432) [5 xors]: match xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x2)
+  new best 558 at 525.6s (episode 180528) [5 xors]: match xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x2)
+[   540s] episodes 186186 (345/s) | rss 60 MB | best 558 | commitments 0 | last 60s: mean cost 1631 | root xors 0:1.3% 1:1.4% 2:3.2% 3:7.4% 4:20.5% 5:55.3% 6:1.5% 7:2.3% 8:1.8% 9:3.6% 10+:1.7%
+[   600s] episodes 209269 (349/s) | rss 65 MB | best 558 | commitments 0 | last 60s: mean cost 1576 | root xors 0:0.9% 1:1.1% 2:2.4% 3:5.4% 4:14.1% 5:64.8% 6:1.6% 7:2.2% 8:2.0% 9:3.6% 10+:2.0%
+[   660s] episodes 232617 (352/s) | rss 71 MB | best 558 | commitments 0 | last 60s: mean cost 1543 | root xors 0:0.8% 1:0.8% 2:1.9% 3:4.5% 4:14.7% 5:68.7% 6:1.1% 7:1.5% 8:1.5% 9:2.9% 10+:1.5%
+[   720s] episodes 256016 (356/s) | rss 76 MB | best 558 | commitments 0 | last 60s: mean cost 1520 | root xors 0:0.8% 1:0.8% 2:1.9% 3:3.7% 4:11.7% 5:73.1% 6:0.9% 7:1.5% 8:1.5% 9:2.8% 10+:1.4%
+  new best 496 at 770.5s (episode 274977) [5 xors]: match not(xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x2))
+  new best 478 at 779.1s (episode 278492) [5 xors]: match not(xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x2))
+[   780s] episodes 278881 (358/s) | rss 81 MB | best 478 | commitments 0 | last 60s: mean cost 1531 | root xors 0:0.7% 1:0.9% 2:1.7% 3:4.2% 4:11.7% 5:71.9% 6:0.9% 7:1.4% 8:1.6% 9:3.1% 10+:1.7%
+  new best 464 at 823.4s (episode 296053) [5 xors]: match not(xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x2))
+[   840s] episodes 302346 (360/s) | rss 89 MB | best 464 | commitments 0 | last 60s: mean cost 1499 | root xors 0:0.6% 1:0.6% 2:1.4% 3:3.2% 4:8.4% 5:77.2% 6:0.6% 7:1.0% 8:1.7% 9:3.1% 10+:2.1%
+  new best 433 at 876.6s (episode 315890) [5 xors]: match xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x2)
+[   900s] episodes 324568 (361/s) | rss 94 MB | best 433 | commitments 0 | last 60s: mean cost 1647 | root xors 0:1.2% 1:1.2% 2:2.6% 3:5.8% 4:13.6% 5:56.1% 6:2.5% 7:4.1% 8:3.5% 9:5.0% 10+:4.4%
+[   960s] episodes 346393 (361/s) | rss 99 MB | best 433 | commitments 0 | last 60s: mean cost 1704 | root xors 0:1.2% 1:1.0% 2:2.7% 3:5.6% 4:13.4% 5:46.0% 6:1.0% 7:2.7% 8:1.7% 9:17.4% 10+:7.3%
+[  1020s] episodes 368386 (361/s) | rss 113 MB | best 433 | commitments 0 | last 60s: mean cost 1665 | root xors 0:1.1% 1:1.1% 2:2.6% 3:5.2% 4:12.8% 5:53.4% 6:1.1% 7:5.2% 8:2.3% 9:9.1% 10+:6.0%
+  new best 375 at 1061.2s (episode 383693) [6 xors]: match xor(xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x2), x5)
+  new best 313 at 1063.8s (episode 384691) [6 xors]: match xor(xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x2), x5)
+[  1080s] episodes 390858 (362/s) | rss 118 MB | best 313 | commitments 0 | last 60s: mean cost 1609 | root xors 0:1.0% 1:1.2% 2:2.4% 3:5.6% 4:12.9% 5:38.8% 6:17.9% 7:3.7% 8:3.7% 9:5.8% 10+:7.0%
+  new best 273 at 1098.3s (episode 397747) [6 xors]: match xor(xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x2), x7)
+[  1140s] episodes 414505 (364/s) | rss 123 MB | best 273 | commitments 0 | last 60s: mean cost 1466 | root xors 0:0.8% 1:0.8% 2:1.7% 3:3.9% 4:8.9% 5:25.1% 6:42.0% 7:1.7% 8:2.3% 9:3.6% 10+:9.3%
+  new best 229 at 1145.3s (episode 416642) [7 xors]: match xor(xor(xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x2), x5), x8)
+  new best 161 at 1164.9s (episode 424682) [6 xors]: match xor(xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x2), x5)
+  new best 119 at 1197.1s (episode 439623) [6 xors]: match xor(xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x2), x5)
+[  1200s] episodes 440986 (367/s) | rss 129 MB | best 119 | commitments 0 | last 60s: mean cost 1218 | root xors 0:0.4% 1:0.4% 2:0.8% 3:1.7% 4:3.9% 5:11.3% 6:73.1% 7:0.5% 8:0.7% 9:1.3% 10+:6.0%
+[  1260s] episodes 468203 (372/s) | rss 136 MB | best 119 | commitments 0 | last 60s: mean cost 1142 | root xors 0:0.2% 1:0.2% 2:0.5% 3:1.0% 4:2.1% 5:5.8% 6:85.2% 7:0.2% 8:0.4% 9:0.8% 10+:3.7%
+[  1320s] episodes 494590 (375/s) | rss 142 MB | best 119 | commitments 0 | last 60s: mean cost 1228 | root xors 0:0.3% 1:0.3% 2:0.5% 3:1.2% 4:3.0% 5:24.5% 6:64.1% 7:0.6% 8:0.6% 9:0.8% 10+:4.1%
+[  1380s] episodes 521904 (378/s) | rss 149 MB | best 119 | commitments 0 | last 60s: mean cost 1156 | root xors 0:0.2% 1:0.2% 2:0.5% 3:1.0% 4:2.2% 5:8.8% 6:80.9% 7:1.0% 8:0.5% 9:1.0% 10+:3.7%
+  new best 103 at 1393.9s (episode 527333) [7 xors]: match xor(xor(xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x2), x9), x5)
+[  1440s] episodes 545611 (379/s) | rss 154 MB | best 103 | commitments 0 | last 60s: mean cost 1475 | root xors 0:0.7% 1:0.8% 2:1.5% 3:3.1% 4:7.0% 5:16.8% 6:44.2% 7:4.5% 8:2.4% 9:3.9% 10+:15.1%
+[  1500s] episodes 569740 (380/s) | rss 160 MB | best 103 | commitments 0 | last 60s: mean cost 1422 | root xors 0:0.5% 1:0.6% 2:1.2% 3:2.7% 4:6.1% 5:16.7% 6:47.0% 7:7.7% 8:2.0% 9:2.8% 10+:12.5%
+Stopped (time limit) after 1500.0s: 569740 episodes, 0 commitments, rss 160 MB
+Whole run: mean cost 1612 | root xors 0:4.1% 1:4.2% 2:5.7% 3:10.3% 4:13.1% 5:30.4% 6:21.5% 7:2.4% 8:1.4% 9:3.0% 10+:4.0%

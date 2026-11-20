@@ -1,0 +1,73 @@
+prims x
+beta 0.25, A 0.01, r 0.5
+beta 0.25, A 0.01, r 0.5
+Heron on 10-bit parity (1024 rows): max applications 9, c 1, seed 1
+  new best 2119 at 0.0s (episode 1) [0 xors]: match x4
+  new best 2083 at 0.0s (episode 8) [0 xors]: match x1
+  new best 2070 at 0.0s (episode 10) [0 xors]: match x3
+  new best 2011 at 0.0s (episode 11) [0 xors]: match x4
+  new best 1997 at 0.1s (episode 29) [0 xors]: match x8
+  new best 1983 at 0.1s (episode 41) [0 xors]: match x1
+  new best 1951 at 0.1s (episode 45) [1 xors]: match xor(x0, x4)
+  new best 1892 at 0.1s (episode 55) [0 xors]: match x0
+  new best 1831 at 0.3s (episode 126) [1 xors]: match xor(x9, x5)
+  new best 1826 at 0.6s (episode 287) [3 xors]: match xor(x9, xor(x1, xor(x7, x2)))
+  new best 1734 at 2.1s (episode 934) [2 xors]: match xor(x6, xor(x0, x8))
+  new best 1730 at 11.3s (episode 5148) [1 xors]: match xor(x9, x6)
+  new best 1687 at 11.8s (episode 5383) [1 xors]: match xor(x9, x6)
+  new best 1664 at 14.3s (episode 6539) [1 xors]: match xor(x9, x6)
+  new best 1656 at 16.3s (episode 7447) [1 xors]: match xor(x9, x6)
+[    20s] episodes 9154 (458/s) | rss 7 MB | best 1656 | commitments 0 | last 20s: mean cost 2034 | root xors 0:16.4% 1:83.5% 2:0.1% 3:0.0%
+  new best 1596 at 30.9s (episode 14158) [1 xors]: match xor(x9, x6)
+  new best 1589 at 39.2s (episode 17872) [1 xors]: match xor(x9, x6)
+[    40s] episodes 18253 (456/s) | rss 9 MB | best 1589 | commitments 0 | last 20s: mean cost 1944 | root xors 0:0.2% 1:99.8%
+  new best 1581 at 42.7s (episode 19483) [1 xors]: match xor(x9, x6)
+  new best 1544 at 43.7s (episode 19982) [1 xors]: match xor(x9, x6)
+  new best 1434 at 46.4s (episode 21213) [1 xors]: match xor(x9, x6)
+[    60s] episodes 27476 (458/s) | rss 11 MB | best 1434 | commitments 0 | last 20s: mean cost 1833 | root xors 0:0.2% 1:99.8%
+
+Stopped (time limit) after 60.0s: 27476 episodes, 0 commitments, rss 11 MB
+Whole run: mean cost 1937 | root xors 0:5.6% 1:94.4% 2:0.0% 3:0.0%
+Root: 27476 visits | stop 65 (mean -2126.0) | continue 27411 (mean -1936.3) | reward bounds of means: normalized stop 0.1468, continue 0.3806
+Best model, cost 1434:
+  match xor(x9, x6)
+    F ->
+      match x7
+        F ->
+          match x5
+            F ->
+              match xor(x2, x4)
+                F ->
+                  match x3
+                    F ->
+                      match x8
+                        F ->
+                          match x1
+                            F ->
+                              leaf x0
+                            T ->
+                              match x0
+                                F ->
+                                  leaf x1
+                                T ->
+                                  leaf x3
+                        T ->
+                          match x0
+                            F ->
+                              leaf xor(x1, T)
+                            T ->
+                              leaf x1
+                    T ->
+                      match xor(x8, x0)
+                        F ->
+                          match x1
+                            F ->
+                              leaf x3
+                            T ->
+                              leaf x5
+                        T ->
+                          leaf x1
+                T ->
+                  match xor(x3, x8)
+                    F ->
+  (cut at 40 lines; raise k_model_lines to show more)

@@ -1,0 +1,70 @@
+prims xaon
+beta 0.25, A 0.01, r 0.5
+Kite on 10-bit parity (1024 rows): max applications 9, c 4, seed 1
+  new best 2283 at 0.0s (episode 1) [0 xors]: match x4
+  new best 2224 at 0.0s (episode 4) [0 xors]: match or(x0, and(x3, x5))
+  new best 2201 at 0.0s (episode 9) [0 xors]: match x2
+  new best 2181 at 0.1s (episode 16) [0 xors]: match x2
+  new best 2164 at 0.1s (episode 25) [0 xors]: match x9
+  new best 2119 at 0.2s (episode 53) [0 xors]: match x8
+  new best 2104 at 0.4s (episode 148) [0 xors]: match x7
+  new best 2100 at 0.9s (episode 288) [0 xors]: match x6
+  new best 2097 at 1.0s (episode 337) [1 xors]: match xor(x3, x6)
+  new best 2073 at 1.0s (episode 347) [1 xors]: match xor(x8, x0)
+  new best 2044 at 1.1s (episode 371) [0 xors]: match x7
+  new best 2027 at 1.2s (episode 402) [1 xors]: match xor(x3, x9)
+  new best 1966 at 1.2s (episode 410) [1 xors]: match xor(x3, x2)
+  new best 1946 at 2.7s (episode 905) [2 xors]: match xor(x4, not(xor(x9, x0)))
+  new best 1916 at 4.8s (episode 1615) [1 xors]: match xor(x0, x3)
+  new best 1819 at 10.1s (episode 3386) [2 xors]: match xor(x4, xor(x6, x1))
+[    20s] episodes 6699 (335/s) | rss 7 MB | best 1819 | commitments 0 | last 20s: mean cost 2279 | root xors 0:89.0% 1:10.0% 2:0.6% 3:0.3% 4:0.1%
+  new best 1789 at 22.6s (episode 7612) [3 xors]: match xor(x0, not(xor(x1, xor(x3, x7))))
+  new best 1760 at 36.7s (episode 12497) [3 xors]: match xor(x6, not(xor(xor(x2, x8), x1)))
+[    40s] episodes 13652 (341/s) | rss 9 MB | best 1760 | commitments 0 | last 20s: mean cost 2274 | root xors 0:85.9% 1:12.8% 2:0.9% 3:0.4% 4:0.1%
+[    60s] episodes 20326 (339/s) | rss 10 MB | best 1760 | commitments 0 | last 20s: mean cost 2271 | root xors 0:83.1% 1:15.6% 2:1.0% 3:0.2% 4:0.1% 5:0.0%
+
+Stopped (time limit) after 60.0s: 20326 episodes, 0 commitments, rss 10 MB
+Whole run: mean cost 2275 | root xors 0:86.0% 1:12.8% 2:0.8% 3:0.3% 4:0.1% 5:0.0%
+Root: 20326 visits | stop 8220 (mean -2284.7) | continue 12106 (mean -2268.1) | reward bounds of means: normalized stop 0.2284, continue 0.2529
+Best model, cost 1760:
+  match xor(x6, not(xor(xor(x2, x8), x1)))
+    F ->
+      match not(x6)
+        F ->
+          match and(x8, x0)
+            F ->
+              match x5
+                F ->
+                  match x7
+                    F ->
+                      match x9
+                        F ->
+                          match x2
+                            F ->
+                              match not(x0)
+                                F ->
+                                  match x3
+                                    F ->
+                                      leaf x4
+                                    T ->
+                                      match x4
+                                        F ->
+                                          leaf x0
+                                        T ->
+                                          leaf x1
+                                T ->
+                                  match x4
+                                    F ->
+                                      leaf not(x3)
+                                    T ->
+                                      leaf x3
+                            T ->
+                              match x4
+                                F ->
+                                  match x3
+                                    F ->
+                                      match x8
+                                        F ->
+                                          match x0
+                                            F ->
+  (cut at 40 lines; raise k_model_lines to show more)

@@ -1,0 +1,70 @@
+prims xaon
+beta 0.25, A 0.01, r 0.5
+Kite with grafting on 10-bit parity (1024 rows): max applications 9, c 2, seed 1
+  new best 2283 at 0.0s (episode 1) [0 xors]: match x4
+  new best 2242 at 0.0s (episode 5) [0 xors]: match x8
+  new best 2236 at 0.0s (episode 6) [0 xors]: match not(x0)
+  new best 2185 at 0.0s (episode 13) [1 xors]: match not(xor(not(x9), x2))
+  new best 2183 at 0.1s (episode 27) [0 xors]: match x9
+  new best 2115 at 0.2s (episode 52) [0 xors]: match x0
+  new best 2106 at 0.4s (episode 135) [2 xors]: match xor(x6, xor(x9, T))
+  new best 2063 at 0.4s (episode 136) [1 xors]: match not(xor(x5, x1))
+  new best 2048 at 0.6s (episode 208) [1 xors]: match xor(x0, x5)
+  new best 2030 at 0.7s (episode 230) [1 xors]: match xor(x1, x3)
+  new best 1962 at 1.3s (episode 439) [1 xors]: match xor(x3, x1)
+  new best 1953 at 4.5s (episode 1551) [2 xors]: match xor(x3, xor(x0, x5))
+  new best 1946 at 4.6s (episode 1581) [1 xors]: match xor(x3, x9)
+  new best 1927 at 5.1s (episode 1766) [1 xors]: match not(xor(x8, x3))
+  new best 1920 at 5.8s (episode 2014) [2 xors]: match xor(x0, xor(x6, x8))
+  new best 1884 at 6.3s (episode 2181) [1 xors]: match xor(x8, x0)
+  new best 1837 at 6.6s (episode 2265) [2 xors]: match xor(xor(x0, x1), x5)
+  new best 1735 at 13.7s (episode 4768) [4 xors]: match xor(x9, xor(xor(x3, x1), xor(x4, x5)))
+[    30s] episodes 10441 (348/s) | rss 38 MB | best 1735 | commitments 0 | last 30s: mean cost 2272 | root xors 0:82.4% 1:16.1% 2:1.1% 3:0.3% 4:0.0% 5:0.0%
+[    60s] episodes 20774 (346/s) | rss 40 MB | best 1735 | commitments 0 | last 30s: mean cost 2252 | root xors 0:63.1% 1:33.7% 2:2.4% 3:0.6% 4:0.1% 5:0.1% 6:0.0% 7:0.0% 8:0.0%
+[    90s] episodes 31183 (346/s) | rss 42 MB | best 1735 | commitments 0 | last 30s: mean cost 2228 | root xors 0:44.9% 1:51.0% 2:3.1% 3:0.9% 4:0.1% 5:0.0% 6:0.0% 10+:0.0%
+
+Stopped (time limit) after 90.0s: 31183 episodes, 0 commitments, rss 42 MB
+Whole run: mean cost 2251 | root xors 0:63.5% 1:33.6% 2:2.2% 3:0.6% 4:0.1% 5:0.0% 6:0.0% 7:0.0% 8:0.0% 10+:0.0%
+Root: 31183 visits | stop 4908 (mean -2284.7) | continue 26275 (mean -2244.6) | reward bounds of means: normalized stop 0.2531, continue 0.3076
+Best model, cost 1735:
+  match xor(x9, xor(xor(x3, x1), xor(x4, x5)))
+    F ->
+      match x2
+        F ->
+          match x8
+            F ->
+              match not(x0)
+                F ->
+                  match x4
+                    F ->
+                      match and(x3, or(x5, x1))
+                        F ->
+                          match x6
+                            F ->
+                              match x5
+                                F ->
+                                  match x7
+                                    F ->
+                                      leaf x0
+                                    T ->
+                                      leaf x2
+                                T ->
+                                  match and(x9, x7)
+                                    F ->
+                                      match x1
+                                        F ->
+                                          leaf x0
+                                        T ->
+                                          leaf not(x7)
+                                    T ->
+                                      leaf x1
+                            T ->
+                              leaf x7
+                        T ->
+                          match x9
+                            F ->
+                              match or(x1, x7)
+                                F ->
+                                  leaf not(x6)
+                                T ->
+  (cut at 40 lines; raise k_model_lines to show more)

@@ -1,0 +1,72 @@
+prims x
+beta 0.25, A 0.01, r 0.5
+Root-only Kite on 10-bit parity (1024 rows): max applications 9, c 0.5, seed 1
+  new best 1971 at 0.0s (episode 1) [0 xors]: match x4
+  new best 1857 at 0.0s (episode 4) [0 xors]: match x5
+  new best 1797 at 0.0s (episode 6) [0 xors]: match x9
+  new best 1784 at 0.1s (episode 49) [0 xors]: match x7
+  new best 1693 at 0.2s (episode 64) [1 xors]: match xor(x8, x7)
+  new best 1661 at 0.5s (episode 199) [1 xors]: match xor(x0, x9)
+  new best 1631 at 0.7s (episode 270) [1 xors]: match xor(x4, x3)
+  new best 1614 at 0.9s (episode 348) [1 xors]: match xor(x2, x8)
+  new best 1546 at 1.0s (episode 372) [1 xors]: match xor(x1, x5)
+  new best 1466 at 1.1s (episode 408) [3 xors]: match xor(x5, xor(xor(x2, x1), x6))
+  new best 1462 at 2.5s (episode 965) [3 xors]: match xor(xor(x0, xor(x1, x2)), x6)
+  new best 1455 at 4.9s (episode 1955) [3 xors]: match xor(xor(xor(x0, x1), x9), x5)
+  new best 1419 at 7.6s (episode 3044) [4 xors]: match xor(x0, xor(xor(x1, x4), xor(x6, x5)))
+  new best 1392 at 14.2s (episode 5608) [2 xors]: match xor(xor(x1, x0), x2)
+  new best 1172 at 14.9s (episode 5867) [9 xors]: match xor(xor(xor(T, xor(xor(xor(x1, x0), x7), xor(xor(x1, x0), x5))), xor(x1, x0)), x9)
+[    20s] episodes 7940 (397/s) | rss 7 MB | best 1172 | commitments 0 | last 20s: mean cost 1923 | root xors 0:37.1% 1:41.2% 2:17.6% 3:3.1% 4:0.5% 5:0.4% 6:0.1% 7:0.1% 8:0.0% 9:0.0%
+  new best 1169 at 30.8s (episode 12361) [2 xors]: match xor(x5, xor(x1, x0))
+[    40s] episodes 16147 (404/s) | rss 7 MB | best 1169 | commitments 0 | last 20s: mean cost 1834 | root xors 0:9.3% 1:17.8% 2:63.9% 3:7.0% 4:0.7% 5:0.9% 6:0.2% 7:0.0% 8:0.1% 10+:0.0%
+  new best 1164 at 42.5s (episode 17186) [3 xors]: match xor(x2, xor(x4, xor(x1, x0)))
+  new best 1116 at 47.0s (episode 19105) [3 xors]: match xor(x2, xor(x4, xor(x1, x0)))
+  new best 878 at 47.7s (episode 19418) [3 xors]: match xor(x2, xor(x4, xor(x1, x0)))
+  new best 800 at 51.3s (episode 20904) [3 xors]: match xor(x2, xor(x4, xor(x1, x0)))
+[    60s] episodes 24592 (410/s) | rss 7 MB | best 800 | commitments 0 | last 20s: mean cost 1686 | root xors 0:0.7% 1:0.8% 2:2.3% 3:95.3% 4:0.4% 5:0.4% 6:0.0% 7:0.0% 8:0.0% 10+:0.0%
+
+Stopped (time limit) after 60.0s: 24592 episodes, 0 commitments, rss 7 MB
+Whole run: mean cost 1812 | root xors 0:15.3% 1:19.5% 2:27.8% 3:36.1% 4:0.5% 5:0.5% 6:0.1% 7:0.0% 8:0.1% 9:0.0% 10+:0.0%
+Root: 24592 visits | stop 353 (mean -1984.1) | continue 24239 (mean -1809.7) | reward bounds of means: normalized stop 0.1935, continue 0.3667
+Best model, cost 800:
+  match xor(x2, xor(x4, xor(x1, x0)))
+    F ->
+      match xor(xor(xor(x7, x6), x9), xor(x5, x3))
+        F ->
+          leaf x8
+        T ->
+          match x8
+            F ->
+              leaf T
+            T ->
+              leaf F
+    T ->
+      match x7
+        F ->
+          match x2
+            F ->
+              match xor(x1, x6)
+                F ->
+                  match x9
+                    F ->
+                      match xor(x3, x1)
+                        F ->
+                          match x5
+                            F ->
+                              match x1
+                                F ->
+                                  match x4
+                                    F ->
+                                      leaf xor(T, x8)
+                                    T ->
+                                      leaf xor(T, x8)
+                                T ->
+                                  match xor(x0, T)
+                                    F ->
+                                      match x8
+                                        F ->
+                                          leaf x0
+                                        T ->
+                                          leaf x2
+                                    T ->
+  (cut at 40 lines; raise k_model_lines to show more)
