@@ -114,6 +114,10 @@ probe/                                     developer entry point outside the lib
     `focus_ucb1`: at a node with N visits, the first child in index order whose normalized mean is within
     A·N^(−r) of the best gets a constant bonus β (`focus_width`, `focus_rate`, `focus_bonus`), so interchangeable
     choices stop splitting the visits evenly while the shrinking band lets any real difference win.
+  - **Kestrel** (`kestrel_*`): Kite with mixmax selection from the `mcts` submodule: each backup adds the reward to a
+    node's sum and raises its best (`max_value_update`, `paired_value_update`), and selection reads a node as
+    (1 − w)·mean + w·best (`mixmax_value_view`, `best_weight`), so a deep good path among poor siblings is not
+    averaged away.
 
 ### Per-bin columns
 
