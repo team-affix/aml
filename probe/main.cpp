@@ -271,6 +271,6 @@ int main() {
     size_t lines = 0;
     print_model(solver.best_model_tracker_.best_model().value(), 0, k_model_lines, lines);
     if (lines >= k_model_lines)
-        std::printf("  (cut at %zu lines; --model-lines shows more)\n", k_model_lines);
+        std::printf("  (cut at %zu lines; raise k_model_lines to show more)\n", k_model_lines);
     return 0;
 }
