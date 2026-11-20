@@ -8,19 +8,24 @@
 #include "infrastructure/application_log.hpp"
 #include "infrastructure/argument_option_finder.hpp"
 #include "infrastructure/best_model_tracker.hpp"
+#include "infrastructure/best_path_child_finder.hpp"
+#include "infrastructure/best_path_recorder.hpp"
+#include "infrastructure/best_path_recording_terminator.hpp"
+#include "infrastructure/best_path_store.hpp"
 #include "infrastructure/binary_option_chooser.hpp"
 #include "infrastructure/bin_splitter.hpp"
 #include "infrastructure/cheapest_feature_index.hpp"
+#include "infrastructure/choice_logger.hpp"
 #include "infrastructure/constant_seeder.hpp"
 #include "infrastructure/commitment_store.hpp"
 #include "infrastructure/committed_policy.hpp"
 #include "infrastructure/committing_policy.hpp"
 #include "infrastructure/constant_store.hpp"
+#include "infrastructure/episode_choice_log.hpp"
 #include "infrastructure/feature_evaluator.hpp"
 #include "infrastructure/feature_order_measurer.hpp"
 #include "infrastructure/feature_sizer.hpp"
 #include "infrastructure/feature_synthesizer.hpp"
-#include "infrastructure/highest_mean_child_finder.hpp"
 #include "infrastructure/bound_argument_chooser.hpp"
 #include "infrastructure/in_rollout_flag.hpp"
 #include "infrastructure/leaf_detector.hpp"
@@ -70,9 +75,10 @@
 #include "value_objects/typed_primitive.hpp"
 
 // Osprey: Kite with commitments. Once the frontier (the root at first) has gathered `commit_visits` visits since it
-// became the frontier, the search commits to its child with the highest mean reward and takes that choice in every
-// later episode, searching only below it; that child becomes the frontier. A commitment is never undone. Everything
-// else is Kite's: normalized UCT from the mcts submodule, order-tiered choices and two-way choices.
+// became the frontier, the search commits to the choice the best episode so far made there (the episode behind the
+// best model) and takes it in every later episode, searching only below it; that child becomes the frontier. Every
+// choice of an episode is logged, and an episode cheaper than any before has its path recorded. A commitment is never
+// undone. Everything else is Kite's: normalized UCT from the mcts submodule, order-tiered choices and two-way choices.
 struct osprey_manifest {
     struct visits_table_t : monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map> {
         using monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map>::visits_table;
@@ -124,12 +130,14 @@ struct osprey_manifest {
     struct commitment_store_t : monte_carlo::commitment_store<mcts_tree_node_id, mcts_choice, std::unordered_map> {
         using monte_carlo::commitment_store<mcts_tree_node_id, mcts_choice, std::unordered_map>::commitment_store;
     };
-    struct commit_child_finder_t : monte_carlo::highest_mean_child_finder<
-        mcts_tree_node_id, mcts_choice, double, visits_table_t, value_table_t, tree_walker_t, option_range,
-        option_range> {
-        using monte_carlo::highest_mean_child_finder<
-            mcts_tree_node_id, mcts_choice, double, visits_table_t, value_table_t, tree_walker_t, option_range,
-            option_range>::highest_mean_child_finder;
+    struct best_path_store_t
+        : monte_carlo::best_path_store<mcts_tree_node_id, mcts_choice, double, std::unordered_map> {
+        using monte_carlo::best_path_store<mcts_tree_node_id, mcts_choice, double, std::unordered_map>::best_path_store;
+    };
+    struct commit_child_finder_t : monte_carlo::best_path_child_finder<
+        mcts_tree_node_id, mcts_choice, best_path_store_t, option_range, option_range> {
+        using monte_carlo::best_path_child_finder<
+            mcts_tree_node_id, mcts_choice, best_path_store_t, option_range, option_range>::best_path_child_finder;
     };
     struct committing_policy_t : monte_carlo::committing_policy<
         mcts_tree_node_id, mcts_choice, visits_table_t, tree_walker_t, commitment_store_t, commitment_store_t,
@@ -154,16 +162,35 @@ struct osprey_manifest {
             rollout_t, cursor_t, cursor_t, backprop_path_t, monte_carlo::in_rollout_flag,
             monte_carlo::in_rollout_flag>::uct_chooser;
     };
-    struct terminator_t : monte_carlo::uct_terminator<
+    struct choice_log_t : monte_carlo::episode_choice_log<mcts_choice> {
+        using monte_carlo::episode_choice_log<mcts_choice>::episode_choice_log;
+    };
+    struct logged_chooser_t
+        : monte_carlo::choice_logger<mcts_choice, option_range, option_range, mcts_chooser_t, choice_log_t> {
+        using monte_carlo::choice_logger<
+            mcts_choice, option_range, option_range, mcts_chooser_t, choice_log_t>::choice_logger;
+    };
+    struct backprop_terminator_t : monte_carlo::uct_terminator<
         mcts_tree_node_id, backprop_path_t, value_creditor_t, backprop_path_t, backprop_path_t, cursor_t,
         monte_carlo::in_rollout_flag> {
         using monte_carlo::uct_terminator<
             mcts_tree_node_id, backprop_path_t, value_creditor_t, backprop_path_t, backprop_path_t, cursor_t,
             monte_carlo::in_rollout_flag>::uct_terminator;
     };
+    struct recorder_t : monte_carlo::best_path_recorder<
+        mcts_tree_node_id, mcts_choice, double, value_delta_t, choice_log_t, choice_log_t, best_path_store_t,
+        best_path_store_t, best_path_store_t, tree_walker_t> {
+        using monte_carlo::best_path_recorder<
+            mcts_tree_node_id, mcts_choice, double, value_delta_t, choice_log_t, choice_log_t, best_path_store_t,
+            best_path_store_t, best_path_store_t, tree_walker_t>::best_path_recorder;
+    };
+    struct terminator_t : monte_carlo::best_path_recording_terminator<backprop_terminator_t, recorder_t> {
+        using monte_carlo::best_path_recording_terminator<
+            backprop_terminator_t, recorder_t>::best_path_recording_terminator;
+    };
 
-    struct option_chooser_t : mcts_option_chooser<mcts_chooser_t> {
-        using mcts_option_chooser<mcts_chooser_t>::mcts_option_chooser;
+    struct option_chooser_t : mcts_option_chooser<logged_chooser_t> {
+        using mcts_option_chooser<logged_chooser_t>::mcts_option_chooser;
     };
     struct binary_option_chooser_t : binary_option_chooser<option_chooser_t> {
         using binary_option_chooser<option_chooser_t>::binary_option_chooser;
@@ -314,12 +341,17 @@ struct osprey_manifest {
     visit_creditor_t             visit_creditor_;
     value_creditor_t             value_creditor_;
     commitment_store_t           commitments_;
+    best_path_store_t            best_path_;
     monte_carlo::visit_threshold commit_threshold_;
     commit_child_finder_t        commit_child_finder_;
     ucb1_policy_t                ucb1_policy_;
     committing_policy_t          committing_policy_;
     policy_t                     policy_;
     mcts_chooser_t               mcts_chooser_;
+    choice_log_t                 choice_log_;
+    logged_chooser_t             logged_chooser_;
+    backprop_terminator_t        backprop_terminator_;
+    recorder_t                   recorder_;
     terminator_t                 terminator_;
     option_chooser_t             option_chooser_;
     binary_option_chooser_t      binary_option_chooser_;

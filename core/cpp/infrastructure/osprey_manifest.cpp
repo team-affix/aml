@@ -47,17 +47,23 @@ osprey_manifest::osprey_manifest(
     , visit_creditor_(backprop_path_, visits_, visits_)
     , value_creditor_(visit_creditor_, backprop_path_, value_update_)
     , commitments_(k_root)
+    , best_path_()
     , commit_threshold_(options.commit_visits)
     , ucb1_policy_(visits_, rewards_, reward_bounds_, reward_bounds_, tree_walker_, exploration_constant_)
-    , commit_child_finder_(visits_, rewards_, tree_walker_)
+    , commit_child_finder_(best_path_)
     , committing_policy_(
           visits_, tree_walker_, commitments_, commitments_, commit_threshold_, commit_child_finder_, commitments_,
           ucb1_policy_)
     , policy_(commitments_, committing_policy_)
     , mcts_chooser_(
           visits_, tree_walker_, policy_, rollout_, cursor_, cursor_, backprop_path_, in_rollout_, in_rollout_)
-    , terminator_(backprop_path_, value_creditor_, backprop_path_, backprop_path_, cursor_, in_rollout_, k_root)
-    , option_chooser_(mcts_chooser_)
+    , choice_log_()
+    , logged_chooser_(mcts_chooser_, choice_log_)
+    , backprop_terminator_(
+          backprop_path_, value_creditor_, backprop_path_, backprop_path_, cursor_, in_rollout_, k_root)
+    , recorder_(value_delta_, choice_log_, choice_log_, best_path_, best_path_, best_path_, tree_walker_, k_root)
+    , terminator_(backprop_terminator_, recorder_)
+    , option_chooser_(logged_chooser_)
     , binary_option_chooser_(option_chooser_)
     , tiered_option_chooser_(binary_option_chooser_, binary_option_chooser_)
     , argument_chooser_(argument_option_finder_, operand_table_, feature_order_measurer_, tiered_option_chooser_)

@@ -213,7 +213,7 @@ TEST_F(OspreyIntegrationTest, WithoutCommitmentsOspreySearchesExactlyLikeKite) {
     }
 }
 
-TEST_F(OspreyIntegrationTest, TheRootIsCommittedToItsChildWithTheHighestMeanReward) {
+TEST_F(OspreyIntegrationTest, TheRootIsCommittedToTheBestEpisodesFirstChoice) {
     const bin training = xor_training();
     osprey_options committing = options;
     committing.commit_visits = 20;
@@ -221,12 +221,33 @@ TEST_F(OspreyIntegrationTest, TheRootIsCommittedToItsChildWithTheHighestMeanRewa
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 20; ++episode)
         manifest.mcts_episode_.run(training);
-    std::vector<double> means;
-    for (mcts_choice choice = 0; choice < 2; ++choice) {
-        const mcts_tree_node_id child = manifest.tree_walker_.walk(0, choice);
-        means.push_back(manifest.rewards_.get_value(child) / static_cast<double>(manifest.visits_.get_visits(child)));
-    }
+    const mcts_choice first = manifest.best_path_.find_step(0).value();
     manifest.mcts_episode_.run(training);
-    const mcts_choice committed = manifest.commitments_.find_commitment(0).value();
-    EXPECT_GE(means[committed], means[1 - committed]);
+    EXPECT_EQ(manifest.commitments_.find_commitment(0), std::optional<mcts_choice>(first));
+}
+
+TEST_F(OspreyIntegrationTest, TheBestPathsRewardIsTheBestModelsNegatedCost) {
+    const bin training = xor_training();
+    osprey_manifest manifest(types, values, {bool_equality}, options);
+    manifest.constant_seeder_.seed(constants);
+    for (size_t episode = 0; episode < 60; ++episode) {
+        manifest.mcts_episode_.run(training);
+        EXPECT_EQ(manifest.best_path_.best_reward(), -static_cast<double>(manifest.best_model_tracker_.best_cost()));
+    }
+}
+
+TEST_F(OspreyIntegrationTest, EveryCommitmentFollowsTheBestPath) {
+    const bin training = xor_training();
+    osprey_options committing = options;
+    committing.commit_visits = 20;
+    osprey_manifest manifest(types, values, {bool_equality}, committing);
+    manifest.constant_seeder_.seed(constants);
+    for (size_t episode = 0; episode < 101; ++episode)
+        manifest.mcts_episode_.run(training);
+    ASSERT_GT(manifest.commitments_.commitment_count(), 1u);
+    mcts_tree_node_id node = 0;
+    while (manifest.commitments_.find_commitment(node).has_value()) {
+        EXPECT_EQ(manifest.commitments_.find_commitment(node), manifest.best_path_.find_step(node));
+        node = manifest.tree_walker_.walk(node, manifest.commitments_.find_commitment(node).value());
+    }
 }
