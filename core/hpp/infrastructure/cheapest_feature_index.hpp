@@ -21,7 +21,9 @@ struct cheapest_feature_index {
     const std::vector<size_t>& features_of_type(type_id type) const;
 private:
     std::vector<candidate> candidates_;
-    std::unordered_map<typed_column, size_t, typed_column_hash> slots_;
+    // Positions by their column's hash; a hash's positions are compared with the held columns, so no column is copied
+    // as a key.
+    std::unordered_multimap<size_t, size_t> slots_;
     std::vector<std::vector<size_t>> by_type_;
     std::vector<size_t> none_;
 };
