@@ -43,7 +43,9 @@ and are minimal in symbolic description length. Fit comes first; among models th
   variable and per primitive application, and a constant's own size.
 - Design doc: "Partition Model: Structure" (Claude Doc, https://claude.ai/artifact/H1DWSUimtzBz38G4nrhi7e).
 
-Only `core/` exists. There is no CLI or parser yet; tests build their data in C++.
+The library is `core/`. There is no parser yet; tests build their data in C++. `probe/` is a developer's entry point for
+watching a solver run by hand (`make probe`, then `./build/probe`), outside the library and its tests; its example is
+meant to be swapped.
 
 ## Layout
 
@@ -55,6 +57,7 @@ core/test/support/                         user-level code the tests share (the 
 mcts/ googletest/                          git submodules, not ours to edit
 debug_assert.hpp                           DEBUG_ASSERT(cond): throws std::logic_error under -DDEBUG
 docs/                                      design notes (see docs/continuous-documentation.md)
+probe/                                     developer entry point outside the library (make probe); swappable example
 ```
 
 ## Architecture
