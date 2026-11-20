@@ -6,8 +6,8 @@
 
 namespace AML {
 
-// One interned value per row of a bin, aligned with the bin's rows.
-using column = std::vector<const value*>;
+// One value per row of a bin, aligned with the bin's rows.
+using column = std::vector<value>;
 
 }
 

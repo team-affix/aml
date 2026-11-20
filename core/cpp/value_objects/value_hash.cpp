@@ -5,10 +5,10 @@
 namespace AML {
 
 size_t value_hash::operator()(const value& term) const noexcept {
-    size_t seed = std::hash<size_t>{}(term.tag);
+    size_t seed = std::hash<ctor_id>{}(term.ctor);
     seed = hash_combine(seed, std::hash<size_t>{}(term.args.size()));
-    for (const value* argument : term.args)
-        seed = hash_combine(seed, std::hash<const value*>{}(argument));
+    for (const value& argument : term.args)
+        seed = hash_combine(seed, (*this)(argument));
     return seed;
 }
 

@@ -7,7 +7,8 @@
 
 namespace AML {
 
-// Finds the one value every cell of a column holds. A column with no cells, or with two different values, has none.
+// Finds the one value every cell of a column holds, pointing at the column's first cell. A column with no cells, or
+// with two different values, has none.
 struct uniform_value_finder {
     std::optional<const value*> find(const column& cells) const;
 };

@@ -18,7 +18,7 @@ struct MockGetOperandCell {
 };
 
 struct MockCallPrimitive {
-    MOCK_METHOD(const value*, call, (prim_id, const std::vector<const value*>&), (const));
+    MOCK_METHOD(value, call, (prim_id, const std::vector<const value*>&), (const));
 };
 
 // Operand 4 is false then true; operand 7 is true then false.
@@ -40,8 +40,8 @@ struct OperandApplierTest : public ::testing::Test {
 };
 
 OperandApplierTest::OperandApplierTest()
-    : falsity{.tag = 0, .args = {}}
-    , truth{.tag = 1, .args = {}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
     , get_operand_cell()
     , call_primitive() {}
 
@@ -49,9 +49,9 @@ OperandApplierTest::OperandApplierTest()
 
 TEST_F(OperandApplierTest, ThePrimitiveIsAppliedToEachRowsOperandCells) {
     InSequence order;
-    EXPECT_CALL(call_primitive, call(2, std::vector<const value*>{&falsity, &truth})).WillOnce(Return(&falsity));
-    EXPECT_CALL(call_primitive, call(2, std::vector<const value*>{&truth, &falsity})).WillOnce(Return(&truth));
-    EXPECT_EQ(applier.apply(2, {4, 7}, 2), (column{&falsity, &truth}));
+    EXPECT_CALL(call_primitive, call(2, std::vector<const value*>{&falsity, &truth})).WillOnce(Return(falsity));
+    EXPECT_CALL(call_primitive, call(2, std::vector<const value*>{&truth, &falsity})).WillOnce(Return(truth));
+    EXPECT_EQ(applier.apply(2, {4, 7}, 2), (column{falsity, truth}));
 }
 
 TEST_F(OperandApplierTest, NoRowsGiveAnEmptyColumn) {
@@ -61,9 +61,9 @@ TEST_F(OperandApplierTest, NoRowsGiveAnEmptyColumn) {
 
 TEST_F(OperandApplierTest, AUnaryApplicationReadsOneOperandPerRow) {
     InSequence order;
-    EXPECT_CALL(call_primitive, call(1, std::vector<const value*>{&falsity})).WillOnce(Return(&truth));
-    EXPECT_CALL(call_primitive, call(1, std::vector<const value*>{&truth})).WillOnce(Return(&falsity));
-    EXPECT_EQ(applier.apply(1, {4}, 2), (column{&truth, &falsity}));
+    EXPECT_CALL(call_primitive, call(1, std::vector<const value*>{&falsity})).WillOnce(Return(truth));
+    EXPECT_CALL(call_primitive, call(1, std::vector<const value*>{&truth})).WillOnce(Return(falsity));
+    EXPECT_EQ(applier.apply(1, {4}, 2), (column{truth, falsity}));
 }
 
 TEST_F(OperandApplierTest, AnOperandMayFillSeveralPositions) {

@@ -15,33 +15,31 @@ struct ValueSizerTest : public ::testing::Test {
 };
 
 ValueSizerTest::ValueSizerTest()
-    : zero{.tag = 0, .args = {}}
-    , one{.tag = 1, .args = {&zero}}
-    , two{.tag = 1, .args = {&one}}
+    : zero{.ctor = 0, .args = {}}
+    , one{.ctor = 1, .args = {zero}}
+    , two{.ctor = 1, .args = {one}}
     , sizer() {}
 
 }
 
 TEST_F(ValueSizerTest, ANullaryValueHasSizeOne) {
-    EXPECT_EQ(sizer.size(&zero), 1u);
+    EXPECT_EQ(sizer.size(zero), 1u);
 }
 
 TEST_F(ValueSizerTest, AValueCountsEveryConstructorInIt) {
-    EXPECT_EQ(sizer.size(&two), 3u);
-    const value pair{.tag = 2, .args = {&two, &one}};
-    EXPECT_EQ(sizer.size(&pair), 6u);
+    EXPECT_EQ(sizer.size(two), 3u);
+    const value pair{.ctor = 2, .args = {two, one}};
+    EXPECT_EQ(sizer.size(pair), 6u);
 }
 
-TEST_F(ValueSizerTest, ASharedArgumentIsCountedEachTimeItAppears) {
-    const value pair{.tag = 2, .args = {&one, &one}};
-    EXPECT_EQ(sizer.size(&pair), 5u);
+TEST_F(ValueSizerTest, ARepeatedArgumentIsCountedEachTimeItAppears) {
+    const value pair{.ctor = 2, .args = {one, one}};
+    EXPECT_EQ(sizer.size(pair), 5u);
 }
 
 TEST_F(ValueSizerTest, ADeepValueIsSizedFully) {
-    std::vector<value> chain;
-    chain.reserve(50);
-    chain.push_back(value{.tag = 0, .args = {}});
+    value chain{.ctor = 0, .args = {}};
     for (size_t depth = 1; depth < 50; ++depth)
-        chain.push_back(value{.tag = 1, .args = {&chain.back()}});
-    EXPECT_EQ(sizer.size(&chain.back()), 50u);
+        chain = value{.ctor = 1, .args = {chain}};
+    EXPECT_EQ(sizer.size(chain), 50u);
 }

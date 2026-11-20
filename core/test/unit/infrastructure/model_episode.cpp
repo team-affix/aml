@@ -36,9 +36,9 @@ struct ModelEpisodeTest : public ::testing::Test {
 };
 
 ModelEpisodeTest::ModelEpisodeTest()
-    : label{.tag = 0, .args = {}}
-    , training{.inputs = {}, .labels = typed_column{.type = 0, .cells = {&label}}}
-    , label_output{feature::constant{.literal = &label}}
+    : label{.ctor = 0, .args = {}}
+    , training{.inputs = {}, .labels = typed_column{.type = 0, .cells = {label}}}
+    , label_output{feature::constant{.literal = label}}
     , model{model_node::leaf{.output = label_output}}
     , build_model()
     , size_model()

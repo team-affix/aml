@@ -3,7 +3,6 @@
 #include "infrastructure/constant_seeder.hpp"
 #include "infrastructure/constant_store.hpp"
 #include "infrastructure/schema.hpp"
-#include "infrastructure/value_pool.hpp"
 #include "value_objects/typed_constant.hpp"
 
 using namespace AML;
@@ -17,18 +16,17 @@ struct ConstantSeedingIntegrationTest : public ::testing::Test {
     ConstantSeedingIntegrationTest();
     schema types;
     type_id boolean;
-    size_t false_ctor;
-    size_t true_ctor;
+    ctor_id false_ctor;
+    ctor_id true_ctor;
     type_id nat;
-    size_t zero_ctor;
-    size_t suc_ctor;
-    value_pool values;
+    ctor_id zero_ctor;
+    ctor_id suc_ctor;
     constant_store constants;
     seeder_t seeder;
-    const value* falsity;
-    const value* truth;
-    const value* zero;
-    const value* one;
+    value falsity;
+    value truth;
+    value zero;
+    value one;
     std::vector<typed_constant> offered;
 };
 
@@ -40,13 +38,12 @@ ConstantSeedingIntegrationTest::ConstantSeedingIntegrationTest()
     , nat(types.declare_type())
     , zero_ctor(types.declare_ctor(nat, {}))
     , suc_ctor(types.declare_ctor(nat, {nat}))
-    , values()
     , constants()
     , seeder(constants)
-    , falsity(values.make(false_ctor, {}))
-    , truth(values.make(true_ctor, {}))
-    , zero(values.make(zero_ctor, {}))
-    , one(values.make(suc_ctor, {zero}))
+    , falsity(value{.ctor = false_ctor, .args = {}})
+    , truth(value{.ctor = true_ctor, .args = {}})
+    , zero(value{.ctor = zero_ctor, .args = {}})
+    , one(value{.ctor = suc_ctor, .args = {zero}})
     , offered{
           typed_constant{.type = boolean, .literal = falsity}, typed_constant{.type = nat, .literal = zero},
           typed_constant{.type = boolean, .literal = truth}, typed_constant{.type = nat, .literal = one}} {}

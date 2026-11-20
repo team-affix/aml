@@ -25,7 +25,7 @@ struct feature {
         std::strong_ordering operator<=>(const app&) const = default;
     };
     struct constant {
-        const value* literal;
+        value literal;
         auto operator<=>(const constant&) const = default;
     };
     std::variant<var, app, constant> content;

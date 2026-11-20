@@ -31,7 +31,6 @@
 #include "infrastructure/schema.hpp"
 #include "infrastructure/synthesis_starter.hpp"
 #include "infrastructure/uniform_value_finder.hpp"
-#include "infrastructure/value_pool.hpp"
 #include "infrastructure/value_sizer.hpp"
 #include "infrastructure/variable_candidate_finder.hpp"
 #include "infrastructure/witness_detector.hpp"
@@ -133,12 +132,10 @@ struct scout_manifest {
 
     scout_manifest(
         schema& types,
-        value_pool& values,
         const std::vector<typed_primitive>& primitives,
         const scout_options& options);
 
     schema&                     schema_;
-    value_pool&                 values_;
     constant_store              constants_;
     cheapest_feature_index      feature_candidates_;
     application_log             applications_;

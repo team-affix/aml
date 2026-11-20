@@ -10,11 +10,9 @@ const mcts_tree_node_id k_root = 0;
 
 osprey_manifest::osprey_manifest(
     schema& types,
-    value_pool& values,
     const std::vector<typed_primitive>& primitives,
     const osprey_options& options)
     : schema_(types)
-    , values_(values)
     , constants_()
     , feature_candidates_()
     , applications_()

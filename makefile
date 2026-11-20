@@ -139,8 +139,10 @@ $(CORE_DEBUG_FAST_BIN): $(CORE_DEBUG_FAST_LIB) $(CORE_DEBUG_FAST_BIN_OBJ) | buil
 	    $(CORE_DEBUG_FAST_BIN_OBJ) \
 	    -Lbuild -laml_core_debug_fast -lpthread
 
-$(PROBE_BIN): probe/main.cpp $(CORE_LIB) | build
-	$(CXX) $(CXXFLAGS) $(RELEASE_CXXFLAGS) -Icore/test -o $@ probe/main.cpp \
+PROBE_SRC = $(shell find probe core/test/support -name '*.cpp' | sort)
+
+$(PROBE_BIN): $(PROBE_SRC) $(CORE_LIB) | build
+	$(CXX) $(CXXFLAGS) $(RELEASE_CXXFLAGS) -Icore/test -o $@ $(PROBE_SRC) \
 	    -Lbuild -laml_core
 
 # ==============================================================================

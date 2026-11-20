@@ -88,12 +88,12 @@ struct FeatureSynthesizerTest : public ::testing::Test {
 };
 
 FeatureSynthesizerTest::FeatureSynthesizerTest()
-    : falsity{.tag = 0, .args = {}}
-    , truth{.tag = 1, .args = {}}
-    , data{.inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}}},
-           .labels = typed_column{.type = 0, .cells = {&falsity, &truth}}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
+    , data{.inputs = {typed_column{.type = 0, .cells = {falsity, truth}}},
+           .labels = typed_column{.type = 0, .cells = {falsity, truth}}}
     , features()
-    , truth_output{feature::constant{.literal = &truth}} {}
+    , truth_output{feature::constant{.literal = truth}} {}
 
 synthesizer_t FeatureSynthesizerTest::make(size_t max_applications) {
     return synthesizer_t{

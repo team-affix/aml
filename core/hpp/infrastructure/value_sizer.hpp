@@ -8,7 +8,7 @@ namespace AML {
 
 // Sizes a value: one per constructor in it.
 struct value_sizer {
-    size_t size(const value* term) const;
+    size_t size(const value& term) const;
 };
 
 }

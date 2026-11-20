@@ -1,18 +1,18 @@
 #ifndef VALUE_HPP
 #define VALUE_HPP
 
-#include <cstddef>
+#include <compare>
 #include <vector>
+#include "value_objects/ctor_id.hpp"
 
 namespace AML {
 
-// A constructor applied to argument values. `tag` is the constructor's position among its type's constructors; the
-// type itself is known from where the value sits (its column), not stored. Values are interned, so two values are equal
-// exactly when their pointers are.
+// A constructor applied to argument values: a tree that owns its arguments. `ctor` is the constructor's id within its
+// type; the type itself is known from where the value sits (its column), not stored. Values compare by structure.
 struct value {
-    size_t tag;
-    std::vector<const value*> args;
-    auto operator<=>(const value&) const = default;
+    ctor_id ctor;
+    std::vector<value> args;
+    std::strong_ordering operator<=>(const value&) const = default;
 };
 
 }

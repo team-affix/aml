@@ -10,11 +10,9 @@ const mcts_tree_node_id k_root = 0;
 
 falcon_manifest::falcon_manifest(
     schema& types,
-    value_pool& values,
     const std::vector<typed_primitive>& primitives,
     const falcon_options& options)
     : schema_(types)
-    , values_(values)
     , constants_()
     , feature_candidates_()
     , applications_()

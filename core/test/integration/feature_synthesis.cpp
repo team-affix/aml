@@ -1,4 +1,4 @@
-#include <set>
+#include <algorithm>
 #include <vector>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -22,7 +22,6 @@
 #include "infrastructure/schema.hpp"
 #include "infrastructure/synthesis_starter.hpp"
 #include "infrastructure/uniform_value_finder.hpp"
-#include "infrastructure/value_pool.hpp"
 #include "infrastructure/value_sizer.hpp"
 #include "infrastructure/variable_candidate_finder.hpp"
 #include "infrastructure/witness_detector.hpp"
@@ -83,15 +82,14 @@ struct FeatureSynthesisIntegrationTest : public ::testing::Test {
     FeatureSynthesisIntegrationTest();
     feature_synthesizer_t make(size_t max_applications);
     schema types;
-    value_pool values;
     type_id boolean;
-    size_t false_ctor;
-    size_t true_ctor;
-    const value* falsity;
-    const value* truth;
+    ctor_id false_ctor;
+    ctor_id true_ctor;
+    value falsity;
+    value truth;
     type_id colour;
-    const value* red;
-    const value* green;
+    value red;
+    value green;
     typed_primitive equality;
     bin training;
     bin unreachable;
@@ -123,18 +121,17 @@ struct FeatureSynthesisIntegrationTest : public ::testing::Test {
 
 FeatureSynthesisIntegrationTest::FeatureSynthesisIntegrationTest()
     : types()
-    , values()
     , boolean(types.declare_type())
     , false_ctor(types.declare_ctor(boolean, {}))
     , true_ctor(types.declare_ctor(boolean, {}))
-    , falsity(values.make(false_ctor, {}))
-    , truth(values.make(true_ctor, {}))
+    , falsity(value{.ctor = false_ctor, .args = {}})
+    , truth(value{.ctor = true_ctor, .args = {}})
     , colour(types.declare_type())
-    , red(values.make(types.declare_ctor(colour, {}), {}))
-    , green(values.make(types.declare_ctor(colour, {}), {}))
+    , red(value{.ctor = types.declare_ctor(colour, {}), .args = {}})
+    , green(value{.ctor = types.declare_ctor(colour, {}), .args = {}})
     , equality{
           .type = primitive_type{.arg_types = {boolean, boolean}, .result_type = boolean},
-          .apply = value_equality<value_pool>(values, false_ctor, true_ctor)}
+          .apply = value_equality(false_ctor, true_ctor)}
     , training{
           .inputs = {typed_column{.type = boolean, .cells = {falsity, falsity, truth, truth}},
                     typed_column{.type = boolean, .cells = {falsity, truth, falsity, truth}}},
@@ -233,10 +230,11 @@ TEST_F(FeatureSynthesisIntegrationTest, TheSessionAppliesNoMoreThanTheCap) {
 TEST_F(FeatureSynthesisIntegrationTest, EveryDerivedFeatureIsHeterogeneousAndHasItsOwnColumn) {
     feature_synthesizer_t synthesizer = make(1000);
     ON_CALL(chooser, choose(_)).WillByDefault(Invoke(&last_option));
-    std::set<column> columns;
+    std::vector<column> columns;
     for (const candidate& entry : synthesizer.synthesize(unreachable)) {
         EXPECT_FALSE(uniform_values.find(entry.observed.cells).has_value());
-        EXPECT_TRUE(columns.insert(entry.observed.cells).second);
+        EXPECT_EQ(std::find(columns.begin(), columns.end(), entry.observed.cells), columns.end());
+        columns.push_back(entry.observed.cells);
     }
 }
 
@@ -281,7 +279,7 @@ TEST_F(FeatureSynthesisIntegrationTest, EveryFeaturesColumnIsWhatEvaluatingItOnE
     ON_CALL(chooser, choose(_)).WillByDefault(Invoke(&last_option));
     for (const candidate& entry : synthesizer.synthesize(unreachable)) {
         for (size_t row = 0; row < unreachable.labels.cells.size(); ++row) {
-            const std::vector<const value*> inputs{unreachable.inputs[0].cells[row], unreachable.inputs[1].cells[row]};
+            const std::vector<value> inputs{unreachable.inputs[0].cells[row], unreachable.inputs[1].cells[row]};
             EXPECT_EQ(evaluator.evaluate(entry.expression, inputs), entry.observed.cells[row]);
         }
     }

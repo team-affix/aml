@@ -35,10 +35,10 @@ struct ModelSizerTest : public ::testing::Test {
 };
 
 ModelSizerTest::ModelSizerTest()
-    : label{.tag = 0, .args = {}}
+    : label{.ctor = 0, .args = {}}
     , scrutinee{feature::var{.index = 0}}
     , inner_scrutinee{feature::var{.index = 1}}
-    , constant_output{feature::constant{.literal = &label}}
+    , constant_output{feature::constant{.literal = label}}
     , variable_output{feature::var{.index = 2}}
     , constant_leaf{model_node::leaf{.output = constant_output}}
     , variable_leaf{model_node::leaf{.output = variable_output}}

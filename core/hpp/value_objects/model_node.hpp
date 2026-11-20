@@ -9,7 +9,7 @@
 namespace AML {
 
 // A node of a model, which owns its branches, so a model is a tree. `match` is an exhaustive one-layer case on
-// `scrutinee`: `branches[t]` handles the constructor with tag t and sees that constructor's arguments bound as the next
+// `scrutinee`: `branches[c]` handles the constructor with id c and sees that constructor's arguments bound as the next
 // variables in scope. `leaf` returns its output feature evaluated in scope: a constant label, a variable, or any
 // synthesized feature. `empty` saw no data and returns nothing. The node types nest inside `model_node` so that
 // `match` can hold nodes without a forward declaration; the recursive comparisons name their result type, since an

@@ -20,12 +20,12 @@ struct OutputFinderTest : public ::testing::Test {
 };
 
 OutputFinderTest::OutputFinderTest()
-    : falsity{.tag = 0, .args = {}}
-    , truth{.tag = 1, .args = {}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
     , first{feature::var{.index = 0}}
     , second{feature::var{.index = 1}}
     , third{feature::var{.index = 2}}
-    , labels{.type = 0, .cells = {&falsity, &truth}}
+    , labels{.type = 0, .cells = {falsity, truth}}
     , finder() {}
 
 candidate OutputFinderTest::make(const feature& expression, size_t cost, const column& cells) {
@@ -39,12 +39,12 @@ TEST_F(OutputFinderTest, NoCandidatesGiveNoOutput) {
 }
 
 TEST_F(OutputFinderTest, ACandidateWhoseColumnIsTheLabelsIsTheOutput) {
-    EXPECT_EQ(finder.find({make(first, 1, {&truth, &falsity}), make(second, 3, labels.cells)}, labels),
+    EXPECT_EQ(finder.find({make(first, 1, {truth, falsity}), make(second, 3, labels.cells)}, labels),
               std::optional<feature>(second));
 }
 
 TEST_F(OutputFinderTest, CandidatesThatDifferFromTheLabelsGiveNoOutput) {
-    EXPECT_FALSE(finder.find({make(first, 1, {&truth, &falsity}), make(second, 1, {&truth, &truth})}, labels)
+    EXPECT_FALSE(finder.find({make(first, 1, {truth, falsity}), make(second, 1, {truth, truth})}, labels)
                      .has_value());
 }
 

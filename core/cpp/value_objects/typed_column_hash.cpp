@@ -1,14 +1,16 @@
 #include "value_objects/typed_column_hash.hpp"
 
 #include <functional>
+#include "value_objects/value_hash.hpp"
 
 namespace AML {
 
 size_t typed_column_hash::operator()(const typed_column& observed) const noexcept {
     size_t seed = std::hash<type_id>{}(observed.type);
     seed = hash_combine(seed, std::hash<size_t>{}(observed.cells.size()));
-    for (const value* cell : observed.cells)
-        seed = hash_combine(seed, std::hash<const value*>{}(cell));
+    const value_hash hash_value;
+    for (const value& cell : observed.cells)
+        seed = hash_combine(seed, hash_value(cell));
     return seed;
 }
 

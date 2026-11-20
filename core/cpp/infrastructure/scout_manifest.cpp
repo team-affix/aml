@@ -4,11 +4,9 @@ namespace AML {
 
 scout_manifest::scout_manifest(
     schema& types,
-    value_pool& values,
     const std::vector<typed_primitive>& primitives,
     const scout_options& options)
     : schema_(types)
-    , values_(values)
     , constants_()
     , feature_candidates_()
     , applications_()

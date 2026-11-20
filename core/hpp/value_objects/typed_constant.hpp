@@ -9,7 +9,7 @@ namespace AML {
 // A constant the user offers synthesis as a primitive argument, with its type.
 struct typed_constant {
     type_id type;
-    const value* literal;
+    value literal;
     auto operator<=>(const typed_constant&) const = default;
 };
 

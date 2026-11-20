@@ -15,16 +15,16 @@ struct MockGetPrimitiveFunction {
     MOCK_METHOD(const primitive&, function, (prim_id), (const));
 };
 
-const value* first_argument(const std::vector<const value*>& args) {
-    return args.front();
+value first_argument(const std::vector<const value*>& args) {
+    return *args.front();
 }
 
-const value* last_argument(const std::vector<const value*>& args) {
-    return args.back();
+value last_argument(const std::vector<const value*>& args) {
+    return *args.back();
 }
 
-const value* no_argument(const std::vector<const value*>& args) {
-    return args.empty() ? nullptr : args.front();
+value no_argument(const std::vector<const value*>& args) {
+    return args.empty() ? value{.ctor = 9, .args = {}} : *args.front();
 }
 
 struct PrimitiveCallerTest : public ::testing::Test {
@@ -43,8 +43,8 @@ struct PrimitiveCallerTest : public ::testing::Test {
 };
 
 PrimitiveCallerTest::PrimitiveCallerTest()
-    : zero{.tag = 0, .args = {}}
-    , one{.tag = 1, .args = {&zero}}
+    : zero{.ctor = 0, .args = {}}
+    , one{.ctor = 1, .args = {zero}}
     , first(&first_argument)
     , last(&last_argument)
     , get_primitive_function() {}
@@ -52,8 +52,8 @@ PrimitiveCallerTest::PrimitiveCallerTest()
 }
 
 TEST_F(PrimitiveCallerTest, TheArgumentsGoToThePrimitiveAtThatId) {
-    EXPECT_EQ(caller.call(0, {&one, &zero}), &one);
-    EXPECT_EQ(caller.call(1, {&one, &zero}), &zero);
+    EXPECT_EQ(caller.call(0, {&one, &zero}), one);
+    EXPECT_EQ(caller.call(1, {&one, &zero}), zero);
 }
 
 TEST_F(PrimitiveCallerTest, ThePrimitiveIsLookedUpByItsId) {
@@ -64,5 +64,5 @@ TEST_F(PrimitiveCallerTest, ThePrimitiveIsLookedUpByItsId) {
 TEST_F(PrimitiveCallerTest, ANullaryCallPassesNoArguments) {
     const primitive nullary(&no_argument);
     ON_CALL(get_primitive_function, function(2)).WillByDefault(ReturnRef(nullary));
-    EXPECT_EQ(caller.call(2, {}), nullptr);
+    EXPECT_EQ(caller.call(2, {}), (value{.ctor = 9, .args = {}}));
 }

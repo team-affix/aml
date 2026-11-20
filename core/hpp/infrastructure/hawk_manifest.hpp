@@ -54,7 +54,6 @@
 #include "infrastructure/uniform_value_finder.hpp"
 #include "infrastructure/uniform_value_update.hpp"
 #include "infrastructure/value_bounds.hpp"
-#include "infrastructure/value_pool.hpp"
 #include "infrastructure/value_sizer.hpp"
 #include "infrastructure/value_table.hpp"
 #include "infrastructure/variable_candidate_finder.hpp"
@@ -256,12 +255,10 @@ struct hawk_manifest {
 
     hawk_manifest(
         schema& types,
-        value_pool& values,
         const std::vector<typed_primitive>& primitives,
         const hawk_options& options);
 
     schema&                      schema_;
-    value_pool&                  values_;
     constant_store               constants_;
     cheapest_feature_index       feature_candidates_;
     application_log              applications_;

@@ -34,23 +34,23 @@ struct VariableCandidateFinderTest : public ::testing::Test {
 
     void SetUp() override {
         ON_CALL(size_feature, size(_)).WillByDefault(Return(1));
-        ON_CALL(find_uniform_value, find(column{&falsity, &truth})).WillByDefault(Return(std::nullopt));
-        ON_CALL(find_uniform_value, find(column{&truth, &falsity})).WillByDefault(Return(std::nullopt));
-        ON_CALL(find_uniform_value, find(column{&truth, &truth})).WillByDefault(Return(&truth));
+        ON_CALL(find_uniform_value, find(column{falsity, truth})).WillByDefault(Return(std::nullopt));
+        ON_CALL(find_uniform_value, find(column{truth, falsity})).WillByDefault(Return(std::nullopt));
+        ON_CALL(find_uniform_value, find(column{truth, truth})).WillByDefault(Return(&truth));
     }
 };
 
 VariableCandidateFinderTest::VariableCandidateFinderTest()
-    : falsity{.tag = 0, .args = {}}
-    , truth{.tag = 1, .args = {}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
     , first{feature::var{.index = 0}}
     , third{feature::var{.index = 2}}
     , data{
           .inputs = {
-              typed_column{.type = 0, .cells = {&falsity, &truth}},
-              typed_column{.type = 0, .cells = {&truth, &truth}},
-              typed_column{.type = 3, .cells = {&truth, &falsity}}},
-          .labels = typed_column{.type = 0, .cells = {&falsity, &truth}}}
+              typed_column{.type = 0, .cells = {falsity, truth}},
+              typed_column{.type = 0, .cells = {truth, truth}},
+              typed_column{.type = 3, .cells = {truth, falsity}}},
+          .labels = typed_column{.type = 0, .cells = {falsity, truth}}}
     , size_feature()
     , find_uniform_value() {}
 
@@ -82,6 +82,6 @@ TEST_F(VariableCandidateFinderTest, ACandidateKeepsItsVariablesType) {
 }
 
 TEST_F(VariableCandidateFinderTest, AnEmptyScopeFindsNothing) {
-    const bin no_variables{.inputs = {}, .labels = typed_column{.type = 0, .cells = {&falsity, &truth}}};
+    const bin no_variables{.inputs = {}, .labels = typed_column{.type = 0, .cells = {falsity, truth}}};
     EXPECT_TRUE(finder.find(no_variables, 0).empty());
 }

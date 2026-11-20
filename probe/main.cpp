@@ -16,7 +16,6 @@
 #include <unistd.h>
 #include "infrastructure/falcon_manifest.hpp"
 #include "infrastructure/schema.hpp"
-#include "infrastructure/value_pool.hpp"
 #include "probe/bool_xor.hpp"
 #include "support/bool_and.hpp"
 #include "support/bool_not.hpp"
@@ -79,23 +78,23 @@ size_t count_xors(const AML::feature& expression) {
     return total;
 }
 
-std::string show_feature(const AML::feature& expression, size_t true_tag) {
+std::string show_feature(const AML::feature& expression, AML::ctor_id true_ctor) {
     if (const AML::feature::var* variable = std::get_if<AML::feature::var>(&expression.content))
         return "x" + std::to_string(variable->index);
     if (const AML::feature::constant* constant = std::get_if<AML::feature::constant>(&expression.content))
-        return constant->literal->tag == true_tag ? "T" : "F";
+        return constant->literal.ctor == true_ctor ? "T" : "F";
     const AML::feature::app& application = std::get<AML::feature::app>(expression.content);
     std::string text = std::string(k_primitive_names[application.prim]) + "(";
     for (size_t index = 0; index < application.args.size(); ++index)
-        text += (index == 0 ? "" : ", ") + show_feature(application.args[index], true_tag);
+        text += (index == 0 ? "" : ", ") + show_feature(application.args[index], true_ctor);
     return text + ")";
 }
 
-std::string show_root(const AML::model_node& model, size_t true_tag) {
+std::string show_root(const AML::model_node& model, AML::ctor_id true_ctor) {
     if (const AML::model_node::match* match = std::get_if<AML::model_node::match>(&model.content))
-        return "match " + show_feature(match->scrutinee, true_tag);
+        return "match " + show_feature(match->scrutinee, true_ctor);
     if (const AML::model_node::leaf* leaf = std::get_if<AML::model_node::leaf>(&model.content))
-        return "leaf " + show_feature(leaf->output, true_tag);
+        return "leaf " + show_feature(leaf->output, true_ctor);
     return "empty";
 }
 
@@ -106,23 +105,23 @@ size_t root_xors(const AML::model_node& model) {
     return count_xors(match->scrutinee);
 }
 
-void print_model(const AML::model_node& node, size_t true_tag, size_t depth, size_t max_lines, size_t& lines) {
+void print_model(const AML::model_node& node, AML::ctor_id true_ctor, size_t depth, size_t max_lines, size_t& lines) {
     if (lines >= max_lines)
         return;
     const std::string indent(2 * depth + 2, ' ');
     ++lines;
     const AML::model_node::match* match = std::get_if<AML::model_node::match>(&node.content);
     if (match == nullptr) {
-        std::printf("%s%s\n", indent.c_str(), show_root(node, true_tag).c_str());
+        std::printf("%s%s\n", indent.c_str(), show_root(node, true_ctor).c_str());
         return;
     }
-    std::printf("%smatch %s\n", indent.c_str(), show_feature(match->scrutinee, true_tag).c_str());
+    std::printf("%smatch %s\n", indent.c_str(), show_feature(match->scrutinee, true_ctor).c_str());
     for (size_t branch = 0; branch < match->branches.size(); ++branch) {
         if (lines >= max_lines)
             return;
         ++lines;
-        std::printf("%s  %s ->\n", indent.c_str(), branch == true_tag ? "T" : "F");
-        print_model(match->branches[branch], true_tag, depth + 2, max_lines, lines);
+        std::printf("%s  %s ->\n", indent.c_str(), branch == true_ctor ? "T" : "F");
+        print_model(match->branches[branch], true_ctor, depth + 2, max_lines, lines);
     }
 }
 
@@ -144,7 +143,7 @@ void print_tally(const root_tally& tally) {
                     100.0 * static_cast<double>(tally.by_xors[bucket]) / episodes);
 }
 
-AML::bin parity_training(AML::type_id boolean, const AML::value* falsity, const AML::value* truth, size_t bits) {
+AML::bin parity_training(AML::type_id boolean, const AML::value& falsity, const AML::value& truth, size_t bits) {
     AML::bin training{.inputs = {}, .labels = AML::typed_column{.type = boolean, .cells = {}}};
     for (size_t bit = 0; bit < bits; ++bit)
         training.inputs.push_back(AML::typed_column{.type = boolean, .cells = {}});
@@ -171,26 +170,25 @@ int main() {
 
     AML::schema types;
     const AML::type_id boolean = types.declare_type();
-    const size_t false_tag = types.declare_ctor(boolean, {});
-    const size_t true_tag = types.declare_ctor(boolean, {});
+    const AML::ctor_id false_ctor = types.declare_ctor(boolean, {});
+    const AML::ctor_id true_ctor = types.declare_ctor(boolean, {});
 
-    AML::value_pool values;
-    const AML::value* falsity = values.make(false_tag, {});
-    const AML::value* truth = values.make(true_tag, {});
+    const AML::value falsity{.ctor = false_ctor, .args = {}};
+    const AML::value truth{.ctor = true_ctor, .args = {}};
     const AML::primitive_type binary{.arg_types = {boolean, boolean}, .result_type = boolean};
     const std::vector<AML::typed_primitive> primitives{
-        {.type = binary, .apply = bool_xor<AML::value_pool>(values, false_tag, true_tag)},
-        {.type = binary, .apply = bool_and<AML::value_pool>(values, false_tag, true_tag)},
-        {.type = binary, .apply = bool_or<AML::value_pool>(values, false_tag, true_tag)},
+        {.type = binary, .apply = bool_xor(false_ctor, true_ctor)},
+        {.type = binary, .apply = bool_and(false_ctor, true_ctor)},
+        {.type = binary, .apply = bool_or(false_ctor, true_ctor)},
         {.type = {.arg_types = {boolean}, .result_type = boolean},
-         .apply = bool_not<AML::value_pool>(values, false_tag, true_tag)}};
+         .apply = bool_not(false_ctor, true_ctor)}};
     const std::vector<AML::typed_constant> constants{
         {.type = boolean, .literal = falsity},
         {.type = boolean, .literal = truth}};
     const AML::bin training = parity_training(boolean, falsity, truth, k_bits);
 
     // The manifest directly, not falcon_runtime: the probe also watches the commitments, which no runtime exposes.
-    AML::falcon_manifest manifest(types, values, primitives,
+    AML::falcon_manifest manifest(types, primitives,
                                   AML::falcon_options{.max_applications = k_max_applications,
                                                       .exploration_constant = k_exploration_constant,
                                                       .seed = k_seed,
@@ -224,7 +222,7 @@ int main() {
         if (manifest.best_model_tracker_.best_cost() < best_cost) {
             best_cost = manifest.best_model_tracker_.best_cost();
             std::printf("  new best %zu at %.1fs (episode %zu): %s\n", best_cost, elapsed, episode,
-                        show_root(manifest.best_model_tracker_.best_model().value(), true_tag).c_str());
+                        show_root(manifest.best_model_tracker_.best_model().value(), true_ctor).c_str());
         }
         if (manifest.commitments_.commitment_count() != commitments) {
             commitments = manifest.commitments_.commitment_count();
@@ -266,7 +264,7 @@ int main() {
         return 0;
     std::printf("Best model, cost %zu:\n", manifest.best_model_tracker_.best_cost());
     size_t lines = 0;
-    print_model(manifest.best_model_tracker_.best_model().value(), true_tag, 0, k_model_lines, lines);
+    print_model(manifest.best_model_tracker_.best_model().value(), true_ctor, 0, k_model_lines, lines);
     if (lines >= k_model_lines)
         std::printf("  (cut at %zu lines; raise k_model_lines to show more)\n", k_model_lines);
     return 0;

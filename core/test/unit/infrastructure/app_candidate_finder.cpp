@@ -61,12 +61,12 @@ struct AppCandidateFinderTest : public ::testing::Test {
 };
 
 AppCandidateFinderTest::AppCandidateFinderTest()
-    : falsity{.tag = 0, .args = {}}
-    , truth{.tag = 1, .args = {}}
-    , true_constant{feature::constant{.literal = &truth}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
+    , true_constant{feature::constant{.literal = truth}}
     , variable{feature::var{.index = 0}}
     , application{feature::app{.prim = 2, .args = {true_constant, variable}}}
-    , result{&falsity, &truth}
+    , result{falsity, truth}
     , apply_primitive_to_operands()
     , find_uniform_value()
     , get_operand_expression()

@@ -29,24 +29,24 @@ struct ConstantSeederTest : public ::testing::Test {
 };
 
 ConstantSeederTest::ConstantSeederTest()
-    : falsity{.tag = 0, .args = {}}
-    , truth{.tag = 1, .args = {}}
-    , zero{.tag = 0, .args = {}}
-    , false_feature{feature::constant{.literal = &falsity}}
-    , true_feature{feature::constant{.literal = &truth}}
-    , zero_feature{feature::constant{.literal = &zero}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
+    , zero{.ctor = 0, .args = {}}
+    , false_feature{feature::constant{.literal = falsity}}
+    , true_feature{feature::constant{.literal = truth}}
+    , zero_feature{feature::constant{.literal = zero}}
     , offered{
-          typed_constant{.type = 0, .literal = &falsity}, typed_constant{.type = 0, .literal = &truth},
-          typed_constant{.type = 1, .literal = &zero}}
+          typed_constant{.type = 0, .literal = falsity}, typed_constant{.type = 0, .literal = truth},
+          typed_constant{.type = 1, .literal = zero}}
     , insert_constant() {}
 
 }
 
 TEST_F(ConstantSeederTest, EveryOfferedConstantIsInsertedInOrderWithItsTypeAndFeature) {
     InSequence order;
-    EXPECT_CALL(insert_constant, insert(constant_operand{.expression = false_feature, .literal = &falsity, .type = 0}));
-    EXPECT_CALL(insert_constant, insert(constant_operand{.expression = true_feature, .literal = &truth, .type = 0}));
-    EXPECT_CALL(insert_constant, insert(constant_operand{.expression = zero_feature, .literal = &zero, .type = 1}));
+    EXPECT_CALL(insert_constant, insert(constant_operand{.expression = false_feature, .literal = falsity, .type = 0}));
+    EXPECT_CALL(insert_constant, insert(constant_operand{.expression = true_feature, .literal = truth, .type = 0}));
+    EXPECT_CALL(insert_constant, insert(constant_operand{.expression = zero_feature, .literal = zero, .type = 1}));
     seeder.seed(offered);
 }
 
@@ -57,7 +57,7 @@ TEST_F(ConstantSeederTest, NoOfferedConstantsInsertNothing) {
 
 TEST_F(ConstantSeederTest, TheSameLiteralUnderTwoTypesIsTwoConstants) {
     const std::vector<typed_constant> shared{
-        typed_constant{.type = 0, .literal = &zero}, typed_constant{.type = 1, .literal = &zero}};
+        typed_constant{.type = 0, .literal = zero}, typed_constant{.type = 1, .literal = zero}};
     EXPECT_CALL(insert_constant, insert(_)).Times(2);
     seeder.seed(shared);
 }

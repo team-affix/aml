@@ -6,7 +6,7 @@
 
 namespace AML {
 
-// A user type: a monomorphic algebraic data type given by its constructors, in tag order.
+// A user type: a monomorphic algebraic data type given by its constructors, in id order.
 struct type_def {
     std::vector<ctor_def> ctors;
     auto operator<=>(const type_def&) const = default;

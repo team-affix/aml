@@ -7,9 +7,9 @@
 
 namespace AML {
 
-// A native primitive: a total function from argument values to a result value. It must make its result through the
-// same value pool the solver uses, so results are interned.
-using primitive = std::function<const value*(const std::vector<const value*>&)>;
+// A native primitive: a total function from argument values to a result value. The arguments are read in place (they
+// point into the solver's columns); the result is a fresh value the primitive builds.
+using primitive = std::function<value(const std::vector<const value*>&)>;
 
 }
 

@@ -37,7 +37,7 @@ std::optional<feature> LEAF_DETECTOR::detect(const bin& data) const {
     const std::optional<const value*> label = find_uniform_value_.find(data.labels.cells);
     if (!label.has_value())
         return std::nullopt;
-    return feature{feature::constant{.literal = label.value()}};
+    return feature{feature::constant{.literal = *label.value()}};
 }
 
 #undef LEAF_DETECTOR
