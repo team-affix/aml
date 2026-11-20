@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <limits>
 #include <string>
 #include <variant>
@@ -32,23 +31,22 @@ const prim_id k_xor = 0;
 const char* const k_primitive_names[] = {"xor", "and", "or", "not"};
 const size_t k_xor_buckets = 6;
 
+// Settings for this example: edit them here.
+const size_t k_bits = 10;                // parity over this many input bits; the training set has 2^bits rows
+const size_t k_max_applications = 9;     // synthesis applications per session
+const double k_exploration_constant = 4; // on ucb1's normalized [0, 1] scale; above 1 favours exploration
+const uint32_t k_seed = 1;
+const size_t k_commit_visits = 52000;    // frontier visits before committing along the best path; 0 never commits
+const double k_seconds = 0;              // stop after this many seconds; 0 runs until Ctrl-C
+const double k_report_seconds = 10;      // seconds between progress lines
+const size_t k_max_rss_mb = 4000;        // stop once resident memory passes this (checked every 1,000 episodes)
+const size_t k_model_lines = 40;         // lines of the best model printed at the end
+
 volatile std::sig_atomic_t stop_requested = 0;
 
 void request_stop(int) {
     stop_requested = 1;
 }
-
-struct run_settings {
-    size_t bits;
-    size_t max_applications;
-    double exploration_constant;
-    uint32_t seed;
-    size_t commit_visits;
-    double seconds;
-    double report_seconds;
-    size_t max_rss_mb;
-    size_t model_lines;
-};
 
 // Counts of episodes by how many xors the feature their root matches on holds (the last bucket is "or more"), and
 // their summed cost.
@@ -60,39 +58,6 @@ struct root_tally {
 
 root_tally empty_tally() {
     return root_tally{.episodes = 0, .cost_sum = 0, .by_xors = {0, 0, 0, 0, 0, 0}};
-}
-
-void print_usage() {
-    std::printf(
-        "usage: probe [--key=value ...]\n"
-        "  --bits=10              parity over this many input bits (the training set is all 2^bits rows)\n"
-        "  --max-applications=9   synthesis applications per session\n"
-        "  --c=4                  exploration constant, on ucb1's normalized [0, 1] scale (may exceed 1)\n"
-        "  --seed=1               random seed\n"
-        "  --commit-visits=52000  visits at the frontier before committing along the best path (0: never commit)\n"
-        "  --seconds=0            stop after this many seconds (0: run until Ctrl-C)\n"
-        "  --report-seconds=10    seconds between progress lines\n"
-        "  --max-rss-mb=4000      stop if resident memory exceeds this many MB\n"
-        "  --model-lines=40       lines of the best model to print at the end\n");
-}
-
-bool parse_option(const char* argument, run_settings& settings) {
-    const char* equals = std::strchr(argument, '=');
-    if (std::strncmp(argument, "--", 2) != 0 || equals == nullptr)
-        return false;
-    const std::string key(argument + 2, equals);
-    const char* text = equals + 1;
-    if (key == "bits") settings.bits = std::strtoull(text, nullptr, 10);
-    else if (key == "max-applications") settings.max_applications = std::strtoull(text, nullptr, 10);
-    else if (key == "c") settings.exploration_constant = std::strtod(text, nullptr);
-    else if (key == "seed") settings.seed = static_cast<uint32_t>(std::strtoul(text, nullptr, 10));
-    else if (key == "commit-visits") settings.commit_visits = std::strtoull(text, nullptr, 10);
-    else if (key == "seconds") settings.seconds = std::strtod(text, nullptr);
-    else if (key == "report-seconds") settings.report_seconds = std::strtod(text, nullptr);
-    else if (key == "max-rss-mb") settings.max_rss_mb = std::strtoull(text, nullptr, 10);
-    else if (key == "model-lines") settings.model_lines = std::strtoull(text, nullptr, 10);
-    else return false;
-    return true;
 }
 
 double resident_mb() {
@@ -206,25 +171,8 @@ double seconds_since(std::chrono::steady_clock::time_point start) {
 
 }
 
-int main(int argc, char** argv) {
-    run_settings settings{
-        .bits = 10,
-        .max_applications = 9,
-        .exploration_constant = 4.0,
-        .seed = 1,
-        .commit_visits = 52000,
-        .seconds = 0,
-        .report_seconds = 10,
-        .max_rss_mb = 4000,
-        .model_lines = 40};
-    for (int index = 1; index < argc; ++index) {
-        if (parse_option(argv[index], settings))
-            continue;
-        print_usage();
-        return std::strcmp(argv[index], "--help") == 0 ? 0 : 1;
-    }
-    const size_t commit_visits =
-        settings.commit_visits == 0 ? std::numeric_limits<size_t>::max() : settings.commit_visits;
+int main() {
+    const size_t commit_visits = k_commit_visits == 0 ? std::numeric_limits<size_t>::max() : k_commit_visits;
 
     schema types(std::vector<type_def>{type_def{.ctors = {ctor_def{.arg_types = {}}, ctor_def{.arg_types = {}}}}});
     value_pool values;
@@ -238,20 +186,20 @@ int main(int argc, char** argv) {
     const std::vector<typed_constant> constants{
         {.type = k_boolean, .literal = values.make(k_false_tag, {})},
         {.type = k_boolean, .literal = values.make(k_true_tag, {})}};
-    const bin training = parity_training(values, settings.bits);
+    const bin training = parity_training(values, k_bits);
 
     falcon_manifest solver(types, values, primitives,
-                           falcon_options{.max_applications = settings.max_applications,
-                                          .exploration_constant = settings.exploration_constant,
-                                          .seed = settings.seed,
+                           falcon_options{.max_applications = k_max_applications,
+                                          .exploration_constant = k_exploration_constant,
+                                          .seed = k_seed,
                                           .commit_visits = commit_visits});
     solver.constant_seeder_.seed(constants);
 
     std::signal(SIGINT, request_stop);
     std::printf("Falcon on %zu-bit parity (%zu rows): max applications %zu, c %.3g, seed %u, commit visits %s\n",
-                settings.bits, training.labels.cells.size(), settings.max_applications,
-                settings.exploration_constant, settings.seed,
-                settings.commit_visits == 0 ? "never" : std::to_string(settings.commit_visits).c_str());
+                k_bits, training.labels.cells.size(), k_max_applications,
+                k_exploration_constant, k_seed,
+                k_commit_visits == 0 ? "never" : std::to_string(k_commit_visits).c_str());
     std::printf("Primitives: xor, and, or, not. Constants: F, T. Ctrl-C stops and prints a summary.\n\n");
     std::fflush(stdout);
 
@@ -261,7 +209,7 @@ int main(int argc, char** argv) {
     size_t episode = 0;
     size_t best_cost = std::numeric_limits<size_t>::max();
     size_t commitments = 0;
-    double next_report = settings.report_seconds;
+    double next_report = k_report_seconds;
     const char* stop_reason = "Ctrl-C";
     while (stop_requested == 0) {
         // One episode, as falcon's mcts_episode runs it, keeping the model to look at its root.
@@ -286,21 +234,21 @@ int main(int argc, char** argv) {
             std::printf("  commitment %zu at %.1fs (episode %zu)\n", commitments, elapsed, episode);
         }
         if (elapsed >= next_report) {
-            next_report += settings.report_seconds;
+            next_report += k_report_seconds;
             std::printf("[%6.0fs] episodes %zu (%.0f/s) | rss %.0f MB | best %zu | commitments %zu | last %.0fs: ",
                         elapsed, episode, static_cast<double>(episode) / elapsed, resident_mb(), best_cost,
-                        commitments, settings.report_seconds);
+                        commitments, k_report_seconds);
             print_tally(window);
             std::printf("\n");
             window = empty_tally();
         }
         std::fflush(stdout);
-        if (settings.seconds > 0 && elapsed >= settings.seconds) {
+        if (k_seconds > 0 && elapsed >= k_seconds) {
             stop_reason = "time limit";
             break;
         }
         const bool check_memory = episode % 1000 == 0;
-        if (check_memory && resident_mb() > static_cast<double>(settings.max_rss_mb)) {
+        if (check_memory && resident_mb() > static_cast<double>(k_max_rss_mb)) {
             stop_reason = "memory limit";
             break;
         }
@@ -321,8 +269,8 @@ int main(int argc, char** argv) {
         return 0;
     std::printf("Best model, cost %zu:\n", solver.best_model_tracker_.best_cost());
     size_t lines = 0;
-    print_model(solver.best_model_tracker_.best_model().value(), 0, settings.model_lines, lines);
-    if (lines >= settings.model_lines)
-        std::printf("  (cut at %zu lines; --model-lines shows more)\n", settings.model_lines);
+    print_model(solver.best_model_tracker_.best_model().value(), 0, k_model_lines, lines);
+    if (lines >= k_model_lines)
+        std::printf("  (cut at %zu lines; --model-lines shows more)\n", k_model_lines);
     return 0;
 }
