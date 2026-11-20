@@ -3,6 +3,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/argument_chooser.hpp"
 
+using namespace AML;
+
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;

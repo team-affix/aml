@@ -5,6 +5,8 @@
 #include <optional>
 #include "value_objects/model_node.hpp"
 
+namespace AML {
+
 // Stores a copy of the cheapest model recorded so far. Before any record there is no model and the cost is the largest
 // size_t. A cheaper model replaces the copy; the copy is taken only then, which is rare.
 struct best_model_tracker {
@@ -16,5 +18,7 @@ private:
     std::optional<model_node> best_model_;
     size_t best_cost_;
 };
+
+}
 
 #endif

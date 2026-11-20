@@ -12,6 +12,8 @@
 #include "value_objects/var_id.hpp"
 #include "debug_assert.hpp"
 
+namespace AML {
+
 // Builds a model that fits a bin exactly. A bin without rows becomes empty. A bin with a detected output (a variable
 // equal to its labels, or labels that agree) becomes a leaf. Otherwise a synthesis session runs over the bin: a
 // synthesized feature equal to the labels becomes a leaf's output, and failing that the bin is partitioned by a match
@@ -113,5 +115,7 @@ model_node MODEL_BUILDER::build_match(const bin& data, const candidate& scrutine
 
 #undef MODEL_BUILDER
 #undef MODEL_BUILDER_TEMPLATE
+
+}
 
 #endif

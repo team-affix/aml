@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/application_log.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct ApplicationLogTest : public ::testing::Test {

@@ -3,6 +3,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/output_finder.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct OutputFinderTest : public ::testing::Test {

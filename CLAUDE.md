@@ -50,6 +50,9 @@ The library is `core/`. There is no parser yet; tests build their data in C++. `
 watching a solver run by hand (`make probe`, then `./build/probe`), outside the library and its tests; its example is
 meant to be swapped.
 
+Everything in `core/` is in `namespace AML` (upper case on purpose), so AML's names read apart from C++'s. Tests say
+`using namespace AML;`; user-side code (the probe, `core/test/support/`) writes `AML::` in full.
+
 ## Layout
 
 ```

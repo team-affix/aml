@@ -2,6 +2,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/primitive_store.hpp"
 
+using namespace AML;
+
 namespace {
 
 const value* first_argument(const std::vector<const value*>& args) {

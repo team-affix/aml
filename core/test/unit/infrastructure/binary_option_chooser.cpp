@@ -4,6 +4,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/binary_option_chooser.hpp"
 
+using namespace AML;
+
 using ::testing::AnyNumber;
 using ::testing::InSequence;
 using ::testing::NiceMock;

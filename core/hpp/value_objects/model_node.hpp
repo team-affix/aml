@@ -6,6 +6,8 @@
 #include <vector>
 #include "value_objects/feature.hpp"
 
+namespace AML {
+
 // A node of a model, which owns its branches, so a model is a tree. `match` is an exhaustive one-layer case on
 // `scrutinee`: `branches[t]` handles the constructor with tag t and sees that constructor's arguments bound as the next
 // variables in scope. `leaf` returns its output feature evaluated in scope: a constant label, a variable, or any
@@ -28,5 +30,7 @@ struct model_node {
     std::variant<match, leaf, empty> content;
     std::strong_ordering operator<=>(const model_node&) const = default;
 };
+
+}
 
 #endif

@@ -10,6 +10,8 @@
 #include "value_objects/typed_constant.hpp"
 #include "value_objects/typed_primitive.hpp"
 
+using namespace AML;
+
 namespace {
 
 // Booleans, naturals and pairs of a natural and a boolean. Models whose leaves output variables or synthesized

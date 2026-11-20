@@ -4,6 +4,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/feature_synthesizer.hpp"
 
+using namespace AML;
+
 using ::testing::AnyNumber;
 using ::testing::AtLeast;
 using ::testing::_;

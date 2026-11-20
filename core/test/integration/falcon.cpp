@@ -12,6 +12,8 @@
 #include "value_objects/typed_constant.hpp"
 #include "value_objects/typed_primitive.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct FalconIntegrationTest : public ::testing::Test {

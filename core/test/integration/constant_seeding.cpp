@@ -6,6 +6,8 @@
 #include "infrastructure/value_pool.hpp"
 #include "value_objects/typed_constant.hpp"
 
+using namespace AML;
+
 namespace {
 
 using seeder_t = constant_seeder<constant_store>;

@@ -2,6 +2,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/mcts_episode.hpp"
 
+using namespace AML;
+
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;

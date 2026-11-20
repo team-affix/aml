@@ -4,6 +4,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/model_builder.hpp"
 
+using namespace AML;
+
 using ::testing::AnyNumber;
 using ::testing::_;
 using ::testing::InSequence;

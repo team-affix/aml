@@ -4,6 +4,8 @@
 #include <cstddef>
 #include "value_objects/mcts_choice.hpp"
 
+namespace AML {
+
 // The options 0..count-1, offered to MCTS by count and position without laying them out.
 struct option_range {
     option_range(size_t count);
@@ -12,5 +14,7 @@ struct option_range {
 private:
     size_t count_;
 };
+
+}
 
 #endif

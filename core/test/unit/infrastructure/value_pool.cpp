@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/value_pool.hpp"
 
+using namespace AML;
+
 namespace {
 
 // Tags of nat {zero, suc}, a pair {pair} and bool {false, true}. Values carry no type, only tags.

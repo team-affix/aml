@@ -2,6 +2,8 @@
 
 #include <utility>
 
+namespace AML {
+
 cheapest_feature_index::cheapest_feature_index()
     : candidates_()
     , slots_()
@@ -38,4 +40,6 @@ const std::vector<size_t>& cheapest_feature_index::features_of_type(type_id type
     if (type >= by_type_.size())
         return none_;
     return by_type_[type];
+}
+
 }

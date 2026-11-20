@@ -1,6 +1,8 @@
 #include "infrastructure/schema.hpp"
 #include "debug_assert.hpp"
 
+namespace AML {
+
 schema::schema()
     : types_() {}
 
@@ -24,4 +26,6 @@ size_t schema::type_count() const {
 
 const type_def& schema::def(type_id type) const {
     return types_.at(type);
+}
+
 }

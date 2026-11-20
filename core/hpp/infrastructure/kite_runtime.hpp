@@ -15,6 +15,8 @@
 #include "value_objects/typed_primitive.hpp"
 #include "value_objects/value.hpp"
 
+namespace AML {
+
 struct kite_runtime {
     kite_runtime(
         schema& types,
@@ -31,5 +33,7 @@ private:
     kite_manifest manifest_;
     bin training_;
 };
+
+}
 
 #endif

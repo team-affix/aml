@@ -12,6 +12,8 @@
 #include "support/value_equality.hpp"
 #include "value_objects/typed_primitive.hpp"
 
+using namespace AML;
+
 namespace {
 
 // The test primitives over a real value pool, stored with their types and reached through the caller and through

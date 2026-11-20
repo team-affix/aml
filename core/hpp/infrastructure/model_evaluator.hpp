@@ -7,6 +7,8 @@
 #include "value_objects/model_node.hpp"
 #include "value_objects/value.hpp"
 
+namespace AML {
+
 // Infers a label for one input tuple: each match evaluates its scrutinee, binds the matched constructor's arguments
 // and descends into that constructor's branch. A leaf gives its output evaluated in that scope; an empty node gives
 // nothing.
@@ -42,5 +44,7 @@ std::optional<const value*> MODEL_EVALUATOR::evaluate(
 
 #undef MODEL_EVALUATOR
 #undef MODEL_EVALUATOR_TEMPLATE
+
+}
 
 #endif

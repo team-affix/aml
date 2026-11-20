@@ -10,6 +10,8 @@
 #include "value_objects/value.hpp"
 #include "debug_assert.hpp"
 
+namespace AML {
+
 // Splits a bin by a one-layer case on a scrutinee column: one child per constructor of the scrutinee's type, in tag
 // order. A child holds the rows whose scrutinee has its constructor, with that constructor's arguments bound as new
 // variables after the parent's inputs. A constructor no row has gives an empty child.
@@ -55,5 +57,7 @@ std::vector<bin> BIN_SPLITTER::split(const bin& parent, const typed_column& scru
 
 #undef BIN_SPLITTER
 #undef BIN_SPLITTER_TEMPLATE
+
+}
 
 #endif

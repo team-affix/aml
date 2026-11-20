@@ -2,6 +2,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/model_episode.hpp"
 
+using namespace AML;
+
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;

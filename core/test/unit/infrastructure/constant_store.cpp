@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/constant_store.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct ConstantStoreTest : public ::testing::Test {

@@ -70,6 +70,8 @@
 #include "value_objects/falcon_options.hpp"
 #include "value_objects/typed_primitive.hpp"
 
+namespace AML {
+
 // Falcon: Osprey without splitting choices. Every choice a model build makes is one MCTS choice among all of its
 // options: the primitive to apply, each of its arguments, the feature a bin is matched on and the argument a funnel
 // descends into (stopping or continuing synthesis is a two-way choice as before). Once the frontier (the root at
@@ -350,5 +352,7 @@ struct falcon_manifest {
     feature_evaluator_t          feature_evaluator_;
     model_evaluator_t            model_evaluator_;
 };
+
+}
 
 #endif

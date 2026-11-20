@@ -7,6 +7,8 @@
 #include "infrastructure/value_pool.hpp"
 #include "value_objects/typed_constant.hpp"
 
+using namespace AML;
+
 namespace {
 
 // Scout's wiring: the real builder, leaf detector, synthesis, splitter, sizer and evaluator together, choosing the

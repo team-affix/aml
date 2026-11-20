@@ -7,6 +7,8 @@
 #include "value_objects/value.hpp"
 #include "value_objects/value_hash.hpp"
 
+namespace AML {
+
 // Interns values, so equal values share one pointer.
 struct value_pool {
     value_pool();
@@ -14,5 +16,7 @@ struct value_pool {
 private:
     std::unordered_set<value, value_hash> values_;
 };
+
+}
 
 #endif

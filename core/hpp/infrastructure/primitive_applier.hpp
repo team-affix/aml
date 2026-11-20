@@ -10,6 +10,8 @@
 #include "value_objects/prim_id.hpp"
 #include "value_objects/primitive_type.hpp"
 
+namespace AML {
+
 // Applies one chosen primitive within a synthesis session: chooses its arguments, logs the application, and adds a
 // heterogeneous result to the features.
 template<
@@ -63,5 +65,7 @@ void PRIMITIVE_APPLIER::apply(prim_id prim, size_t row_count) {
 
 #undef PRIMITIVE_APPLIER
 #undef PRIMITIVE_APPLIER_TEMPLATE
+
+}
 
 #endif

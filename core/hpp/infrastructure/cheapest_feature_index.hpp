@@ -9,6 +9,8 @@
 #include "value_objects/typed_column_hash.hpp"
 #include "value_objects/type_id.hpp"
 
+namespace AML {
+
 // Stores the cheapest candidate seen for each typed column, in insertion order and by type. A cheaper candidate for a
 // typed column already held replaces the held one in place, so a replacement never changes a position's type.
 struct cheapest_feature_index {
@@ -23,5 +25,7 @@ private:
     std::vector<std::vector<size_t>> by_type_;
     std::vector<size_t> none_;
 };
+
+}
 
 #endif

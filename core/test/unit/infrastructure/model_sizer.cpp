@@ -2,6 +2,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/model_sizer.hpp"
 
+using namespace AML;
+
 using ::testing::NiceMock;
 using ::testing::Return;
 

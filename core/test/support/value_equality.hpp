@@ -11,7 +11,7 @@
 template<typename IMakeValue>
 struct value_equality {
     value_equality(IMakeValue& make_value, size_t false_tag, size_t true_tag);
-    const value* operator()(const std::vector<const value*>& args) const;
+    const AML::value* operator()(const std::vector<const AML::value*>& args) const;
 private:
     IMakeValue& make_value_;
     size_t false_tag_;
@@ -28,7 +28,7 @@ VALUE_EQUALITY::value_equality(IMakeValue& make_value, size_t false_tag, size_t 
     , true_tag_(true_tag) {}
 
 VALUE_EQUALITY_TEMPLATE
-const value* VALUE_EQUALITY::operator()(const std::vector<const value*>& args) const {
+const AML::value* VALUE_EQUALITY::operator()(const std::vector<const AML::value*>& args) const {
     DEBUG_ASSERT(args.size() == 2);
     const bool equal = args[0] == args[1];
     return make_value_.make(equal ? true_tag_ : false_tag_, {});

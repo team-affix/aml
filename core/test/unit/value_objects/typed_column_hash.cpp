@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "value_objects/typed_column_hash.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct TypedColumnHashTest : public ::testing::Test {

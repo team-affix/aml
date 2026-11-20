@@ -7,6 +7,8 @@
 #include "value_objects/type_def.hpp"
 #include "value_objects/type_id.hpp"
 
+namespace AML {
+
 // The user's types, and the authority on type ids and constructor tags: every id and tag comes from here. Declaring a
 // type gives its id; declaring a constructor of a declared type gives its tag, the constructors of a type numbered in
 // the order declared. A constructor's argument types may be any declared type, the type itself included, so declaring
@@ -20,5 +22,7 @@ struct schema {
 private:
     std::vector<type_def> types_;
 };
+
+}
 
 #endif

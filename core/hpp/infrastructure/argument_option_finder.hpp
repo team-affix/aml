@@ -7,6 +7,8 @@
 #include "value_objects/type_id.hpp"
 #include "debug_assert.hpp"
 
+namespace AML {
+
 // Finds the operands of a primitive's next argument type that, after a prefix of chosen operands, still leave an
 // application witness. Only operands of that type are looked at, in operand order.
 template<typename ICountOperandsOfType, typename IGetOperandOfType, typename IDetectWitness>
@@ -54,5 +56,7 @@ std::vector<size_t> ARGUMENT_OPTION_FINDER::find(
 
 #undef ARGUMENT_OPTION_FINDER
 #undef ARGUMENT_OPTION_FINDER_TEMPLATE
+
+}
 
 #endif

@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/option_range.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct OptionRangeTest : public ::testing::Test {

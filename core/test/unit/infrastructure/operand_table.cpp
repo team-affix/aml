@@ -3,6 +3,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/operand_table.hpp"
 
+using namespace AML;
+
 using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::ReturnRef;

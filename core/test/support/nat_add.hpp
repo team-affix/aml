@@ -11,7 +11,7 @@
 template<typename IMakeValue>
 struct nat_add {
     nat_add(IMakeValue& make_value, size_t suc_tag);
-    const value* operator()(const std::vector<const value*>& args) const;
+    const AML::value* operator()(const std::vector<const AML::value*>& args) const;
 private:
     IMakeValue& make_value_;
     size_t suc_tag_;
@@ -26,10 +26,10 @@ NAT_ADD::nat_add(IMakeValue& make_value, size_t suc_tag)
     , suc_tag_(suc_tag) {}
 
 NAT_ADD_TEMPLATE
-const value* NAT_ADD::operator()(const std::vector<const value*>& args) const {
+const AML::value* NAT_ADD::operator()(const std::vector<const AML::value*>& args) const {
     DEBUG_ASSERT(args.size() == 2);
-    const value* sum = args[0];
-    for (const value* rest = args[1]; rest->tag == suc_tag_; rest = rest->args[0])
+    const AML::value* sum = args[0];
+    for (const AML::value* rest = args[1]; rest->tag == suc_tag_; rest = rest->args[0])
         sum = make_value_.make(suc_tag_, {sum});
     return sum;
 }

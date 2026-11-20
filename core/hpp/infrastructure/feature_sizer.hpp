@@ -5,6 +5,8 @@
 #include <variant>
 #include "value_objects/feature.hpp"
 
+namespace AML {
+
 // Sizes a feature: one per variable reference and per primitive application, and a constant's own size.
 template<typename ISizeValue>
 struct feature_sizer {
@@ -35,5 +37,7 @@ size_t FEATURE_SIZER::size(const feature& expression) const {
 
 #undef FEATURE_SIZER
 #undef FEATURE_SIZER_TEMPLATE
+
+}
 
 #endif

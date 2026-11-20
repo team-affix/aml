@@ -1,6 +1,8 @@
 #include "infrastructure/scout_runtime.hpp"
 #include "debug_assert.hpp"
 
+namespace AML {
+
 scout_runtime::scout_runtime(
     schema& types,
     value_pool& values,
@@ -28,4 +30,6 @@ size_t scout_runtime::best_cost() const {
 std::optional<const value*> scout_runtime::infer(const std::vector<const value*>& inputs) const {
     DEBUG_ASSERT(best_model().has_value());
     return manifest_.model_evaluator_.evaluate(best_model().value(), inputs);
+}
+
 }

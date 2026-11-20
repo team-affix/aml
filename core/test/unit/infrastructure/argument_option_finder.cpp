@@ -3,6 +3,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/argument_option_finder.hpp"
 
+using namespace AML;
+
 using ::testing::AnyNumber;
 using ::testing::_;
 using ::testing::NiceMock;

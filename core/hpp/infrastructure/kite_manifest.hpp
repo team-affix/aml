@@ -64,6 +64,8 @@
 #include "value_objects/kite_options.hpp"
 #include "value_objects/typed_primitive.hpp"
 
+namespace AML {
+
 // Kite: Razor with order-tiered choices. A feature's order is zero for a variable or a constant and one more than its
 // highest-order argument for a primitive application. Each argument of a primitive and the feature a bin is matched on
 // are chosen highest order first: a two-way choice takes the highest order present or descends to the next, and the
@@ -306,5 +308,7 @@ struct kite_manifest {
     feature_evaluator_t          feature_evaluator_;
     model_evaluator_t            model_evaluator_;
 };
+
+}
 
 #endif

@@ -1,5 +1,7 @@
 #include "infrastructure/uniform_value_finder.hpp"
 
+namespace AML {
+
 std::optional<const value*> uniform_value_finder::find(const column& cells) const {
     if (cells.empty())
         return std::nullopt;
@@ -9,4 +11,6 @@ std::optional<const value*> uniform_value_finder::find(const column& cells) cons
             return std::nullopt;
     }
     return first;
+}
+
 }

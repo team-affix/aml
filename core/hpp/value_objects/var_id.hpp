@@ -3,6 +3,10 @@
 
 #include <cstdint>
 
+namespace AML {
+
 using var_id = uint32_t;
+
+}
 
 #endif

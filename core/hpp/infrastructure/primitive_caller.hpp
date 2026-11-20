@@ -5,6 +5,8 @@
 #include "value_objects/prim_id.hpp"
 #include "value_objects/value.hpp"
 
+namespace AML {
+
 // Calls the primitive behind an id on argument values.
 template<typename IGetPrimitiveFunction>
 struct primitive_caller {
@@ -28,5 +30,7 @@ const value* PRIMITIVE_CALLER::call(prim_id prim, const std::vector<const value*
 
 #undef PRIMITIVE_CALLER
 #undef PRIMITIVE_CALLER_TEMPLATE
+
+}
 
 #endif

@@ -10,7 +10,7 @@
 template<typename IMakeValue>
 struct bool_xor {
     bool_xor(IMakeValue& make_value, size_t false_tag, size_t true_tag);
-    const value* operator()(const std::vector<const value*>& args) const;
+    const AML::value* operator()(const std::vector<const AML::value*>& args) const;
 private:
     IMakeValue& make_value_;
     size_t false_tag_;
@@ -27,7 +27,7 @@ BOOL_XOR::bool_xor(IMakeValue& make_value, size_t false_tag, size_t true_tag)
     , true_tag_(true_tag) {}
 
 BOOL_XOR_TEMPLATE
-const value* BOOL_XOR::operator()(const std::vector<const value*>& args) const {
+const AML::value* BOOL_XOR::operator()(const std::vector<const AML::value*>& args) const {
     DEBUG_ASSERT(args.size() == 2);
     const bool left = args[0]->tag == true_tag_;
     const bool right = args[1]->tag == true_tag_;

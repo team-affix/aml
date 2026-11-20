@@ -3,6 +3,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/constant_seeder.hpp"
 
+using namespace AML;
+
 using ::testing::_;
 using ::testing::InSequence;
 using ::testing::NiceMock;

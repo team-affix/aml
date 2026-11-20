@@ -6,6 +6,8 @@
 #include "value_objects/feature.hpp"
 #include "value_objects/value.hpp"
 
+namespace AML {
+
 // Evaluates a feature on one row, given the values of the variables in scope.
 template<typename ICallPrimitive>
 struct feature_evaluator {
@@ -37,5 +39,7 @@ const value* FEATURE_EVALUATOR::evaluate(const feature& expression, const std::v
 
 #undef FEATURE_EVALUATOR
 #undef FEATURE_EVALUATOR_TEMPLATE
+
+}
 
 #endif

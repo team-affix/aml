@@ -6,6 +6,8 @@
 #include "value_objects/bin.hpp"
 #include "value_objects/candidate.hpp"
 
+namespace AML {
+
 // Starts a synthesis session over a bin: forgets the last session's features and applications, then holds the bin's
 // heterogeneous variables as the first features.
 template<
@@ -51,5 +53,7 @@ void SYNTHESIS_STARTER::start(const bin& data) {
 
 #undef SYNTHESIS_STARTER
 #undef SYNTHESIS_STARTER_TEMPLATE
+
+}
 
 #endif

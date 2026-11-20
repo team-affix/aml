@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "value_objects/value_hash.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct ValueHashTest : public ::testing::Test {

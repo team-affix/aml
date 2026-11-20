@@ -6,6 +6,8 @@
 #include "value_objects/candidate.hpp"
 #include "debug_assert.hpp"
 
+namespace AML {
+
 // Chooses one of a synthesis session's features, read from the session's store, by the features' orders: the
 // highest-order features are offered first, so a bin is likely to be matched on the feature built up furthest.
 template<typename IGetFeatures, typename IMeasureOrder, typename IChooseOption>
@@ -40,5 +42,7 @@ size_t TIERED_FEATURE_CHOOSER::choose(size_t feature_count) {
 
 #undef TIERED_FEATURE_CHOOSER
 #undef TIERED_FEATURE_CHOOSER_TEMPLATE
+
+}
 
 #endif

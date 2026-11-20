@@ -7,6 +7,8 @@
 #include "infrastructure/binary_option_chooser.hpp"
 #include "infrastructure/tiered_option_chooser.hpp"
 
+using namespace AML;
+
 using ::testing::InSequence;
 using ::testing::Return;
 using ::testing::StrictMock;

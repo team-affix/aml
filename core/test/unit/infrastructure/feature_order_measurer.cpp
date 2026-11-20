@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/feature_order_measurer.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct FeatureOrderMeasurerTest : public ::testing::Test {

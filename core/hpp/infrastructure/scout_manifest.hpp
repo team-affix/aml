@@ -38,6 +38,8 @@
 #include "value_objects/scout_options.hpp"
 #include "value_objects/typed_primitive.hpp"
 
+namespace AML {
+
 // Scout: builds one model, taking the first candidate at every choice.
 struct scout_manifest {
     struct feature_sizer_t : feature_sizer<value_sizer> {
@@ -169,5 +171,7 @@ struct scout_manifest {
     feature_evaluator_t         feature_evaluator_;
     model_evaluator_t           model_evaluator_;
 };
+
+}
 
 #endif

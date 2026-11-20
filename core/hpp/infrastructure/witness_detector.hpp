@@ -7,6 +7,8 @@
 #include "value_objects/type_id.hpp"
 #include "debug_assert.hpp"
 
+namespace AML {
+
 // Detects an application witness: an argument tuple for a primitive that extends a prefix of operands, type-checks,
 // holds at least one feature (so is heterogeneous), and has not been tried. Tuples are counted per argument type,
 // never listed.
@@ -61,5 +63,7 @@ bool WITNESS_DETECTOR::detect(
 
 #undef WITNESS_DETECTOR
 #undef WITNESS_DETECTOR_TEMPLATE
+
+}
 
 #endif

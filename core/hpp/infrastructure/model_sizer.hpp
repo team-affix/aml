@@ -5,6 +5,8 @@
 #include <variant>
 #include "value_objects/model_node.hpp"
 
+namespace AML {
+
 // Sizes a model: a match costs one plus its scrutinee's size, a leaf costs its output's size, and empty costs nothing.
 template<typename ISizeFeature>
 struct model_sizer {
@@ -36,5 +38,7 @@ size_t MODEL_SIZER::size(const model_node& node) const {
 
 #undef MODEL_SIZER
 #undef MODEL_SIZER_TEMPLATE
+
+}
 
 #endif

@@ -7,6 +7,8 @@
 #include <vector>
 #include "debug_assert.hpp"
 
+namespace AML {
+
 // Chooses an option by its order, highest first. Starting from the highest order present, a two-way choice takes
 // that order (option 0) or descends to the next lower order present (option 1); the lowest order is taken without a
 // choice. One of the taken order's options is then chosen, in their given order. Returns the chosen option's position
@@ -48,5 +50,7 @@ size_t TIERED_OPTION_CHOOSER::choose(const std::vector<size_t>& orders) {
 
 #undef TIERED_OPTION_CHOOSER
 #undef TIERED_OPTION_CHOOSER_TEMPLATE
+
+}
 
 #endif

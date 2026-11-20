@@ -4,6 +4,8 @@
 #include "infrastructure/primitive_caller.hpp"
 #include "value_objects/primitive.hpp"
 
+using namespace AML;
+
 using ::testing::NiceMock;
 using ::testing::ReturnRef;
 

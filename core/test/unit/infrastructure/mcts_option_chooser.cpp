@@ -3,6 +3,8 @@
 #include "infrastructure/mcts_option_chooser.hpp"
 #include "infrastructure/option_range.hpp"
 
+using namespace AML;
+
 using ::testing::NiceMock;
 using ::testing::Property;
 using ::testing::Return;

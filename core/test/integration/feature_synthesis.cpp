@@ -30,6 +30,8 @@
 #include "value_objects/typed_constant.hpp"
 #include "value_objects/typed_primitive.hpp"
 
+using namespace AML;
+
 using ::testing::Invoke;
 using ::testing::InSequence;
 using ::testing::NiceMock;

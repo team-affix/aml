@@ -15,6 +15,8 @@
 #include "value_objects/typed_primitive.hpp"
 #include "value_objects/value.hpp"
 
+namespace AML {
+
 struct osprey_runtime {
     osprey_runtime(
         schema& types,
@@ -31,5 +33,7 @@ private:
     osprey_manifest manifest_;
     bin training_;
 };
+
+}
 
 #endif

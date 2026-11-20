@@ -1,5 +1,7 @@
 #include "infrastructure/osprey_manifest.hpp"
 
+namespace AML {
+
 namespace {
 
 const mcts_tree_node_id k_root = 0;
@@ -85,3 +87,5 @@ osprey_manifest::osprey_manifest(
     , mcts_episode_(model_episode_, value_delta_, terminator_)
     , feature_evaluator_(primitive_caller_)
     , model_evaluator_(feature_evaluator_) {}
+
+}

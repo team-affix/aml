@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/uniform_value_finder.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct UniformValueFinderTest : public ::testing::Test {

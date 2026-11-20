@@ -3,6 +3,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/bin_splitter.hpp"
 
+using namespace AML;
+
 using ::testing::NiceMock;
 using ::testing::ReturnRef;
 

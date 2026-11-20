@@ -1,5 +1,7 @@
 #include "infrastructure/constant_store.hpp"
 
+namespace AML {
+
 constant_store::constant_store()
     : constants_()
     , by_type_()
@@ -20,4 +22,6 @@ const std::vector<size_t>& constant_store::constants_of_type(type_id type) const
     if (type >= by_type_.size())
         return none_;
     return by_type_[type];
+}
+
 }

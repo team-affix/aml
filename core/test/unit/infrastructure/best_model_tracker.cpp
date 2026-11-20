@@ -3,6 +3,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/best_model_tracker.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct BestModelTrackerTest : public ::testing::Test {

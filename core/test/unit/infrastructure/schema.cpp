@@ -3,6 +3,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/schema.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct SchemaTest : public ::testing::Test {

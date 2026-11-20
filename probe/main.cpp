@@ -24,7 +24,7 @@
 
 namespace {
 
-const prim_id k_xor = 0;
+const AML::prim_id k_xor = 0;
 const char* const k_primitive_names[] = {"xor", "and", "or", "not"};
 const size_t k_xor_buckets = 6;
 
@@ -69,49 +69,49 @@ double resident_mb() {
     return static_cast<double>(resident) * static_cast<double>(sysconf(_SC_PAGESIZE)) / 1048576.0;
 }
 
-size_t count_xors(const feature& expression) {
-    const feature::app* application = std::get_if<feature::app>(&expression.content);
+size_t count_xors(const AML::feature& expression) {
+    const AML::feature::app* application = std::get_if<AML::feature::app>(&expression.content);
     if (application == nullptr)
         return 0;
     size_t total = application->prim == k_xor ? 1 : 0;
-    for (const feature& arg : application->args)
+    for (const AML::feature& arg : application->args)
         total += count_xors(arg);
     return total;
 }
 
-std::string show_feature(const feature& expression, size_t true_tag) {
-    if (const feature::var* variable = std::get_if<feature::var>(&expression.content))
+std::string show_feature(const AML::feature& expression, size_t true_tag) {
+    if (const AML::feature::var* variable = std::get_if<AML::feature::var>(&expression.content))
         return "x" + std::to_string(variable->index);
-    if (const feature::constant* constant = std::get_if<feature::constant>(&expression.content))
+    if (const AML::feature::constant* constant = std::get_if<AML::feature::constant>(&expression.content))
         return constant->literal->tag == true_tag ? "T" : "F";
-    const feature::app& application = std::get<feature::app>(expression.content);
+    const AML::feature::app& application = std::get<AML::feature::app>(expression.content);
     std::string text = std::string(k_primitive_names[application.prim]) + "(";
     for (size_t index = 0; index < application.args.size(); ++index)
         text += (index == 0 ? "" : ", ") + show_feature(application.args[index], true_tag);
     return text + ")";
 }
 
-std::string show_root(const model_node& model, size_t true_tag) {
-    if (const model_node::match* match = std::get_if<model_node::match>(&model.content))
+std::string show_root(const AML::model_node& model, size_t true_tag) {
+    if (const AML::model_node::match* match = std::get_if<AML::model_node::match>(&model.content))
         return "match " + show_feature(match->scrutinee, true_tag);
-    if (const model_node::leaf* leaf = std::get_if<model_node::leaf>(&model.content))
+    if (const AML::model_node::leaf* leaf = std::get_if<AML::model_node::leaf>(&model.content))
         return "leaf " + show_feature(leaf->output, true_tag);
     return "empty";
 }
 
-size_t root_xors(const model_node& model) {
-    const model_node::match* match = std::get_if<model_node::match>(&model.content);
+size_t root_xors(const AML::model_node& model) {
+    const AML::model_node::match* match = std::get_if<AML::model_node::match>(&model.content);
     if (match == nullptr)
         return 0;
     return count_xors(match->scrutinee);
 }
 
-void print_model(const model_node& node, size_t true_tag, size_t depth, size_t max_lines, size_t& lines) {
+void print_model(const AML::model_node& node, size_t true_tag, size_t depth, size_t max_lines, size_t& lines) {
     if (lines >= max_lines)
         return;
     const std::string indent(2 * depth + 2, ' ');
     ++lines;
-    const model_node::match* match = std::get_if<model_node::match>(&node.content);
+    const AML::model_node::match* match = std::get_if<AML::model_node::match>(&node.content);
     if (match == nullptr) {
         std::printf("%s%s\n", indent.c_str(), show_root(node, true_tag).c_str());
         return;
@@ -144,10 +144,10 @@ void print_tally(const root_tally& tally) {
                     100.0 * static_cast<double>(tally.by_xors[bucket]) / episodes);
 }
 
-bin parity_training(type_id boolean, const value* falsity, const value* truth, size_t bits) {
-    bin training{.inputs = {}, .labels = typed_column{.type = boolean, .cells = {}}};
+AML::bin parity_training(AML::type_id boolean, const AML::value* falsity, const AML::value* truth, size_t bits) {
+    AML::bin training{.inputs = {}, .labels = AML::typed_column{.type = boolean, .cells = {}}};
     for (size_t bit = 0; bit < bits; ++bit)
-        training.inputs.push_back(typed_column{.type = boolean, .cells = {}});
+        training.inputs.push_back(AML::typed_column{.type = boolean, .cells = {}});
     for (size_t row = 0; row < (size_t{1} << bits); ++row) {
         bool parity = false;
         for (size_t bit = 0; bit < bits; ++bit) {
@@ -169,32 +169,32 @@ double seconds_since(std::chrono::steady_clock::time_point start) {
 int main() {
     const size_t commit_visits = k_commit_visits == 0 ? std::numeric_limits<size_t>::max() : k_commit_visits;
 
-    schema types;
-    const type_id boolean = types.declare_type();
+    AML::schema types;
+    const AML::type_id boolean = types.declare_type();
     const size_t false_tag = types.declare_ctor(boolean, {});
     const size_t true_tag = types.declare_ctor(boolean, {});
 
-    value_pool values;
-    const value* falsity = values.make(false_tag, {});
-    const value* truth = values.make(true_tag, {});
-    const primitive_type binary{.arg_types = {boolean, boolean}, .result_type = boolean};
-    const std::vector<typed_primitive> primitives{
-        {.type = binary, .apply = bool_xor<value_pool>(values, false_tag, true_tag)},
-        {.type = binary, .apply = bool_and<value_pool>(values, false_tag, true_tag)},
-        {.type = binary, .apply = bool_or<value_pool>(values, false_tag, true_tag)},
+    AML::value_pool values;
+    const AML::value* falsity = values.make(false_tag, {});
+    const AML::value* truth = values.make(true_tag, {});
+    const AML::primitive_type binary{.arg_types = {boolean, boolean}, .result_type = boolean};
+    const std::vector<AML::typed_primitive> primitives{
+        {.type = binary, .apply = bool_xor<AML::value_pool>(values, false_tag, true_tag)},
+        {.type = binary, .apply = bool_and<AML::value_pool>(values, false_tag, true_tag)},
+        {.type = binary, .apply = bool_or<AML::value_pool>(values, false_tag, true_tag)},
         {.type = {.arg_types = {boolean}, .result_type = boolean},
-         .apply = bool_not<value_pool>(values, false_tag, true_tag)}};
-    const std::vector<typed_constant> constants{
+         .apply = bool_not<AML::value_pool>(values, false_tag, true_tag)}};
+    const std::vector<AML::typed_constant> constants{
         {.type = boolean, .literal = falsity},
         {.type = boolean, .literal = truth}};
-    const bin training = parity_training(boolean, falsity, truth, k_bits);
+    const AML::bin training = parity_training(boolean, falsity, truth, k_bits);
 
     // The manifest directly, not falcon_runtime: the probe also watches the commitments, which no runtime exposes.
-    falcon_manifest manifest(types, values, primitives,
-                             falcon_options{.max_applications = k_max_applications,
-                                            .exploration_constant = k_exploration_constant,
-                                            .seed = k_seed,
-                                            .commit_visits = commit_visits});
+    AML::falcon_manifest manifest(types, values, primitives,
+                                  AML::falcon_options{.max_applications = k_max_applications,
+                                                      .exploration_constant = k_exploration_constant,
+                                                      .seed = k_seed,
+                                                      .commit_visits = commit_visits});
     manifest.constant_seeder_.seed(constants);
 
     std::signal(SIGINT, request_stop);
@@ -214,7 +214,7 @@ int main() {
     double next_report = k_report_seconds;
     const char* stop_reason = "Ctrl-C";
     while (stop_requested == 0) {
-        const episode_outcome outcome = manifest.mcts_episode_.run(training);
+        const AML::episode_outcome outcome = manifest.mcts_episode_.run(training);
         ++episode;
         const size_t xors = root_xors(outcome.model);
         record_episode(whole_run, xors, outcome.cost);

@@ -61,6 +61,8 @@
 #include "value_objects/razor_options.hpp"
 #include "value_objects/typed_primitive.hpp"
 
+namespace AML {
+
 // Razor: Monte Carlo tree search over every choice a model build makes (the feature each partition matches on and
 // the argument each funnel step descends into), rewarding each episode with its negated model cost. Every choice is
 // split into two-way choices, so no MCTS node has more than two children.
@@ -286,5 +288,7 @@ struct razor_manifest {
     feature_evaluator_t          feature_evaluator_;
     model_evaluator_t            model_evaluator_;
 };
+
+}
 
 #endif

@@ -3,6 +3,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/feature_evaluator.hpp"
 
+using namespace AML;
+
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::_;

@@ -3,6 +3,8 @@
 #include <gmock/gmock.h>
 #include "support/bool_and.hpp"
 
+using namespace AML;
+
 using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::Return;

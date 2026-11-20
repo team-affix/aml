@@ -1,5 +1,7 @@
 #include "infrastructure/scout_manifest.hpp"
 
+namespace AML {
+
 scout_manifest::scout_manifest(
     schema& types,
     value_pool& values,
@@ -43,3 +45,5 @@ scout_manifest::scout_manifest(
     , model_episode_(model_builder_, model_sizer_, best_model_tracker_)
     , feature_evaluator_(primitive_caller_)
     , model_evaluator_(feature_evaluator_) {}
+
+}

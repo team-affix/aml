@@ -2,6 +2,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/value_sizer.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct ValueSizerTest : public ::testing::Test {

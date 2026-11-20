@@ -1,5 +1,7 @@
 #include "infrastructure/falcon_manifest.hpp"
 
+namespace AML {
+
 namespace {
 
 const mcts_tree_node_id k_root = 0;
@@ -81,3 +83,5 @@ falcon_manifest::falcon_manifest(
     , mcts_episode_(model_episode_, value_delta_, terminator_)
     , feature_evaluator_(primitive_caller_)
     , model_evaluator_(feature_evaluator_) {}
+
+}

@@ -6,6 +6,8 @@
 #include "value_objects/prim_id.hpp"
 #include "value_objects/primitive_type.hpp"
 
+namespace AML {
+
 // Finds the primitives that have an application witness, in id order.
 template<typename IGetPrimitiveCount, typename IGetPrimitiveType, typename IDetectWitness>
 struct primitive_option_finder {
@@ -44,5 +46,7 @@ std::vector<prim_id> PRIMITIVE_OPTION_FINDER::find() const {
 
 #undef PRIMITIVE_OPTION_FINDER
 #undef PRIMITIVE_OPTION_FINDER_TEMPLATE
+
+}
 
 #endif

@@ -4,6 +4,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/variable_candidate_finder.hpp"
 
+using namespace AML;
+
 using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::Return;

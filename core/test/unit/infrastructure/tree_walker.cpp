@@ -3,6 +3,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/tree_walker.hpp"
 
+using namespace AML;
+
 using ::testing::NiceMock;
 using ::testing::Return;
 

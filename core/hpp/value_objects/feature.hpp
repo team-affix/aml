@@ -8,6 +8,8 @@
 #include "value_objects/value.hpp"
 #include "value_objects/var_id.hpp"
 
+namespace AML {
+
 // An expression over the variables in scope: a variable, a primitive application, or a constant. A feature owns its
 // arguments, so it is a tree; the node types nest inside it so that `app` can hold features without a forward
 // declaration. The recursive comparisons name their result type, since an `auto` one cannot be deduced while
@@ -29,5 +31,7 @@ struct feature {
     std::variant<var, app, constant> content;
     std::strong_ordering operator<=>(const feature&) const = default;
 };
+
+}
 
 #endif

@@ -7,6 +7,8 @@
 #include "value_objects/episode_outcome.hpp"
 #include "value_objects/model_node.hpp"
 
+namespace AML {
+
 // Runs one episode: builds a model of the training bin, sizes it and offers it as the best model. Returns the model
 // and its cost.
 template<typename IBuildModel, typename ISizeModel, typename ITryRecordModel>
@@ -38,5 +40,7 @@ episode_outcome MODEL_EPISODE::run(const bin& training) {
 
 #undef MODEL_EPISODE
 #undef MODEL_EPISODE_TEMPLATE
+
+}
 
 #endif

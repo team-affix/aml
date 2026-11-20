@@ -15,6 +15,8 @@
 #include "value_objects/typed_primitive.hpp"
 #include "value_objects/value.hpp"
 
+namespace AML {
+
 struct falcon_runtime {
     falcon_runtime(
         schema& types,
@@ -31,5 +33,7 @@ private:
     falcon_manifest manifest_;
     bin training_;
 };
+
+}
 
 #endif

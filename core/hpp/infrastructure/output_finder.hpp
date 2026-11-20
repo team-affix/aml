@@ -7,9 +7,13 @@
 #include "value_objects/typed_column.hpp"
 #include "value_objects/feature.hpp"
 
+namespace AML {
+
 // Finds the cheapest candidate whose typed column is the labels, so it can be a bin's output. The first wins a tie.
 struct output_finder {
     std::optional<feature> find(const std::vector<candidate>& candidates, const typed_column& labels) const;
 };
+
+}
 
 #endif

@@ -4,6 +4,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/model_evaluator.hpp"
 
+using namespace AML;
+
 using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::Return;

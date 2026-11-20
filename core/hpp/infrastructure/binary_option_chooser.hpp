@@ -4,6 +4,8 @@
 #include <cstddef>
 #include "debug_assert.hpp"
 
+namespace AML {
+
 // Chooses among any number of options through two-way choices alone, so MCTS's branching is at most two everywhere.
 // The options' indices are halved until one is left: each two-way choice keeps the lower half (option 0) or the upper
 // half (option 1), the lower half taking the extra index of an odd range. A single option is chosen without asking.
@@ -41,5 +43,7 @@ size_t BINARY_OPTION_CHOOSER::choose(size_t option_count) {
 
 #undef BINARY_OPTION_CHOOSER
 #undef BINARY_OPTION_CHOOSER_TEMPLATE
+
+}
 
 #endif

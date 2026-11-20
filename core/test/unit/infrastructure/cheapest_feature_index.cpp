@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/cheapest_feature_index.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct CheapestFeatureIndexTest : public ::testing::Test {

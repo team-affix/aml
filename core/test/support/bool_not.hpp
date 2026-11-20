@@ -10,7 +10,7 @@
 template<typename IMakeValue>
 struct bool_not {
     bool_not(IMakeValue& make_value, size_t false_tag, size_t true_tag);
-    const value* operator()(const std::vector<const value*>& args) const;
+    const AML::value* operator()(const std::vector<const AML::value*>& args) const;
 private:
     IMakeValue& make_value_;
     size_t false_tag_;
@@ -27,7 +27,7 @@ BOOL_NOT::bool_not(IMakeValue& make_value, size_t false_tag, size_t true_tag)
     , true_tag_(true_tag) {}
 
 BOOL_NOT_TEMPLATE
-const value* BOOL_NOT::operator()(const std::vector<const value*>& args) const {
+const AML::value* BOOL_NOT::operator()(const std::vector<const AML::value*>& args) const {
     DEBUG_ASSERT(args.size() == 1);
     const bool operand = args[0]->tag == true_tag_;
     return make_value_.make(operand ? false_tag_ : true_tag_, {});

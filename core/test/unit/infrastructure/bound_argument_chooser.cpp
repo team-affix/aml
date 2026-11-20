@@ -3,6 +3,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/bound_argument_chooser.hpp"
 
+using namespace AML;
+
 using ::testing::NiceMock;
 using ::testing::Return;
 

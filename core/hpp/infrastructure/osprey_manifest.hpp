@@ -74,6 +74,8 @@
 #include "value_objects/osprey_options.hpp"
 #include "value_objects/typed_primitive.hpp"
 
+namespace AML {
+
 // Osprey: Kite with commitments. Once the frontier (the root at first) has gathered `commit_visits` visits since it
 // became the frontier, the search commits to the choice the best episode so far made there (the episode behind the
 // best model) and takes it in every later episode, searching only below it; that child becomes the frontier. Every
@@ -371,5 +373,7 @@ struct osprey_manifest {
     feature_evaluator_t          feature_evaluator_;
     model_evaluator_t            model_evaluator_;
 };
+
+}
 
 #endif
