@@ -1,7 +1,8 @@
 // Probe: a developer's entry point for watching a solver run, outside the core library. Swap this file's example for
 // any other. The current example trains Falcon to tell odd-length boolean lists (true) from even-length ones (false),
-// from every list up to a length, with general-purpose list primitives. It prints progress until a time limit, a memory
-// limit or Ctrl-C, then the best model, whether it fits the training lists, and how it does on longer, unseen lists.
+// from every list up to a length, with list primitives (length among them) and natural-number primitives (modulo). It
+// prints progress until a time limit, a memory limit or Ctrl-C, then the best model, whether it fits the training
+// lists, and how it does on longer, unseen lists.
 // See probe/README.md.
 
 #include <chrono>
@@ -19,11 +20,12 @@
 #include "infrastructure/schema.hpp"
 #include "probe/bool_xor.hpp"
 #include "probe/list_primitives.hpp"
+#include "probe/nat_mod.hpp"
 #include "support/bool_not.hpp"
 
 namespace {
 
-const char* const k_primitive_names[] = {"is_nil", "head", "tail", "not", "xor"};
+const char* const k_primitive_names[] = {"is_nil", "head", "tail", "length", "mod", "not", "xor"};
 
 // Settings for this example: edit them here.
 const size_t k_max_training_length = 6;  // training lists: every boolean list of length 0 up to this
@@ -51,6 +53,9 @@ struct list_types {
     AML::type_id list;
     AML::ctor_id nil_ctor;
     AML::ctor_id cons_ctor;
+    AML::type_id nat;
+    AML::ctor_id zero_ctor;
+    AML::ctor_id suc_ctor;
     AML::value falsity;
     AML::value truth;
     AML::value nil;
@@ -68,13 +73,18 @@ double resident_mb() {
     return static_cast<double>(resident) * static_cast<double>(sysconf(_SC_PAGESIZE)) / 1048576.0;
 }
 
+// Values carry no type, so F, nil and 0 are the same value; it prints as 0. A chain of successors prints as its number.
 std::string show_value(const AML::value& term, const list_types& types) {
-    if (term == types.falsity)
-        return "F";
     if (term == types.truth)
         return "T";
-    if (term == types.nil)
-        return "nil";
+    size_t successors = 0;
+    const AML::value* rest = &term;
+    while (rest->ctor == types.suc_ctor && rest->args.size() == 1) {
+        ++successors;
+        rest = &rest->args[0];
+    }
+    if (rest->ctor == types.zero_ctor && rest->args.empty())
+        return std::to_string(successors);
     std::string text = "c" + std::to_string(term.ctor) + "(";
     for (size_t index = 0; index < term.args.size(); ++index)
         text += (index == 0 ? "" : ", ") + show_value(term.args[index], types);
@@ -191,6 +201,9 @@ int main() {
     types.list = schema.declare_type();
     types.nil_ctor = schema.declare_ctor(types.list, {});
     types.cons_ctor = schema.declare_ctor(types.list, {types.boolean, types.list});
+    types.nat = schema.declare_type();
+    types.zero_ctor = schema.declare_ctor(types.nat, {});
+    types.suc_ctor = schema.declare_ctor(types.nat, {types.nat});
     types.falsity = AML::value{.ctor = types.false_ctor, .args = {}};
     types.truth = AML::value{.ctor = types.true_ctor, .args = {}};
     types.nil = AML::value{.ctor = types.nil_ctor, .args = {}};
@@ -201,14 +214,24 @@ int main() {
         {.type = {.arg_types = {types.list}, .result_type = types.boolean},
          .apply = list_head(types.nil_ctor, types.falsity)},
         {.type = {.arg_types = {types.list}, .result_type = types.list}, .apply = list_tail(types.nil_ctor)},
+        {.type = {.arg_types = {types.list}, .result_type = types.nat},
+         .apply = list_length(types.nil_ctor, types.zero_ctor, types.suc_ctor)},
+        {.type = {.arg_types = {types.nat, types.nat}, .result_type = types.nat},
+         .apply = nat_mod(types.zero_ctor, types.suc_ctor)},
         {.type = {.arg_types = {types.boolean}, .result_type = types.boolean},
          .apply = bool_not(types.false_ctor, types.true_ctor)},
         {.type = {.arg_types = {types.boolean, types.boolean}, .result_type = types.boolean},
          .apply = bool_xor(types.false_ctor, types.true_ctor)}};
+    const AML::value zero{.ctor = types.zero_ctor, .args = {}};
+    const AML::value one{.ctor = types.suc_ctor, .args = {zero}};
+    const AML::value two{.ctor = types.suc_ctor, .args = {one}};
     const std::vector<AML::typed_constant> constants{
         {.type = types.boolean, .literal = types.falsity},
         {.type = types.boolean, .literal = types.truth},
-        {.type = types.list, .literal = types.nil}};
+        {.type = types.list, .literal = types.nil},
+        {.type = types.nat, .literal = zero},
+        {.type = types.nat, .literal = one},
+        {.type = types.nat, .literal = two}};
     const AML::bin training = odd_length_training(types);
 
     // The manifest directly, not falcon_runtime: the probe also watches the commitments, which no runtime exposes.
@@ -224,7 +247,7 @@ int main() {
                 "c %.3g, seed %u, commit visits %s\n",
                 training.labels.cells.size(), k_max_training_length, k_max_applications, k_exploration_constant,
                 k_seed, k_commit_visits == 0 ? "never" : std::to_string(k_commit_visits).c_str());
-    std::printf("Primitives: is_nil, head, tail, not, xor. Constants: F, T, nil. "
+    std::printf("Primitives: is_nil, head, tail, length, mod, not, xor. Constants: F, T, nil, 0, 1, 2. "
                 "Ctrl-C stops and prints a summary.\n\n");
     std::fflush(stdout);
 
@@ -278,8 +301,9 @@ int main() {
     if (!manifest.best_model_tracker_.best_model().has_value())
         return 0;
     const AML::model_node& best = manifest.best_model_tracker_.best_model().value();
-    std::printf("Best model, cost %zu (list matches: case 0 is nil, case 1 is cons(head, tail); boolean matches: "
-                "case 0 is F, case 1 is T):\n", manifest.best_model_tracker_.best_cost());
+    std::printf("Best model, cost %zu (list matches: case 0 is nil, case 1 is cons(head, tail); natural matches: "
+                "case 0 is zero, case 1 is suc(predecessor); boolean matches: case 0 is F, case 1 is T):\n",
+                manifest.best_model_tracker_.best_cost());
     size_t lines = 0;
     print_model(best, types, 0, k_model_lines, lines);
     if (lines >= k_model_lines)

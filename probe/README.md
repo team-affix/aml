@@ -15,10 +15,11 @@ It takes no arguments. Settings live as constants at the top of `probe/main.cpp`
 
 Trains **Falcon**, through `falcon_manifest` directly, to label boolean lists true when their length is odd. The
 training set is every boolean list of length 0 to `k_max_training_length` (127 lists at 6). The elements play no part
-in the label. Synthesis may use general-purpose list primitives (`probe/list_primitives.hpp`: `is_nil`, `head`,
-`tail`) and `not` and `xor`, with the constants F, T and nil. It runs until a time limit, a memory limit or Ctrl-C,
-then prints the best model, and for every length up to `k_max_unseen_length` how many lists the best model gets right,
-wrong or leaves unanswered. Lengths above the training ones are unseen.
+in the label. Synthesis may use list primitives (`probe/list_primitives.hpp`: `is_nil`, `head`, `tail`, `length`),
+natural-number modulo (`probe/nat_mod.hpp`), and `not` and `xor`, with the constants F, T, nil, 0, 1 and 2. It runs
+until a time limit, a memory limit or Ctrl-C, then prints the best model, and for every length up to
+`k_max_unseen_length` how many lists the best model gets right, wrong or leaves unanswered. Lengths above the training
+ones are unseen.
 
 Its settings, at the top of `probe/main.cpp`: `k_max_training_length` (6), `k_max_unseen_length` (9),
 `k_max_applications` (4), `k_exploration_constant` (4, on `ucb1`'s normalized scale), `k_seed` (1), `k_commit_visits`
@@ -31,11 +32,13 @@ What it prints:
 - `commitment K at Ts (episode E)` whenever the search commits one more choice.
 - Every `k_report_seconds`, a progress line: episodes and episodes per second, resident memory, the best cost, the
   commitments so far, and the mean cost of the episodes since the last line.
-- At the end, the best model as a tree (a list match's `case 0` is nil and `case 1` is cons, binding the head and
-  tail as the next variables; a boolean match's `case 0` is F and `case 1` is T), then the score by length.
+- At the end, the best model as a tree, then the score by length. A list match's `case 0` is nil and `case 1` is
+  cons, binding the head and tail as the next variables; a natural's are zero and suc (binding the predecessor); a
+  boolean's are F and T. Values carry no type, so F, nil and zero are the same value and print as `0`.
 
-A model has no recursion, so with these primitives it can only fit lengths up to a fixed depth: in 60 seconds Falcon
-finds a cost-18 model that fits every training list, and on unseen lengths it is right only where its last test
-happens to agree with parity. A primitive that recurses (a fold over the list) would let a single leaf generalize.
+In about a second and a half (episode 313) Falcon finds `match mod(length(x0), 2)` with `0 -> F` and `suc -> T`, cost
+9, which is right on every training list and on every unseen length. Without `length` and `mod` (see git history), a
+model has no recursion to count with, so it can only fit lengths up to a fixed depth (cost 18 for these lists) and is
+right on unseen lengths only by coincidence.
 
 The previous example, Falcon on n-bit parity, is in git history.

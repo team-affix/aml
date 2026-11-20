@@ -27,6 +27,16 @@ private:
     AML::value fallback_;
 };
 
+// A list's number of elements, as a Peano natural with the constructors `zero_ctor` and `suc_ctor(predecessor)`.
+struct list_length {
+    list_length(AML::ctor_id nil_ctor, AML::ctor_id zero_ctor, AML::ctor_id suc_ctor);
+    AML::value operator()(const std::vector<const AML::value*>& args) const;
+private:
+    AML::ctor_id nil_ctor_;
+    AML::ctor_id zero_ctor_;
+    AML::ctor_id suc_ctor_;
+};
+
 // A list without its first element; the empty list's tail is the empty list.
 struct list_tail {
     list_tail(AML::ctor_id nil_ctor);
