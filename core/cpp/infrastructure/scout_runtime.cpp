@@ -13,8 +13,8 @@ scout_runtime::scout_runtime(
     manifest_.constant_seeder_.seed(constants);
 }
 
-void scout_runtime::next() {
-    manifest_.model_episode_.run(training_);
+episode_outcome scout_runtime::next() {
+    return manifest_.model_episode_.run(training_);
 }
 
 const std::optional<model_node>& scout_runtime::best_model() const {

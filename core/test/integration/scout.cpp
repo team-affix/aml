@@ -147,3 +147,10 @@ TEST_F(ScoutIntegrationTest, IsEvenFitsLargerTrainingSets) {
     runtime.next();
     expect_fit(runtime, training);
 }
+
+TEST_F(ScoutIntegrationTest, NextReturnsTheEpisodesModelAndItsCost) {
+    scout_runtime runtime(types, values, {}, constants, xor_training(), options);
+    const episode_outcome outcome = runtime.next();
+    EXPECT_EQ(runtime.best_model(), std::optional<model_node>(outcome.model));
+    EXPECT_EQ(runtime.best_cost(), outcome.cost);
+}

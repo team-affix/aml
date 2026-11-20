@@ -9,7 +9,7 @@ using ::testing::Return;
 namespace {
 
 struct MockRunEpisode {
-    MOCK_METHOD(size_t, run, (const bin&));
+    MOCK_METHOD(episode_outcome, run, (const bin&));
 };
 
 struct MockSetReward {
@@ -22,8 +22,10 @@ struct MockTerminate {
 
 struct MctsEpisodeTest : public ::testing::Test {
     MctsEpisodeTest();
+    episode_outcome costing(size_t cost) const;
     value label;
     bin training;
+    model_node model;
     NiceMock<MockRunEpisode> run_episode;
     NiceMock<MockSetReward> set_reward;
     NiceMock<MockTerminate> terminate;
@@ -34,28 +36,33 @@ struct MctsEpisodeTest : public ::testing::Test {
 MctsEpisodeTest::MctsEpisodeTest()
     : label{.tag = 0, .args = {}}
     , training{.inputs = {}, .labels = typed_column{.type = 0, .cells = {&label}}}
+    , model{model_node::leaf{.output = feature{feature::constant{.literal = &label}}}}
     , run_episode()
     , set_reward()
     , terminate() {}
+
+episode_outcome MctsEpisodeTest::costing(size_t cost) const {
+    return episode_outcome{.model = model, .cost = cost};
+}
 
 }
 
 TEST_F(MctsEpisodeTest, TheNegatedCostRewardsThePathBeforeTheEpisodeEnds) {
     InSequence order;
-    EXPECT_CALL(run_episode, run(training)).WillOnce(Return(7));
+    EXPECT_CALL(run_episode, run(training)).WillOnce(Return(costing(7)));
     EXPECT_CALL(set_reward, set_value(-7.0));
     EXPECT_CALL(terminate, terminate());
-    EXPECT_EQ(episode.run(training), 7u);
+    episode.run(training);
 }
 
 TEST_F(MctsEpisodeTest, AFreeModelIsRewardedWithZero) {
-    ON_CALL(run_episode, run(training)).WillByDefault(Return(0));
+    ON_CALL(run_episode, run(training)).WillByDefault(Return(costing(0)));
     EXPECT_CALL(set_reward, set_value(0.0));
-    EXPECT_EQ(episode.run(training), 0u);
+    episode.run(training);
 }
 
 TEST_F(MctsEpisodeTest, ACostlierModelEarnsALowerReward) {
-    EXPECT_CALL(run_episode, run(training)).WillOnce(Return(3)).WillOnce(Return(9));
+    EXPECT_CALL(run_episode, run(training)).WillOnce(Return(costing(3))).WillOnce(Return(costing(9)));
     InSequence order;
     EXPECT_CALL(set_reward, set_value(-3.0));
     EXPECT_CALL(set_reward, set_value(-9.0));
@@ -68,4 +75,9 @@ TEST_F(MctsEpisodeTest, EveryRunEndsItsMctsEpisode) {
     episode.run(training);
     episode.run(training);
     episode.run(training);
+}
+
+TEST_F(MctsEpisodeTest, TheEpisodesModelAndCostAreReturned) {
+    ON_CALL(run_episode, run(training)).WillByDefault(Return(costing(7)));
+    EXPECT_EQ(episode.run(training), costing(7));
 }

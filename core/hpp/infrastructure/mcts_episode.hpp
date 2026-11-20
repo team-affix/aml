@@ -3,13 +3,14 @@
 
 #include <cstddef>
 #include "value_objects/bin.hpp"
+#include "value_objects/episode_outcome.hpp"
 
 // Runs one episode and rewards the MCTS path it took with the negated model cost, then ends the MCTS episode.
-// Returns the model's cost.
+// Returns the episode's model and its cost.
 template<typename IRunEpisode, typename ISetReward, typename ITerminate>
 struct mcts_episode {
     mcts_episode(IRunEpisode& run_episode, ISetReward& set_reward, ITerminate& terminate);
-    size_t run(const bin& training);
+    episode_outcome run(const bin& training);
 private:
     IRunEpisode& run_episode_;
     ISetReward& set_reward_;
@@ -26,11 +27,11 @@ MCTS_EPISODE::mcts_episode(IRunEpisode& run_episode, ISetReward& set_reward, ITe
     , terminate_(terminate) {}
 
 MCTS_EPISODE_TEMPLATE
-size_t MCTS_EPISODE::run(const bin& training) {
-    const size_t cost = run_episode_.run(training);
-    set_reward_.set_value(-static_cast<double>(cost));
+episode_outcome MCTS_EPISODE::run(const bin& training) {
+    episode_outcome outcome = run_episode_.run(training);
+    set_reward_.set_value(-static_cast<double>(outcome.cost));
     terminate_.terminate();
-    return cost;
+    return outcome;
 }
 
 #undef MCTS_EPISODE

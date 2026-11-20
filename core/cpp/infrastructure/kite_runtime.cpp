@@ -13,8 +13,8 @@ kite_runtime::kite_runtime(
     manifest_.constant_seeder_.seed(constants);
 }
 
-void kite_runtime::next() {
-    manifest_.mcts_episode_.run(training_);
+episode_outcome kite_runtime::next() {
+    return manifest_.mcts_episode_.run(training_);
 }
 
 const std::optional<model_node>& kite_runtime::best_model() const {

@@ -13,7 +13,7 @@ It takes no arguments. Settings live as constants at the top of `probe/main.cpp`
 
 ## Current example: Falcon on parity
 
-Trains **Falcon** on n-bit parity: the training set is every row of the truth table, the label is the parity of the
+Trains **Falcon** on n-bit parity, through `falcon_runtime`: the training set is every row of the truth table, the label is the parity of the
 bits, and synthesis may use xor (`probe/bool_xor.hpp`), and, or and not over the inputs and the constants F and T. It
 runs until a time limit, a memory limit or Ctrl-C, then prints a summary and the best model found.
 

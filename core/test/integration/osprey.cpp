@@ -1,4 +1,5 @@
 #include <limits>
+#include <optional>
 #include <variant>
 #include <vector>
 #include <gtest/gtest.h>
@@ -250,4 +251,16 @@ TEST_F(OspreyIntegrationTest, EveryCommitmentFollowsTheBestPath) {
         EXPECT_EQ(manifest.commitments_.find_commitment(node), manifest.best_path_.find_step(node));
         node = manifest.tree_walker_.walk(node, manifest.commitments_.find_commitment(node).value());
     }
+}
+
+TEST_F(OspreyIntegrationTest, TheRuntimeCountsItsCommitments) {
+    const bin training = xor_training();
+    osprey_options committing = options;
+    committing.commit_visits = 20;
+    osprey_runtime runtime(types, values, {bool_equality}, constants, training, committing);
+    for (size_t episode = 0; episode < 20; ++episode)
+        runtime.next();
+    EXPECT_EQ(runtime.commitment_count(), 0u);
+    runtime.next();
+    EXPECT_EQ(runtime.commitment_count(), 1u);
 }

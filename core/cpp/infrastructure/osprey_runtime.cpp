@@ -13,8 +13,8 @@ osprey_runtime::osprey_runtime(
     manifest_.constant_seeder_.seed(constants);
 }
 
-void osprey_runtime::next() {
-    manifest_.mcts_episode_.run(training_);
+episode_outcome osprey_runtime::next() {
+    return manifest_.mcts_episode_.run(training_);
 }
 
 const std::optional<model_node>& osprey_runtime::best_model() const {
@@ -23,6 +23,10 @@ const std::optional<model_node>& osprey_runtime::best_model() const {
 
 size_t osprey_runtime::best_cost() const {
     return manifest_.best_model_tracker_.best_cost();
+}
+
+size_t osprey_runtime::commitment_count() const {
+    return manifest_.commitments_.commitment_count();
 }
 
 std::optional<const value*> osprey_runtime::infer(const std::vector<const value*>& inputs) const {

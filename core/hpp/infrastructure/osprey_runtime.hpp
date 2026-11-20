@@ -8,6 +8,7 @@
 #include "infrastructure/osprey_manifest.hpp"
 #include "infrastructure/value_pool.hpp"
 #include "value_objects/bin.hpp"
+#include "value_objects/episode_outcome.hpp"
 #include "value_objects/model_node.hpp"
 #include "value_objects/osprey_options.hpp"
 #include "value_objects/typed_constant.hpp"
@@ -22,9 +23,10 @@ struct osprey_runtime {
         const std::vector<typed_constant>& constants,
         const bin& training,
         const osprey_options& options);
-    void next();
+    episode_outcome next();
     const std::optional<model_node>& best_model() const;
     size_t best_cost() const;
+    size_t commitment_count() const;
     std::optional<const value*> infer(const std::vector<const value*>& inputs) const;
 private:
     osprey_manifest manifest_;

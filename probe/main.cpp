@@ -1,4 +1,4 @@
-// Probe: a developer's entry point for watching a solver run, outside the core library. Swap this file's example for
+// Probe: a developer's entry point for watching a runtime run, outside the core library. Swap this file's example for
 // any other. The current example trains Falcon on n-bit parity (every row of the truth table) and prints its progress
 // until a time limit, a memory limit or Ctrl-C, then a summary with the best model found. See probe/README.md.
 
@@ -14,7 +14,7 @@
 #include <variant>
 #include <vector>
 #include <unistd.h>
-#include "infrastructure/falcon_manifest.hpp"
+#include "infrastructure/falcon_runtime.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/value_pool.hpp"
 #include "probe/bool_xor.hpp"
@@ -188,12 +188,11 @@ int main() {
         {.type = k_boolean, .literal = values.make(k_true_tag, {})}};
     const bin training = parity_training(values, k_bits);
 
-    falcon_manifest solver(types, values, primitives,
-                           falcon_options{.max_applications = k_max_applications,
-                                          .exploration_constant = k_exploration_constant,
-                                          .seed = k_seed,
-                                          .commit_visits = commit_visits});
-    solver.constant_seeder_.seed(constants);
+    falcon_runtime runtime(types, values, primitives, constants, training,
+                          falcon_options{.max_applications = k_max_applications,
+                                         .exploration_constant = k_exploration_constant,
+                                         .seed = k_seed,
+                                         .commit_visits = commit_visits});
 
     std::signal(SIGINT, request_stop);
     std::printf("Falcon on %zu-bit parity (%zu rows): max applications %zu, c %.3g, seed %u, commit visits %s\n",
@@ -212,25 +211,20 @@ int main() {
     double next_report = k_report_seconds;
     const char* stop_reason = "Ctrl-C";
     while (stop_requested == 0) {
-        // One episode, as falcon's mcts_episode runs it, keeping the model to look at its root.
-        const model_node model = solver.model_builder_.build(training);
-        const size_t cost = solver.model_sizer_.size(model);
-        solver.best_model_tracker_.try_record(model, cost);
-        solver.value_delta_.set_value(-static_cast<double>(cost));
-        solver.terminator_.terminate();
+        const episode_outcome outcome = runtime.next();
         ++episode;
-        const size_t xors = root_xors(model);
-        record_episode(whole_run, xors, cost);
-        record_episode(window, xors, cost);
+        const size_t xors = root_xors(outcome.model);
+        record_episode(whole_run, xors, outcome.cost);
+        record_episode(window, xors, outcome.cost);
 
         const double elapsed = seconds_since(start);
-        if (solver.best_model_tracker_.best_cost() < best_cost) {
-            best_cost = solver.best_model_tracker_.best_cost();
+        if (runtime.best_cost() < best_cost) {
+            best_cost = runtime.best_cost();
             std::printf("  new best %zu at %.1fs (episode %zu): %s\n", best_cost, elapsed, episode,
-                        show_root(solver.best_model_tracker_.best_model().value()).c_str());
+                        show_root(runtime.best_model().value()).c_str());
         }
-        if (solver.commitments_.commitment_count() != commitments) {
-            commitments = solver.commitments_.commitment_count();
+        if (runtime.commitment_count() != commitments) {
+            commitments = runtime.commitment_count();
             std::printf("  commitment %zu at %.1fs (episode %zu)\n", commitments, elapsed, episode);
         }
         if (elapsed >= next_report) {
@@ -265,11 +259,11 @@ int main() {
         print_tally(window);
         std::printf("\n");
     }
-    if (!solver.best_model_tracker_.best_model().has_value())
+    if (!runtime.best_model().has_value())
         return 0;
-    std::printf("Best model, cost %zu:\n", solver.best_model_tracker_.best_cost());
+    std::printf("Best model, cost %zu:\n", runtime.best_cost());
     size_t lines = 0;
-    print_model(solver.best_model_tracker_.best_model().value(), 0, k_model_lines, lines);
+    print_model(runtime.best_model().value(), 0, k_model_lines, lines);
     if (lines >= k_model_lines)
         std::printf("  (cut at %zu lines; raise k_model_lines to show more)\n", k_model_lines);
     return 0;
