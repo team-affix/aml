@@ -66,7 +66,8 @@ probe/                                     developer entry point outside the lib
 
 ```
 <solver>_runtime        core/: non-templated facade (.hpp/.cpp): next() (returns the episode's model and cost),
-                        best_model(), best_cost(), infer(); Osprey's and Falcon's also commitment_count().
+                        best_model(), best_cost(), infer(). Only what users normally need; the probe reads a
+                        manifest directly for anything else.
                         Owns exactly one manifest_.
   <solver>_manifest     composition root: names the component types, owns every component by value,
                         wires them through constructor refs

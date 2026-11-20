@@ -14,7 +14,7 @@
 #include <variant>
 #include <vector>
 #include <unistd.h>
-#include "infrastructure/falcon_runtime.hpp"
+#include "infrastructure/falcon_manifest.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/value_pool.hpp"
 #include "probe/bool_xor.hpp"
@@ -188,11 +188,13 @@ int main() {
         {.type = k_boolean, .literal = values.make(k_true_tag, {})}};
     const bin training = parity_training(values, k_bits);
 
-    falcon_runtime runtime(types, values, primitives, constants, training,
-                          falcon_options{.max_applications = k_max_applications,
-                                         .exploration_constant = k_exploration_constant,
-                                         .seed = k_seed,
-                                         .commit_visits = commit_visits});
+    // The manifest directly, not falcon_runtime: the probe also watches the commitments, which no runtime exposes.
+    falcon_manifest manifest(types, values, primitives,
+                             falcon_options{.max_applications = k_max_applications,
+                                            .exploration_constant = k_exploration_constant,
+                                            .seed = k_seed,
+                                            .commit_visits = commit_visits});
+    manifest.constant_seeder_.seed(constants);
 
     std::signal(SIGINT, request_stop);
     std::printf("Falcon on %zu-bit parity (%zu rows): max applications %zu, c %.3g, seed %u, commit visits %s\n",
@@ -211,20 +213,20 @@ int main() {
     double next_report = k_report_seconds;
     const char* stop_reason = "Ctrl-C";
     while (stop_requested == 0) {
-        const episode_outcome outcome = runtime.next();
+        const episode_outcome outcome = manifest.mcts_episode_.run(training);
         ++episode;
         const size_t xors = root_xors(outcome.model);
         record_episode(whole_run, xors, outcome.cost);
         record_episode(window, xors, outcome.cost);
 
         const double elapsed = seconds_since(start);
-        if (runtime.best_cost() < best_cost) {
-            best_cost = runtime.best_cost();
+        if (manifest.best_model_tracker_.best_cost() < best_cost) {
+            best_cost = manifest.best_model_tracker_.best_cost();
             std::printf("  new best %zu at %.1fs (episode %zu): %s\n", best_cost, elapsed, episode,
-                        show_root(runtime.best_model().value()).c_str());
+                        show_root(manifest.best_model_tracker_.best_model().value()).c_str());
         }
-        if (runtime.commitment_count() != commitments) {
-            commitments = runtime.commitment_count();
+        if (manifest.commitments_.commitment_count() != commitments) {
+            commitments = manifest.commitments_.commitment_count();
             std::printf("  commitment %zu at %.1fs (episode %zu)\n", commitments, elapsed, episode);
         }
         if (elapsed >= next_report) {
@@ -259,11 +261,11 @@ int main() {
         print_tally(window);
         std::printf("\n");
     }
-    if (!runtime.best_model().has_value())
+    if (!manifest.best_model_tracker_.best_model().has_value())
         return 0;
-    std::printf("Best model, cost %zu:\n", runtime.best_cost());
+    std::printf("Best model, cost %zu:\n", manifest.best_model_tracker_.best_cost());
     size_t lines = 0;
-    print_model(runtime.best_model().value(), 0, k_model_lines, lines);
+    print_model(manifest.best_model_tracker_.best_model().value(), 0, k_model_lines, lines);
     if (lines >= k_model_lines)
         std::printf("  (cut at %zu lines; raise k_model_lines to show more)\n", k_model_lines);
     return 0;

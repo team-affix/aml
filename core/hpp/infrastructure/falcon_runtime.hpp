@@ -26,7 +26,6 @@ struct falcon_runtime {
     episode_outcome next();
     const std::optional<model_node>& best_model() const;
     size_t best_cost() const;
-    size_t commitment_count() const;
     std::optional<const value*> infer(const std::vector<const value*>& inputs) const;
 private:
     falcon_manifest manifest_;

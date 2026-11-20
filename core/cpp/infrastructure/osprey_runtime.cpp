@@ -25,10 +25,6 @@ size_t osprey_runtime::best_cost() const {
     return manifest_.best_model_tracker_.best_cost();
 }
 
-size_t osprey_runtime::commitment_count() const {
-    return manifest_.commitments_.commitment_count();
-}
-
 std::optional<const value*> osprey_runtime::infer(const std::vector<const value*>& inputs) const {
     DEBUG_ASSERT(best_model().has_value());
     return manifest_.model_evaluator_.evaluate(best_model().value(), inputs);

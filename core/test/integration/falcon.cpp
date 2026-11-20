@@ -264,15 +264,3 @@ TEST_F(FalconIntegrationTest, NextReturnsTheEpisodesModelAndItsCost) {
         EXPECT_LE(runtime.best_cost(), outcome.cost);
     }
 }
-
-TEST_F(FalconIntegrationTest, TheRuntimeCountsItsCommitments) {
-    const bin training = xor_training();
-    falcon_options committing = options;
-    committing.commit_visits = 20;
-    falcon_runtime runtime(types, values, {bool_equality}, constants, training, committing);
-    for (size_t episode = 0; episode < 20; ++episode)
-        runtime.next();
-    EXPECT_EQ(runtime.commitment_count(), 0u);
-    runtime.next();
-    EXPECT_EQ(runtime.commitment_count(), 1u);
-}
