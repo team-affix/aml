@@ -49,18 +49,19 @@ razor_manifest::razor_manifest(
           visits_, tree_walker_, policy_, rollout_, cursor_, cursor_, backprop_path_, in_rollout_, in_rollout_)
     , terminator_(backprop_path_, value_creditor_, backprop_path_, backprop_path_, cursor_, in_rollout_, k_root)
     , option_chooser_(mcts_chooser_)
-    , argument_chooser_(argument_option_finder_, option_chooser_)
+    , binary_option_chooser_(option_chooser_)
+    , argument_chooser_(argument_option_finder_, binary_option_chooser_)
     , primitive_applier_(
           primitive_store_, argument_chooser_, applications_, app_candidate_finder_, feature_candidates_)
     , synthesis_starter_(feature_candidates_, applications_, variable_candidate_finder_, feature_candidates_)
     , feature_synthesizer_(
-          synthesis_starter_, applications_, primitive_option_finder_, option_chooser_, option_chooser_,
+          synthesis_starter_, applications_, primitive_option_finder_, binary_option_chooser_, binary_option_chooser_,
           primitive_applier_, feature_candidates_, output_finder_, options.max_applications)
     , leaf_detector_(uniform_value_finder_)
     , bin_splitter_(schema_)
-    , bound_argument_chooser_(variable_candidate_finder_, option_chooser_)
+    , bound_argument_chooser_(variable_candidate_finder_, binary_option_chooser_)
     , model_builder_(
-          leaf_detector_, feature_synthesizer_, output_finder_, option_chooser_, bound_argument_chooser_,
+          leaf_detector_, feature_synthesizer_, output_finder_, binary_option_chooser_, bound_argument_chooser_,
           bin_splitter_)
     , best_model_tracker_()
     , model_episode_(model_builder_, model_sizer_, best_model_tracker_)
