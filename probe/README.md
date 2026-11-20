@@ -11,27 +11,31 @@ make probe
 
 It takes no arguments. Settings live as constants at the top of `probe/main.cpp`; change them there and rebuild.
 
-## Current example: Falcon on parity
+## Current example: Falcon on odd-length lists
 
-Trains **Falcon** on n-bit parity, through `falcon_manifest` directly (it also watches the commitments, which no runtime
-exposes): the training set is every row of the truth table, the label is the parity of the
-bits, and synthesis may use xor (`probe/bool_xor.hpp`), and, or and not over the inputs and the constants F and T. It
-runs until a time limit, a memory limit or Ctrl-C, then prints a summary and the best model found.
+Trains **Falcon**, through `falcon_manifest` directly, to label boolean lists true when their length is odd. The
+training set is every boolean list of length 0 to `k_max_training_length` (127 lists at 6). The elements play no part
+in the label. Synthesis may use general-purpose list primitives (`probe/list_primitives.hpp`: `is_nil`, `head`,
+`tail`) and `not` and `xor`, with the constants F, T and nil. It runs until a time limit, a memory limit or Ctrl-C,
+then prints the best model, and for every length up to `k_max_unseen_length` how many lists the best model gets right,
+wrong or leaves unanswered. Lengths above the training ones are unseen.
 
-Its settings, at the top of `probe/main.cpp`: `k_bits` (10), `k_max_applications` (9), `k_exploration_constant` (4,
-on `ucb1`'s normalized scale), `k_seed` (1), `k_commit_visits` (52,000; 0 never commits), `k_seconds` (0 runs until
-Ctrl-C), `k_report_seconds` (10), `k_max_rss_mb` (4,000) and `k_model_lines` (40).
+Its settings, at the top of `probe/main.cpp`: `k_max_training_length` (6), `k_max_unseen_length` (9),
+`k_max_applications` (4), `k_exploration_constant` (4, on `ucb1`'s normalized scale), `k_seed` (1), `k_commit_visits`
+(0: never commits), `k_seconds` (0 runs until Ctrl-C), `k_report_seconds` (10), `k_max_rss_mb` (4,000) and
+`k_model_lines` (60).
 
 What it prints:
 
-- `new best COST at Ts (episode E): ROOT` whenever the best model improves, with what its root does (`match FEATURE`
-  or `leaf FEATURE`).
+- `new best COST at Ts (episode E): ROOT` whenever the best model improves, with what its root does.
 - `commitment K at Ts (episode E)` whenever the search commits one more choice.
 - Every `k_report_seconds`, a progress line: episodes and episodes per second, resident memory, the best cost, the
-  commitments so far, and for the episodes since the last line their mean cost and how many xors the feature their
-  root matched on held (`0:` none, `5+:` five or more).
-- At the end, the same counts for the whole run and since the last progress line, and the best model as a tree
-  (`T ->` and `F ->` are a match's branches).
+  commitments so far, and the mean cost of the episodes since the last line.
+- At the end, the best model as a tree (a list match's `case 0` is nil and `case 1` is cons, binding the head and
+  tail as the next variables; a boolean match's `case 0` is F and `case 1` is T), then the score by length.
 
-At about 400 episodes a second on 10 bits, `k_commit_visits` = 52,000 commits roughly every two minutes.
-Memory grows by about 5 MB a minute, so runs of an hour or more stay well under the default limit.
+A model has no recursion, so with these primitives it can only fit lengths up to a fixed depth: in 60 seconds Falcon
+finds a cost-18 model that fits every training list, and on unseen lengths it is right only where its last test
+happens to agree with parity. A primitive that recurses (a fold over the list) would let a single leaf generalize.
+
+The previous example, Falcon on n-bit parity, is in git history.
