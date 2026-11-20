@@ -37,8 +37,8 @@ CORE_DEBUG_FAST_LIB = build/libaml_core_debug_fast.a
 CORE_DEBUG_BIN      = build/core_debug
 CORE_DEBUG_FAST_BIN = build/core_debug_fast
 
-# Manual runs outside the core library (manual/): built against the release library.
-MANUAL_PARITY_BIN = build/manual_parity
+# The probe (probe/): a developer's entry point outside the core library, built against the release library.
+PROBE_BIN = build/probe
 
 # ==============================================================================
 # Object lists  (object files live in build/obj/<variant>/)
@@ -91,7 +91,7 @@ CORE_DEBUG_FAST_GTEST_DEP = $(CORE_DEBUG_FAST_GTEST_OBJ:.o=.d)
 # User-facing targets
 # ==============================================================================
 
-.PHONY: all core core_debug core_debug_fast test test_fast manual clean
+.PHONY: all core core_debug core_debug_fast test test_fast probe clean
 
 all: core core_debug core_debug_fast
 
@@ -107,7 +107,7 @@ test: core_debug
 test_fast: core_debug_fast
 	$(CORE_DEBUG_FAST_BIN)
 
-manual: $(MANUAL_PARITY_BIN)
+probe: $(PROBE_BIN)
 
 clean:
 	rm -rf build
@@ -139,8 +139,8 @@ $(CORE_DEBUG_FAST_BIN): $(CORE_DEBUG_FAST_LIB) $(CORE_DEBUG_FAST_BIN_OBJ) | buil
 	    $(CORE_DEBUG_FAST_BIN_OBJ) \
 	    -Lbuild -laml_core_debug_fast -lpthread
 
-$(MANUAL_PARITY_BIN): manual/parity.cpp $(CORE_LIB) | build
-	$(CXX) $(CXXFLAGS) $(RELEASE_CXXFLAGS) -Icore/test -o $@ manual/parity.cpp \
+$(PROBE_BIN): probe/main.cpp $(CORE_LIB) | build
+	$(CXX) $(CXXFLAGS) $(RELEASE_CXXFLAGS) -Icore/test -o $@ probe/main.cpp \
 	    -Lbuild -laml_core
 
 # ==============================================================================
@@ -212,7 +212,7 @@ build/obj/core_debug_fast_test/gmock-all.o: $(GMOCK_ALL_CC) | build/obj/core_deb
 -include $(CORE_DEBUG_FAST_TEST_DEP)
 -include $(CORE_DEBUG_GTEST_DEP)
 -include $(CORE_DEBUG_FAST_GTEST_DEP)
--include $(MANUAL_PARITY_BIN).d
+-include $(PROBE_BIN).d
 
 # ==============================================================================
 # Build directory creation

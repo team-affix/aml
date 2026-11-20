@@ -1,6 +1,6 @@
-// Manual parity run: trains Falcon on n-bit parity (every row of the truth table) and prints its progress until a
-// time limit, a memory limit or Ctrl-C, then a summary with the best model found. Not part of the core library; see
-// manual/README.md.
+// Probe: a developer's entry point for watching a solver run, outside the core library. Swap this file's example for
+// any other. The current example trains Falcon on n-bit parity (every row of the truth table) and prints its progress
+// until a time limit, a memory limit or Ctrl-C, then a summary with the best model found. See probe/README.md.
 
 #include <algorithm>
 #include <chrono>
@@ -18,7 +18,7 @@
 #include "infrastructure/falcon_manifest.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/value_pool.hpp"
-#include "manual/bool_xor.hpp"
+#include "probe/bool_xor.hpp"
 #include "support/bool_and.hpp"
 #include "support/bool_not.hpp"
 #include "support/bool_or.hpp"
@@ -64,7 +64,7 @@ root_tally empty_tally() {
 
 void print_usage() {
     std::printf(
-        "usage: manual_parity [--key=value ...]\n"
+        "usage: probe [--key=value ...]\n"
         "  --bits=10              parity over this many input bits (the training set is all 2^bits rows)\n"
         "  --max-applications=9   synthesis applications per session\n"
         "  --c=4                  exploration constant, on ucb1's normalized [0, 1] scale (may exceed 1)\n"
