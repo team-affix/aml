@@ -5,12 +5,16 @@
 #include "value_objects/type_id.hpp"
 #include "value_objects/value.hpp"
 
+namespace AML {
+
 // A constant available as a primitive argument during synthesis.
 struct constant_operand {
     feature expression;
-    const value* literal;
+    value literal;
     type_id type;
     auto operator<=>(const constant_operand&) const = default;
 };
+
+}
 
 #endif

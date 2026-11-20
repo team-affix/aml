@@ -9,6 +9,8 @@
 #include "value_objects/feature.hpp"
 #include "value_objects/var_id.hpp"
 
+namespace AML {
+
 // Finds the variables from `first_var` on that are heterogeneous over a bin, each as a candidate.
 template<typename ISizeFeature, typename IFindUniformValue>
 struct variable_candidate_finder {
@@ -43,5 +45,7 @@ std::vector<candidate> VARIABLE_CANDIDATE_FINDER::find(const bin& data, var_id f
 
 #undef VARIABLE_CANDIDATE_FINDER
 #undef VARIABLE_CANDIDATE_FINDER_TEMPLATE
+
+}
 
 #endif

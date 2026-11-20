@@ -5,6 +5,8 @@
 #include "value_objects/feature.hpp"
 #include "value_objects/typed_column.hpp"
 
+namespace AML {
+
 // A feature together with its cost and the values it takes over a bin's rows.
 struct candidate {
     feature expression;
@@ -12,5 +14,7 @@ struct candidate {
     typed_column observed;
     auto operator<=>(const candidate&) const = default;
 };
+
+}
 
 #endif

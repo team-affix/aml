@@ -10,6 +10,8 @@
 #include "value_objects/value.hpp"
 #include "debug_assert.hpp"
 
+namespace AML {
+
 // Numbers a synthesis session's operands: the constants first, then the session's features, each in its store's
 // order. Every feature is heterogeneous and no constant is. Reads both stores in place and holds nothing itself.
 template<typename IGetConstants, typename IGetConstantsOfType, typename IGetFeatures, typename IGetFeaturesOfType>
@@ -80,11 +82,13 @@ OPERAND_TABLE_TEMPLATE
 const value* OPERAND_TABLE::cell(size_t operand, size_t row) const {
     const std::vector<constant_operand>& constants = get_constants_.constants();
     if (operand < constants.size())
-        return constants[operand].literal;
-    return get_features_.candidates().at(operand - constants.size()).observed.cells.at(row);
+        return &constants[operand].literal;
+    return &get_features_.candidates().at(operand - constants.size()).observed.cells.at(row);
 }
 
 #undef OPERAND_TABLE
 #undef OPERAND_TABLE_TEMPLATE
+
+}
 
 #endif

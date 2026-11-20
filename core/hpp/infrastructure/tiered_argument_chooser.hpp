@@ -7,6 +7,8 @@
 #include "value_objects/type_id.hpp"
 #include "debug_assert.hpp"
 
+namespace AML {
+
 // Chooses a primitive's arguments one position at a time, each from the operands that still leave a witness, by the
 // operands' orders: the highest-order operands are offered first, so a feature just derived is likely to be built on.
 template<typename IFindArgumentOptions, typename IGetOperandExpression, typename IMeasureOrder, typename IChooseOption>
@@ -51,5 +53,7 @@ std::vector<size_t> TIERED_ARGUMENT_CHOOSER::choose(prim_id prim, const std::vec
 
 #undef TIERED_ARGUMENT_CHOOSER
 #undef TIERED_ARGUMENT_CHOOSER_TEMPLATE
+
+}
 
 #endif

@@ -4,6 +4,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/model_builder.hpp"
 
+using namespace AML;
+
 using ::testing::AnyNumber;
 using ::testing::_;
 using ::testing::InSequence;
@@ -92,33 +94,33 @@ struct ModelBuilderTest : public ::testing::Test {
 };
 
 ModelBuilderTest::ModelBuilderTest()
-    : falsity{.tag = 0, .args = {}}
-    , truth{.tag = 1, .args = {}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
     , first_feature{feature::var{.index = 0}}
     , second_feature{feature::app{.prim = 0, .args = {first_feature}}}
     , first_bound_argument{feature::var{.index = 1}}
     , second_argument{feature::var{.index = 2}}
-    , false_output{feature::constant{.literal = &falsity}}
-    , true_output{feature::constant{.literal = &truth}}
+    , false_output{feature::constant{.literal = falsity}}
+    , true_output{feature::constant{.literal = truth}}
     , empty_node{model_node::empty{}}
     , false_leaf{model_node::leaf{.output = false_output}}
     , true_leaf{model_node::leaf{.output = true_output}}
     , output_leaf{model_node::leaf{.output = second_feature}}
-    , root{.inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}}},
-           .labels = typed_column{.type = 0, .cells = {&truth, &falsity}}}
-    , false_child{.inputs = {typed_column{.type = 0, .cells = {&falsity}}},
-                  .labels = typed_column{.type = 0, .cells = {&falsity}}}
-    , true_child{.inputs = {typed_column{.type = 0, .cells = {&truth}}},
-                 .labels = typed_column{.type = 0, .cells = {&truth}}}
+    , root{.inputs = {typed_column{.type = 0, .cells = {falsity, truth}}},
+           .labels = typed_column{.type = 0, .cells = {truth, falsity}}}
+    , false_child{.inputs = {typed_column{.type = 0, .cells = {falsity}}},
+                  .labels = typed_column{.type = 0, .cells = {falsity}}}
+    , true_child{.inputs = {typed_column{.type = 0, .cells = {truth}}},
+                 .labels = typed_column{.type = 0, .cells = {truth}}}
     , no_rows_child{.inputs = {typed_column{.type = 0, .cells = {}}}, .labels = typed_column{.type = 0, .cells = {}}}
     , funnel_child{
-          .inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}},
-                    typed_column{.type = 0, .cells = {&truth, &truth}},
-                    typed_column{.type = 0, .cells = {&truth, &falsity}}},
-          .labels = typed_column{.type = 0, .cells = {&truth, &falsity}}}
+          .inputs = {typed_column{.type = 0, .cells = {falsity, truth}},
+                    typed_column{.type = 0, .cells = {truth, truth}},
+                    typed_column{.type = 0, .cells = {truth, falsity}}},
+          .labels = typed_column{.type = 0, .cells = {truth, falsity}}}
     , first_candidate{.expression = first_feature, .cost = 1, .observed = root.inputs[0]}
     , second_candidate{
-          .expression = second_feature, .cost = 2, .observed = typed_column{.type = 0, .cells = {&truth, &falsity}}}
+          .expression = second_feature, .cost = 2, .observed = typed_column{.type = 0, .cells = {truth, falsity}}}
     , first_bound_argument_candidate{.expression = first_bound_argument, .cost = 1, .observed = funnel_child.inputs[1]}
     , second_argument_candidate{.expression = second_argument, .cost = 1, .observed = funnel_child.inputs[2]}
     , features{first_candidate, second_candidate} {}
@@ -210,9 +212,9 @@ TEST_F(ModelBuilderTest, AFunnelledBinWithADetectedOutputBecomesALeafInsteadOfMa
 
 TEST_F(ModelBuilderTest, ArgumentsAreChosenFromThoseTheMatchJustBound) {
     const bin wide_root{
-        .inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}},
-                  typed_column{.type = 0, .cells = {&truth, &falsity}}},
-        .labels = typed_column{.type = 0, .cells = {&truth, &falsity}}};
+        .inputs = {typed_column{.type = 0, .cells = {falsity, truth}},
+                  typed_column{.type = 0, .cells = {truth, falsity}}},
+        .labels = typed_column{.type = 0, .cells = {truth, falsity}}};
     ON_CALL(split_bin, split(wide_root, first_candidate.observed))
         .WillByDefault(Return(std::vector<bin>{no_rows_child, funnel_child}));
     ON_CALL(split_bin, split(funnel_child, _)).WillByDefault(Return(std::vector<bin>{false_child, true_child}));

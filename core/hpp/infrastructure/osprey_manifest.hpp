@@ -62,7 +62,6 @@
 #include "infrastructure/uniform_value_finder.hpp"
 #include "infrastructure/uniform_value_update.hpp"
 #include "infrastructure/value_bounds.hpp"
-#include "infrastructure/value_pool.hpp"
 #include "infrastructure/value_sizer.hpp"
 #include "infrastructure/value_table.hpp"
 #include "infrastructure/variable_candidate_finder.hpp"
@@ -73,6 +72,8 @@
 #include "value_objects/mcts_tree_node_id.hpp"
 #include "value_objects/osprey_options.hpp"
 #include "value_objects/typed_primitive.hpp"
+
+namespace AML {
 
 // Osprey: Kite with commitments. Once the frontier (the root at first) has gathered `commit_visits` visits since it
 // became the frontier, the search commits to the choice the best episode so far made there (the episode behind the
@@ -301,12 +302,10 @@ struct osprey_manifest {
 
     osprey_manifest(
         schema& types,
-        value_pool& values,
         const std::vector<typed_primitive>& primitives,
         const osprey_options& options);
 
     schema&                      schema_;
-    value_pool&                  values_;
     constant_store               constants_;
     cheapest_feature_index       feature_candidates_;
     application_log              applications_;
@@ -371,5 +370,7 @@ struct osprey_manifest {
     feature_evaluator_t          feature_evaluator_;
     model_evaluator_t            model_evaluator_;
 };
+
+}
 
 #endif

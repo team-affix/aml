@@ -4,6 +4,8 @@
 #include "infrastructure/tiered_argument_chooser.hpp"
 #include "value_objects/feature.hpp"
 
+using namespace AML;
+
 using ::testing::_;
 using ::testing::AnyNumber;
 using ::testing::InSequence;

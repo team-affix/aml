@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/first_option_chooser.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct FirstOptionChooserTest : public ::testing::Test {

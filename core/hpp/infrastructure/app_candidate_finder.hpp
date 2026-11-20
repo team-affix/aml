@@ -12,6 +12,8 @@
 #include "value_objects/type_id.hpp"
 #include "value_objects/typed_column.hpp"
 
+namespace AML {
+
 // Finds the application of a primitive to a tuple of operands as a candidate. An application that is homogeneous over
 // the rows gives none.
 template<
@@ -65,5 +67,7 @@ std::optional<candidate> APP_CANDIDATE_FINDER::find(
 
 #undef APP_CANDIDATE_FINDER
 #undef APP_CANDIDATE_FINDER_TEMPLATE
+
+}
 
 #endif

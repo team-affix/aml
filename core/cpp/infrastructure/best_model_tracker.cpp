@@ -2,6 +2,8 @@
 
 #include <limits>
 
+namespace AML {
+
 best_model_tracker::best_model_tracker()
     : best_model_()
     , best_cost_(std::numeric_limits<size_t>::max()) {}
@@ -19,4 +21,6 @@ const std::optional<model_node>& best_model_tracker::best_model() const {
 
 size_t best_model_tracker::best_cost() const {
     return best_cost_;
+}
+
 }

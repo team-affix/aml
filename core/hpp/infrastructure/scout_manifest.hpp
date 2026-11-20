@@ -31,12 +31,13 @@
 #include "infrastructure/schema.hpp"
 #include "infrastructure/synthesis_starter.hpp"
 #include "infrastructure/uniform_value_finder.hpp"
-#include "infrastructure/value_pool.hpp"
 #include "infrastructure/value_sizer.hpp"
 #include "infrastructure/variable_candidate_finder.hpp"
 #include "infrastructure/witness_detector.hpp"
 #include "value_objects/scout_options.hpp"
 #include "value_objects/typed_primitive.hpp"
+
+namespace AML {
 
 // Scout: builds one model, taking the first candidate at every choice.
 struct scout_manifest {
@@ -131,12 +132,10 @@ struct scout_manifest {
 
     scout_manifest(
         schema& types,
-        value_pool& values,
         const std::vector<typed_primitive>& primitives,
         const scout_options& options);
 
     schema&                     schema_;
-    value_pool&                 values_;
     constant_store              constants_;
     cheapest_feature_index      feature_candidates_;
     application_log             applications_;
@@ -169,5 +168,7 @@ struct scout_manifest {
     feature_evaluator_t         feature_evaluator_;
     model_evaluator_t           model_evaluator_;
 };
+
+}
 
 #endif

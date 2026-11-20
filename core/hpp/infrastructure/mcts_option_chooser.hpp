@@ -5,6 +5,8 @@
 #include "infrastructure/option_range.hpp"
 #include "debug_assert.hpp"
 
+namespace AML {
+
 // Chooses an option by asking MCTS to choose among the options' indices.
 template<typename IChooseChoice>
 struct mcts_option_chooser {
@@ -30,5 +32,7 @@ size_t MCTS_OPTION_CHOOSER::choose(size_t option_count) {
 
 #undef MCTS_OPTION_CHOOSER
 #undef MCTS_OPTION_CHOOSER_TEMPLATE
+
+}
 
 #endif

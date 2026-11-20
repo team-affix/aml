@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/feature_order_measurer.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct FeatureOrderMeasurerTest : public ::testing::Test {
@@ -13,10 +15,10 @@ struct FeatureOrderMeasurerTest : public ::testing::Test {
 };
 
 FeatureOrderMeasurerTest::FeatureOrderMeasurerTest()
-    : four{.tag = 0, .args = {}}
+    : four{.ctor = 0, .args = {}}
     , x0{feature::var{.index = 0}}
     , x1{feature::var{.index = 1}}
-    , four_constant{feature::constant{.literal = &four}}
+    , four_constant{feature::constant{.literal = four}}
     , measurer() {}
 
 feature apply(prim_id prim, std::vector<feature> args) {

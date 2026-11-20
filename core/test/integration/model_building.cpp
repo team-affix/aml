@@ -4,8 +4,9 @@
 #include <gtest/gtest.h>
 #include "infrastructure/schema.hpp"
 #include "infrastructure/scout_manifest.hpp"
-#include "infrastructure/value_pool.hpp"
 #include "value_objects/typed_constant.hpp"
+
+using namespace AML;
 
 namespace {
 
@@ -13,52 +14,50 @@ namespace {
 // first option everywhere.
 struct ModelBuildingIntegrationTest : public ::testing::Test {
     ModelBuildingIntegrationTest();
-    const value* number(size_t count);
+    value number(size_t count);
     void expect_fit(const model_node& model, const bin& training);
     schema types;
-    value_pool values;
     type_id boolean;
-    size_t false_ctor;
-    size_t true_ctor;
+    ctor_id false_ctor;
+    ctor_id true_ctor;
     type_id nat;
-    size_t zero_ctor;
-    size_t suc_ctor;
-    const value* falsity;
-    const value* truth;
+    ctor_id zero_ctor;
+    ctor_id suc_ctor;
+    value falsity;
+    value truth;
     scout_manifest manifest;
 };
 
 ModelBuildingIntegrationTest::ModelBuildingIntegrationTest()
     : types()
-    , values()
     , boolean(types.declare_type())
     , false_ctor(types.declare_ctor(boolean, {}))
     , true_ctor(types.declare_ctor(boolean, {}))
     , nat(types.declare_type())
     , zero_ctor(types.declare_ctor(nat, {}))
     , suc_ctor(types.declare_ctor(nat, {nat}))
-    , falsity(values.make(false_ctor, {}))
-    , truth(values.make(true_ctor, {}))
-    , manifest(types, values, {}, scout_options{.max_applications = 0}) {
+    , falsity(value{.ctor = false_ctor, .args = {}})
+    , truth(value{.ctor = true_ctor, .args = {}})
+    , manifest(types, {}, scout_options{.max_applications = 0}) {
     manifest.constant_seeder_.seed(std::vector<typed_constant>{
         typed_constant{.type = boolean, .literal = falsity}, typed_constant{.type = boolean, .literal = truth},
-        typed_constant{.type = nat, .literal = values.make(zero_ctor, {})}});
+        typed_constant{.type = nat, .literal = value{.ctor = zero_ctor, .args = {}}}});
 }
 
-const value* ModelBuildingIntegrationTest::number(size_t count) {
-    const value* result = values.make(zero_ctor, {});
+value ModelBuildingIntegrationTest::number(size_t count) {
+    value result = value{.ctor = zero_ctor, .args = {}};
     for (size_t step = 0; step < count; ++step)
-        result = values.make(suc_ctor, {result});
+        result = value{.ctor = suc_ctor, .args = {result}};
     return result;
 }
 
 void ModelBuildingIntegrationTest::expect_fit(const model_node& model, const bin& training) {
     for (size_t row = 0; row < training.labels.cells.size(); ++row) {
-        std::vector<const value*> inputs;
+        std::vector<value> inputs;
         for (const typed_column& input : training.inputs)
             inputs.push_back(input.cells[row]);
         EXPECT_EQ(manifest.model_evaluator_.evaluate(model, inputs),
-                  std::optional<const value*>(training.labels.cells[row]));
+                  std::optional<value>(training.labels.cells[row]));
     }
 }
 

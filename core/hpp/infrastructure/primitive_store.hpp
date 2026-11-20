@@ -8,6 +8,8 @@
 #include "value_objects/primitive_type.hpp"
 #include "value_objects/typed_primitive.hpp"
 
+namespace AML {
+
 // Stores the primitives a solver was given, each with its function type. A primitive's id is its position.
 struct primitive_store {
     primitive_store(const std::vector<typed_primitive>& primitives);
@@ -17,5 +19,7 @@ struct primitive_store {
 private:
     std::vector<typed_primitive> primitives_;
 };
+
+}
 
 #endif

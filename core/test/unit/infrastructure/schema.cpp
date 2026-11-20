@@ -3,6 +3,8 @@
 #include <gtest/gtest.h>
 #include "infrastructure/schema.hpp"
 
+using namespace AML;
+
 namespace {
 
 struct SchemaTest : public ::testing::Test {
@@ -28,7 +30,7 @@ TEST_F(SchemaTest, ADeclaredTypeStartsWithoutConstructors) {
     EXPECT_TRUE(types.def(boolean).ctors.empty());
 }
 
-TEST_F(SchemaTest, EachConstructorGetsTheNextTagOfItsType) {
+TEST_F(SchemaTest, EachConstructorGetsTheNextIdOfItsType) {
     const type_id boolean = types.declare_type();
     const type_id nat = types.declare_type();
     EXPECT_EQ(types.declare_ctor(boolean, {}), 0u);
@@ -42,22 +44,22 @@ TEST_F(SchemaTest, ConstructorsKeepTheirArgumentTypes) {
     const type_id nat = types.declare_type();
     const type_id list = types.declare_type();
     types.declare_ctor(list, {});
-    const size_t cons = types.declare_ctor(list, {nat, list});
+    const ctor_id cons = types.declare_ctor(list, {nat, list});
     EXPECT_EQ(types.def(list).ctors[cons].arg_types, (std::vector<type_id>{nat, list}));
 }
 
 TEST_F(SchemaTest, ATypeMayReferToItself) {
     const type_id nat = types.declare_type();
     types.declare_ctor(nat, {});
-    const size_t suc = types.declare_ctor(nat, {nat});
+    const ctor_id suc = types.declare_ctor(nat, {nat});
     EXPECT_EQ(types.def(nat).ctors[suc].arg_types, (std::vector<type_id>{nat}));
 }
 
 TEST_F(SchemaTest, TypesMayReferToEachOther) {
     const type_id tree = types.declare_type();
     const type_id forest = types.declare_type();
-    const size_t node = types.declare_ctor(tree, {forest});
-    const size_t cons = types.declare_ctor(forest, {tree, forest});
+    const ctor_id node = types.declare_ctor(tree, {forest});
+    const ctor_id cons = types.declare_ctor(forest, {tree, forest});
     EXPECT_EQ(types.def(tree).ctors[node].arg_types, (std::vector<type_id>{forest}));
     EXPECT_EQ(types.def(forest).ctors[cons].arg_types, (std::vector<type_id>{tree, forest}));
 }

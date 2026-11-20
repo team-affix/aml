@@ -2,14 +2,16 @@
 #include <gtest/gtest.h>
 #include "infrastructure/primitive_store.hpp"
 
+using namespace AML;
+
 namespace {
 
-const value* first_argument(const std::vector<const value*>& args) {
-    return args.front();
+value first_argument(const std::vector<const value*>& args) {
+    return *args.front();
 }
 
-const value* last_argument(const std::vector<const value*>& args) {
-    return args.back();
+value last_argument(const std::vector<const value*>& args) {
+    return *args.back();
 }
 
 struct PrimitiveStoreTest : public ::testing::Test {
@@ -22,8 +24,8 @@ struct PrimitiveStoreTest : public ::testing::Test {
 };
 
 PrimitiveStoreTest::PrimitiveStoreTest()
-    : zero{.tag = 0, .args = {}}
-    , one{.tag = 1, .args = {&zero}}
+    : zero{.ctor = 0, .args = {}}
+    , one{.ctor = 1, .args = {zero}}
     , unary{.arg_types = {0}, .result_type = 0}
     , binary{.arg_types = {0, 1}, .result_type = 2}
     , store(std::vector<typed_primitive>{
@@ -42,8 +44,8 @@ TEST_F(PrimitiveStoreTest, APrimitivesIdIsItsPosition) {
 }
 
 TEST_F(PrimitiveStoreTest, AStoredFunctionIsTheOneGivenAtThatId) {
-    EXPECT_EQ(store.function(0)({&zero, &one}), &zero);
-    EXPECT_EQ(store.function(1)({&zero, &one}), &one);
+    EXPECT_EQ(store.function(0)({&zero, &one}), zero);
+    EXPECT_EQ(store.function(1)({&zero, &one}), one);
 }
 
 TEST_F(PrimitiveStoreTest, NoPrimitivesCountZero) {

@@ -5,23 +5,24 @@
 AML (abstractive machine learning) learns models of noiseless, functional data that fit every data point exactly
 and are minimal in symbolic description length. Fit comes first; among models that fit, cheaper is better.
 
-- **Data:** each data point is an input tuple (bound to variables x0..xn-1) and a label. Values are interned
-  constructor terms, `value{tag, args}`, where `tag` is the constructor's position in its type. A value carries no
-  type: columns do (`typed_column`, for the inputs and the labels), so comparisons that must respect types compare
-  typed columns.
+- **Data:** each data point is an input tuple (bound to variables x0..xn-1) and a label. Values are constructor terms,
+  `value{ctor, args}`: an owned tree, compared by structure, where `ctor` is the constructor's `ctor_id` within its
+  type. There is no value pool; users build values directly. A value carries no type: columns do (`typed_column`, for
+  the inputs and the labels), so comparisons that must respect types compare typed columns.
 - **User types are data, never C++ types.** A user type is a `type_def`: its constructors (`ctor_def`), each with its
-  argument types. `schema` is the authority on type ids and constructor tags: `declare_type()` gives a type's id, then
-  `declare_ctor(type, arg_types)` gives each constructor's tag. Declaring types before their constructors allows
-  recursive and mutually recursive types. Code that sets up types (tests with real types, the probe) takes ids and tags
-  from the schema rather than writing them as literals.
+  argument types. `schema` is the authority on type ids and constructor ids: `declare_type()` gives a type's id, then
+  `declare_ctor(type, arg_types)` gives each constructor's `ctor_id`. Declaring types before their constructors allows
+  recursive and mutually recursive types. Code that sets up types (tests with real types, the probe) takes ids from
+  the schema rather than writing them as literals.
   Core knows no particular user type (no bool, no nat); anything specific to one lives with the user (the tests).
-- **Primitives and constants:** a `primitive` is a `std::function` from argument values to a result value, made
-  through the solver's value pool; a `typed_primitive` pairs it with its `primitive_type` (argument and result
-  types). The constants synthesis may use as arguments are `typed_constant`s the user offers. Solvers receive both at
-  construction; nothing is enumerated. They are user code: the ones the tests use live in `core/test/support/`.
-- **Features:** a variable, a primitive application, or a constant. A feature owns its arguments, so it is a tree
-  (not interned). A feature is heterogeneous over a bin when its values there are not all equal.
-- **Model:** a tree that owns its nodes (not interned); each episode builds one, and `best_model_tracker` keeps a copy
+- **Primitives and constants:** a `primitive` is a `std::function` from argument values (read in place, as pointers
+  into the solver's columns) to a fresh result value; a `typed_primitive` pairs it with its `primitive_type`
+  (argument and result types). The constants synthesis may use as arguments are `typed_constant`s the user offers.
+  Solvers receive both at construction; nothing is enumerated. They are user code: the ones the tests use live in
+  `core/test/support/`.
+- **Features:** a variable, a primitive application, or a constant. A feature owns its arguments, so it is a tree. A
+  feature is heterogeneous over a bin when its values there are not all equal.
+- **Model:** a tree that owns its nodes; each episode builds one, and `best_model_tracker` keeps a copy
   of the cheapest. Three node types, nested in `model_node` so `match` needs no forward declaration: `match` (an
   exhaustive one-layer case on a feature; each branch sees its constructor's arguments bound as the next variables),
   `leaf` (outputs a feature evaluated in scope: a constant label, a variable, or a synthesized feature), `empty` (no
@@ -49,6 +50,9 @@ and are minimal in symbolic description length. Fit comes first; among models th
 The library is `core/`. There is no parser yet; tests build their data in C++. `probe/` is a developer's entry point for
 watching a solver run by hand (`make probe`, then `./build/probe`), outside the library and its tests; its example is
 meant to be swapped.
+
+Everything in `core/` is in `namespace AML` (upper case on purpose), so AML's names read apart from C++'s. Tests say
+`using namespace AML;`; user-side code (the probe, `core/test/support/`) writes `AML::` in full.
 
 ## Layout
 
@@ -106,6 +110,14 @@ probe/                                     developer entry point outside the lib
   - **Falcon** (`falcon_*`): Osprey without splitting choices: every choice (a primitive, each argument, a match's
     feature, a funnel's bound argument) is one MCTS choice among all its options, with no two-way splitting and no
     order tiers; stopping or continuing synthesis stays a two-way choice. Commits follow the best episode's path.
+  - **Heron** (`heron_*`): Falcon's flat choices without commitments, selecting with the `mcts` submodule's
+    `focus_ucb1`: at a node with N visits, the first child in index order whose normalized mean is within
+    A·N^(−r) of the best gets a constant bonus β (`focus_width`, `focus_rate`, `focus_bonus`), so interchangeable
+    choices stop splitting the visits evenly while the shrinking band lets any real difference win.
+  - **Kestrel** (`kestrel_*`): Kite with mixmax selection from the `mcts` submodule: each backup adds the reward to a
+    node's sum and raises its best (`max_value_update`, `paired_value_update`), and selection reads a node as
+    (1 − w)·mean + w·best (`mixmax_value_view`, `best_weight`), so a deep good path among poor siblings is not
+    averaged away.
 
 ### Per-bin columns
 
@@ -116,7 +128,7 @@ data points are never re-read.
 
 ### Components (one mechanism each)
 
-- Stores: `schema`, `value_pool`, `constant_store`, `primitive_store`, `cheapest_feature_index` (a session's features),
+- Stores: `schema`, `constant_store`, `primitive_store`, `cheapest_feature_index` (a session's features),
   `application_log`, `best_model_tracker`, `tree_walker`; `operand_table` is a read-only view over the constant and
   feature stores.
 - Synthesis: `constant_seeder`, `synthesis_starter`, `variable_candidate_finder`,

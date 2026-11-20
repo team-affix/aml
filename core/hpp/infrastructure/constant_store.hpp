@@ -6,6 +6,8 @@
 #include "value_objects/constant_operand.hpp"
 #include "value_objects/type_id.hpp"
 
+namespace AML {
+
 // Stores the constants synthesis may use as primitive arguments, in insertion order and by type.
 struct constant_store {
     constant_store();
@@ -17,5 +19,7 @@ private:
     std::vector<std::vector<size_t>> by_type_;
     std::vector<size_t> none_;
 };
+
+}
 
 #endif

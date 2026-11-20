@@ -3,6 +3,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/bound_argument_chooser.hpp"
 
+using namespace AML;
+
 using ::testing::NiceMock;
 using ::testing::Return;
 
@@ -33,14 +35,14 @@ struct BoundArgumentChooserTest : public ::testing::Test {
 };
 
 BoundArgumentChooserTest::BoundArgumentChooserTest()
-    : falsity{.tag = 0, .args = {}}
-    , truth{.tag = 1, .args = {}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
     , first_bound_argument{feature::var{.index = 1}}
     , second_argument{feature::var{.index = 2}}
-    , data{.inputs = {typed_column{.type = 0, .cells = {&falsity, &truth}},
-                     typed_column{.type = 0, .cells = {&truth, &falsity}},
-                     typed_column{.type = 0, .cells = {&falsity, &truth}}},
-           .labels = typed_column{.type = 0, .cells = {&falsity, &truth}}}
+    , data{.inputs = {typed_column{.type = 0, .cells = {falsity, truth}},
+                     typed_column{.type = 0, .cells = {truth, falsity}},
+                     typed_column{.type = 0, .cells = {falsity, truth}}},
+           .labels = typed_column{.type = 0, .cells = {falsity, truth}}}
     , first_bound_argument_candidate{.expression = first_bound_argument, .cost = 1, .observed = data.inputs[1]}
     , second_argument_candidate{.expression = second_argument, .cost = 1, .observed = data.inputs[2]}
     , find_variable_candidates()

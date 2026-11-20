@@ -8,10 +8,11 @@
 #include "infrastructure/osprey_runtime.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/scout_runtime.hpp"
-#include "infrastructure/value_pool.hpp"
 #include "support/value_equality.hpp"
 #include "value_objects/typed_constant.hpp"
 #include "value_objects/typed_primitive.hpp"
+
+using namespace AML;
 
 namespace {
 
@@ -21,15 +22,14 @@ struct OspreyIntegrationTest : public ::testing::Test {
     bin xor_training();
     bin is_even_training(size_t count);
     schema types;
-    value_pool values;
     type_id boolean;
-    size_t false_ctor;
-    size_t true_ctor;
+    ctor_id false_ctor;
+    ctor_id true_ctor;
     type_id nat;
-    size_t zero_ctor;
-    size_t suc_ctor;
-    const value* falsity;
-    const value* truth;
+    ctor_id zero_ctor;
+    ctor_id suc_ctor;
+    value falsity;
+    value truth;
     typed_primitive bool_equality;
     std::vector<typed_constant> constants;
     osprey_options options;
@@ -37,29 +37,28 @@ struct OspreyIntegrationTest : public ::testing::Test {
 
 OspreyIntegrationTest::OspreyIntegrationTest()
     : types()
-    , values()
     , boolean(types.declare_type())
     , false_ctor(types.declare_ctor(boolean, {}))
     , true_ctor(types.declare_ctor(boolean, {}))
     , nat(types.declare_type())
     , zero_ctor(types.declare_ctor(nat, {}))
     , suc_ctor(types.declare_ctor(nat, {nat}))
-    , falsity(values.make(false_ctor, {}))
-    , truth(values.make(true_ctor, {}))
+    , falsity(value{.ctor = false_ctor, .args = {}})
+    , truth(value{.ctor = true_ctor, .args = {}})
     , bool_equality{
           .type = primitive_type{.arg_types = {boolean, boolean}, .result_type = boolean},
-          .apply = value_equality<value_pool>(values, false_ctor, true_ctor)}
+          .apply = value_equality(false_ctor, true_ctor)}
     , constants{
           typed_constant{.type = boolean, .literal = falsity}, typed_constant{.type = boolean, .literal = truth},
-          typed_constant{.type = nat, .literal = values.make(zero_ctor, {})}}
+          typed_constant{.type = nat, .literal = value{.ctor = zero_ctor, .args = {}}}}
     , options{.max_applications = 2, .exploration_constant = 5.0, .seed = 7, .commit_visits = 100} {}
 
 void OspreyIntegrationTest::expect_fit(const osprey_runtime& runtime, const bin& training) {
     for (size_t row = 0; row < training.labels.cells.size(); ++row) {
-        std::vector<const value*> inputs;
+        std::vector<value> inputs;
         for (const typed_column& input : training.inputs)
             inputs.push_back(input.cells[row]);
-        EXPECT_EQ(runtime.infer(inputs), std::optional<const value*>(training.labels.cells[row]));
+        EXPECT_EQ(runtime.infer(inputs), std::optional<value>(training.labels.cells[row]));
     }
 }
 
@@ -73,12 +72,12 @@ bin OspreyIntegrationTest::xor_training() {
 bin OspreyIntegrationTest::is_even_training(size_t count) {
     bin training{.inputs = {typed_column{.type = nat, .cells = {}}},
                  .labels = typed_column{.type = boolean, .cells = {}}};
-    const value* number = values.make(zero_ctor, {});
+    value number = value{.ctor = zero_ctor, .args = {}};
     for (size_t index = 0; index < count; ++index) {
         const bool even = (index % 2) == 0;
         training.inputs[0].cells.push_back(number);
         training.labels.cells.push_back(even ? truth : falsity);
-        number = values.make(suc_ctor, {number});
+        number = value{.ctor = suc_ctor, .args = {number}};
     }
     return training;
 }
@@ -87,7 +86,7 @@ bin OspreyIntegrationTest::is_even_training(size_t count) {
 
 TEST_F(OspreyIntegrationTest, XorIsFoundAsOneSynthesizedOutput) {
     const bin training = xor_training();
-    osprey_runtime runtime(types, values, {bool_equality}, constants, training, options);
+    osprey_runtime runtime(types, {bool_equality}, constants, training, options);
     for (size_t episode = 0; episode < 200; ++episode)
         runtime.next();
     // leaf eq(eq(x0, x1), false): 1 + (1 + 1 + 1) + 1
@@ -98,7 +97,7 @@ TEST_F(OspreyIntegrationTest, XorIsFoundAsOneSynthesizedOutput) {
 
 TEST_F(OspreyIntegrationTest, EveryEpisodesModelFitsTheTrainingData) {
     const bin training = is_even_training(6);
-    osprey_runtime runtime(types, values, {}, constants, training, options);
+    osprey_runtime runtime(types, {}, constants, training, options);
     for (size_t episode = 0; episode < 20; ++episode) {
         runtime.next();
         expect_fit(runtime, training);
@@ -107,10 +106,10 @@ TEST_F(OspreyIntegrationTest, EveryEpisodesModelFitsTheTrainingData) {
 
 TEST_F(OspreyIntegrationTest, OspreyFindsAModelNoCostlierThanScouts) {
     const bin training = is_even_training(6);
-    scout_runtime scout(types, values, {}, constants, training,
+    scout_runtime scout(types, {}, constants, training,
                         scout_options{.max_applications = 1});
     scout.next();
-    osprey_runtime runtime(types, values, {}, constants, training, options);
+    osprey_runtime runtime(types, {}, constants, training, options);
     for (size_t episode = 0; episode < 300; ++episode)
         runtime.next();
     EXPECT_LE(runtime.best_cost(), scout.best_cost());
@@ -118,7 +117,7 @@ TEST_F(OspreyIntegrationTest, OspreyFindsAModelNoCostlierThanScouts) {
 
 TEST_F(OspreyIntegrationTest, TheBestCostNeverRises) {
     const bin training = xor_training();
-    osprey_runtime runtime(types, values, {bool_equality}, constants, training, options);
+    osprey_runtime runtime(types, {bool_equality}, constants, training, options);
     size_t previous = runtime.best_cost();
     for (size_t episode = 0; episode < 100; ++episode) {
         runtime.next();
@@ -129,8 +128,8 @@ TEST_F(OspreyIntegrationTest, TheBestCostNeverRises) {
 
 TEST_F(OspreyIntegrationTest, TheSameSeedFindsTheSameModel) {
     const bin training = xor_training();
-    osprey_runtime first(types, values, {bool_equality}, constants, training, options);
-    osprey_runtime second(types, values, {bool_equality}, constants, training, options);
+    osprey_runtime first(types, {bool_equality}, constants, training, options);
+    osprey_runtime second(types, {bool_equality}, constants, training, options);
     for (size_t episode = 0; episode < 50; ++episode) {
         first.next();
         second.next();
@@ -139,7 +138,7 @@ TEST_F(OspreyIntegrationTest, TheSameSeedFindsTheSameModel) {
 }
 
 TEST_F(OspreyIntegrationTest, NoModelExistsBeforeTheFirstEpisode) {
-    osprey_runtime runtime(types, values, {}, constants, xor_training(), options);
+    osprey_runtime runtime(types, {}, constants, xor_training(), options);
     EXPECT_FALSE(runtime.best_model().has_value());
 }
 
@@ -147,7 +146,7 @@ TEST_F(OspreyIntegrationTest, ACapOfZeroNeverAppliesAPrimitive) {
     const bin training = xor_training();
     osprey_options no_applications = options;
     no_applications.max_applications = 0;
-    osprey_runtime runtime(types, values, {bool_equality}, constants, training, no_applications);
+    osprey_runtime runtime(types, {bool_equality}, constants, training, no_applications);
     for (size_t episode = 0; episode < 100; ++episode)
         runtime.next();
     // Without synthesis XOR needs a match on both inputs: the best is scout's cost 7.
@@ -158,7 +157,7 @@ TEST_F(OspreyIntegrationTest, ACapOfZeroNeverAppliesAPrimitive) {
 TEST_F(OspreyIntegrationTest, AgreeingLabelsNeedNoSearch) {
     bin training = xor_training();
     training.labels = typed_column{.type = boolean, .cells = {truth, truth, truth, truth}};
-    osprey_runtime runtime(types, values, {bool_equality}, constants, training, options);
+    osprey_runtime runtime(types, {bool_equality}, constants, training, options);
     runtime.next();
     EXPECT_EQ(runtime.best_cost(), 1u);
 }
@@ -167,7 +166,7 @@ TEST_F(OspreyIntegrationTest, TheSearchCommitsOnceEachTimeTheFrontierGathersItsV
     const bin training = xor_training();
     osprey_options committing = options;
     committing.commit_visits = 20;
-    osprey_manifest manifest(types, values, {bool_equality}, committing);
+    osprey_manifest manifest(types, {bool_equality}, committing);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 20; ++episode)
         manifest.mcts_episode_.run(training);
@@ -183,7 +182,7 @@ TEST_F(OspreyIntegrationTest, TheCommittedRootChoiceIsTakenByEveryLaterEpisode) 
     const bin training = xor_training();
     osprey_options committing = options;
     committing.commit_visits = 20;
-    osprey_manifest manifest(types, values, {bool_equality}, committing);
+    osprey_manifest manifest(types, {bool_equality}, committing);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 21; ++episode)
         manifest.mcts_episode_.run(training);
@@ -202,8 +201,8 @@ TEST_F(OspreyIntegrationTest, WithoutCommitmentsOspreySearchesExactlyLikeKite) {
     const bin training = xor_training();
     osprey_options never = options;
     never.commit_visits = std::numeric_limits<size_t>::max();
-    osprey_runtime osprey(types, values, {bool_equality}, constants, training, never);
-    kite_runtime kite(types, values, {bool_equality}, constants, training,
+    osprey_runtime osprey(types, {bool_equality}, constants, training, never);
+    kite_runtime kite(types, {bool_equality}, constants, training,
                       kite_options{.max_applications = 2, .exploration_constant = 5.0, .seed = 7});
     for (size_t episode = 0; episode < 100; ++episode) {
         osprey.next();
@@ -216,7 +215,7 @@ TEST_F(OspreyIntegrationTest, TheRootIsCommittedToTheBestEpisodesFirstChoice) {
     const bin training = xor_training();
     osprey_options committing = options;
     committing.commit_visits = 20;
-    osprey_manifest manifest(types, values, {bool_equality}, committing);
+    osprey_manifest manifest(types, {bool_equality}, committing);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 20; ++episode)
         manifest.mcts_episode_.run(training);
@@ -227,7 +226,7 @@ TEST_F(OspreyIntegrationTest, TheRootIsCommittedToTheBestEpisodesFirstChoice) {
 
 TEST_F(OspreyIntegrationTest, TheBestPathsRewardIsTheBestModelsNegatedCost) {
     const bin training = xor_training();
-    osprey_manifest manifest(types, values, {bool_equality}, options);
+    osprey_manifest manifest(types, {bool_equality}, options);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 60; ++episode) {
         manifest.mcts_episode_.run(training);
@@ -239,7 +238,7 @@ TEST_F(OspreyIntegrationTest, EveryCommitmentFollowsTheBestPath) {
     const bin training = xor_training();
     osprey_options committing = options;
     committing.commit_visits = 20;
-    osprey_manifest manifest(types, values, {bool_equality}, committing);
+    osprey_manifest manifest(types, {bool_equality}, committing);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 101; ++episode)
         manifest.mcts_episode_.run(training);

@@ -2,13 +2,15 @@
 #include <gmock/gmock.h>
 #include "infrastructure/feature_sizer.hpp"
 
+using namespace AML;
+
 using ::testing::NiceMock;
 using ::testing::Return;
 
 namespace {
 
 struct MockSizeValue {
-    MOCK_METHOD(size_t, size, (const value*), (const));
+    MOCK_METHOD(size_t, size, (const value&), (const));
 };
 
 struct FeatureSizerTest : public ::testing::Test {
@@ -20,14 +22,14 @@ struct FeatureSizerTest : public ::testing::Test {
     feature_sizer<NiceMock<MockSizeValue>> sizer{size_value};
 
     void SetUp() override {
-        ON_CALL(size_value, size(&four)).WillByDefault(Return(5));
+        ON_CALL(size_value, size(four)).WillByDefault(Return(5));
     }
 };
 
 FeatureSizerTest::FeatureSizerTest()
-    : four{.tag = 0, .args = {}}
+    : four{.ctor = 0, .args = {}}
     , variable{feature::var{.index = 0}}
-    , constant{feature::constant{.literal = &four}}
+    , constant{feature::constant{.literal = four}}
     , size_value() {}
 
 }

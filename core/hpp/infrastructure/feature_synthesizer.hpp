@@ -7,6 +7,8 @@
 #include "value_objects/candidate.hpp"
 #include "value_objects/prim_id.hpp"
 
+namespace AML {
+
 // Synthesizes heterogeneous features of a bin in one session of at most `max_applications` primitive applications.
 // Each step first chooses between stopping (option 0) and continuing (option 1); only on continuing does it choose
 // which of the primitives with an application witness to apply. Keeping the step a two-way choice keeps MCTS's
@@ -93,5 +95,7 @@ const std::vector<candidate>& FEATURE_SYNTHESIZER::synthesize(const bin& data) {
 
 #undef FEATURE_SYNTHESIZER
 #undef FEATURE_SYNTHESIZER_TEMPLATE
+
+}
 
 #endif

@@ -7,6 +7,8 @@
 #include "value_objects/value.hpp"
 #include "value_objects/var_id.hpp"
 
+namespace AML {
+
 // Detects a bin that needs no partition and gives its output. A variable whose column is the label column is the
 // output (the first such, at cost one, which no constant undercuts); otherwise labels that all agree give that label
 // as a constant. A variable output generalizes past the training data; a constant one does not.
@@ -35,10 +37,12 @@ std::optional<feature> LEAF_DETECTOR::detect(const bin& data) const {
     const std::optional<const value*> label = find_uniform_value_.find(data.labels.cells);
     if (!label.has_value())
         return std::nullopt;
-    return feature{feature::constant{.literal = label.value()}};
+    return feature{feature::constant{.literal = *label.value()}};
 }
 
 #undef LEAF_DETECTOR
 #undef LEAF_DETECTOR_TEMPLATE
+
+}
 
 #endif

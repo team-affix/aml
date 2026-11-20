@@ -7,6 +7,8 @@
 #include "value_objects/type_id.hpp"
 #include "debug_assert.hpp"
 
+namespace AML {
+
 // Chooses a primitive's arguments one position at a time, each from the operands that still leave a witness.
 template<typename IFindArgumentOptions, typename IChooseArgument>
 struct argument_chooser {
@@ -38,5 +40,7 @@ std::vector<size_t> ARGUMENT_CHOOSER::choose(prim_id prim, const std::vector<typ
 
 #undef ARGUMENT_CHOOSER
 #undef ARGUMENT_CHOOSER_TEMPLATE
+
+}
 
 #endif

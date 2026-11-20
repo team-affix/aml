@@ -3,6 +3,10 @@
 
 #include <cstdint>
 
+namespace AML {
+
 using type_id = uint32_t;
+
+}
 
 #endif

@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+namespace AML {
+
 application_log::application_log()
     : applications_() {}
 
@@ -28,4 +30,6 @@ size_t application_log::count_with_prefix(prim_id prim, const std::vector<size_t
         ++matching;
     }
     return matching;
+}
+
 }

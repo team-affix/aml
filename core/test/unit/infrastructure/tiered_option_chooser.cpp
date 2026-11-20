@@ -4,6 +4,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/tiered_option_chooser.hpp"
 
+using namespace AML;
+
 using ::testing::_;
 using ::testing::InSequence;
 using ::testing::NiceMock;

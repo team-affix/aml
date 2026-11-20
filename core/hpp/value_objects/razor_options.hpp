@@ -4,11 +4,15 @@
 #include <cstddef>
 #include <cstdint>
 
+namespace AML {
+
 struct razor_options {
     size_t max_applications;
     double exploration_constant;
     uint32_t seed;
     auto operator<=>(const razor_options&) const = default;
 };
+
+}
 
 #endif

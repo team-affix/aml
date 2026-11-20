@@ -7,6 +7,8 @@
 #include "value_objects/prim_id.hpp"
 #include "value_objects/value.hpp"
 
+namespace AML {
+
 // Applies a primitive row by row to a tuple of operands.
 template<typename IGetOperandCell, typename ICallPrimitive>
 struct operand_applier {
@@ -40,5 +42,7 @@ column OPERAND_APPLIER::apply(prim_id prim, const std::vector<size_t>& args, siz
 
 #undef OPERAND_APPLIER
 #undef OPERAND_APPLIER_TEMPLATE
+
+}
 
 #endif

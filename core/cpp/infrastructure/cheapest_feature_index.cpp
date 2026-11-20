@@ -2,6 +2,8 @@
 
 #include <utility>
 
+namespace AML {
+
 cheapest_feature_index::cheapest_feature_index()
     : candidates_()
     , slots_()
@@ -15,12 +17,17 @@ void cheapest_feature_index::clear() {
 }
 
 void cheapest_feature_index::try_insert(candidate entry) {
-    const auto [slot, inserted] = slots_.try_emplace(entry.observed, candidates_.size());
-    if (inserted) {
+    const size_t hashed = typed_column_hash{}(entry.observed);
+    const auto [first, last] = slots_.equal_range(hashed);
+    auto slot = first;
+    while (slot != last && candidates_[slot->second].observed != entry.observed)
+        ++slot;
+    if (slot == last) {
         const type_id type = entry.observed.type;
         if (type >= by_type_.size())
             by_type_.resize(type + 1);
         by_type_[type].push_back(candidates_.size());
+        slots_.emplace(hashed, candidates_.size());
         candidates_.push_back(std::move(entry));
         return;
     }
@@ -38,4 +45,6 @@ const std::vector<size_t>& cheapest_feature_index::features_of_type(type_id type
     if (type >= by_type_.size())
         return none_;
     return by_type_[type];
+}
+
 }

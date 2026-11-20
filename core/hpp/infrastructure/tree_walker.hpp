@@ -5,6 +5,8 @@
 #include "value_objects/mcts_choice.hpp"
 #include "value_objects/mcts_tree_node_id.hpp"
 
+namespace AML {
+
 // Names MCTS tree nodes: the child reached from a node by a choice gets a fresh id the first time it is walked.
 // The root is 0. A rollout grows no tree, so walking during one records nothing and stays at the node it began from.
 template<typename IIsInRollout>
@@ -43,5 +45,7 @@ mcts_tree_node_id TREE_WALKER::walk(mcts_tree_node_id node, const mcts_choice& c
 
 #undef TREE_WALKER
 #undef TREE_WALKER_TEMPLATE
+
+}
 
 #endif

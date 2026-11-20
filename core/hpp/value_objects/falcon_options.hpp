@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <cstdint>
 
+namespace AML {
+
 struct falcon_options {
     size_t max_applications;
     double exploration_constant;
@@ -11,5 +13,7 @@ struct falcon_options {
     size_t commit_visits;
     auto operator<=>(const falcon_options&) const = default;
 };
+
+}
 
 #endif

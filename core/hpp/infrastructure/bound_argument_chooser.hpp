@@ -8,6 +8,8 @@
 #include "value_objects/var_id.hpp"
 #include "debug_assert.hpp"
 
+namespace AML {
+
 // Chooses the constructor argument a funnel descends into: one of a bin's heterogeneous variables from
 // `first_bound_argument` on, which are the arguments the match above just bound.
 template<typename IFindVariableCandidates, typename IChooseBoundArgument>
@@ -37,5 +39,7 @@ candidate BOUND_ARGUMENT_CHOOSER::choose(const bin& data, var_id first_bound_arg
 
 #undef BOUND_ARGUMENT_CHOOSER
 #undef BOUND_ARGUMENT_CHOOSER_TEMPLATE
+
+}
 
 #endif

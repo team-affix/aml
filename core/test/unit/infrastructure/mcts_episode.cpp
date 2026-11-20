@@ -2,6 +2,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/mcts_episode.hpp"
 
+using namespace AML;
+
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
@@ -34,9 +36,9 @@ struct MctsEpisodeTest : public ::testing::Test {
 };
 
 MctsEpisodeTest::MctsEpisodeTest()
-    : label{.tag = 0, .args = {}}
-    , training{.inputs = {}, .labels = typed_column{.type = 0, .cells = {&label}}}
-    , model{model_node::leaf{.output = feature{feature::constant{.literal = &label}}}}
+    : label{.ctor = 0, .args = {}}
+    , training{.inputs = {}, .labels = typed_column{.type = 0, .cells = {label}}}
+    , model{model_node::leaf{.output = feature{feature::constant{.literal = label}}}}
     , run_episode()
     , set_reward()
     , terminate() {}

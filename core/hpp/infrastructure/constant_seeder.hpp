@@ -6,6 +6,8 @@
 #include "value_objects/feature.hpp"
 #include "value_objects/typed_constant.hpp"
 
+namespace AML {
+
 // Seeds the constants the user offers, each as a constant feature.
 template<typename IInsertConstant>
 struct constant_seeder {
@@ -34,5 +36,7 @@ void CONSTANT_SEEDER::seed(const std::vector<typed_constant>& constants) {
 
 #undef CONSTANT_SEEDER
 #undef CONSTANT_SEEDER_TEMPLATE
+
+}
 
 #endif

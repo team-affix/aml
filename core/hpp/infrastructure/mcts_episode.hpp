@@ -5,6 +5,8 @@
 #include "value_objects/bin.hpp"
 #include "value_objects/episode_outcome.hpp"
 
+namespace AML {
+
 // Runs one episode and rewards the MCTS path it took with the negated model cost, then ends the MCTS episode.
 // Returns the episode's model and its cost.
 template<typename IRunEpisode, typename ISetReward, typename ITerminate>
@@ -36,5 +38,7 @@ episode_outcome MCTS_EPISODE::run(const bin& training) {
 
 #undef MCTS_EPISODE
 #undef MCTS_EPISODE_TEMPLATE
+
+}
 
 #endif

@@ -6,7 +6,6 @@
 #include <vector>
 #include "infrastructure/schema.hpp"
 #include "infrastructure/osprey_manifest.hpp"
-#include "infrastructure/value_pool.hpp"
 #include "value_objects/bin.hpp"
 #include "value_objects/episode_outcome.hpp"
 #include "value_objects/model_node.hpp"
@@ -15,10 +14,11 @@
 #include "value_objects/typed_primitive.hpp"
 #include "value_objects/value.hpp"
 
+namespace AML {
+
 struct osprey_runtime {
     osprey_runtime(
         schema& types,
-        value_pool& values,
         const std::vector<typed_primitive>& primitives,
         const std::vector<typed_constant>& constants,
         const bin& training,
@@ -26,10 +26,12 @@ struct osprey_runtime {
     episode_outcome next();
     const std::optional<model_node>& best_model() const;
     size_t best_cost() const;
-    std::optional<const value*> infer(const std::vector<const value*>& inputs) const;
+    std::optional<value> infer(const std::vector<value>& inputs) const;
 private:
     osprey_manifest manifest_;
     bin training_;
 };
+
+}
 
 #endif

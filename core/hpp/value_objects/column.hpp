@@ -4,7 +4,11 @@
 #include <vector>
 #include "value_objects/value.hpp"
 
-// One interned value per row of a bin, aligned with the bin's rows.
-using column = std::vector<const value*>;
+namespace AML {
+
+// One value per row of a bin, aligned with the bin's rows.
+using column = std::vector<value>;
+
+}
 
 #endif

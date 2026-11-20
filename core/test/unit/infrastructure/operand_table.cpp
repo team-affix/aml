@@ -3,6 +3,8 @@
 #include <gmock/gmock.h>
 #include "infrastructure/operand_table.hpp"
 
+using namespace AML;
+
 using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::ReturnRef;
@@ -66,23 +68,23 @@ struct OperandTableTest : public ::testing::Test {
 };
 
 OperandTableTest::OperandTableTest()
-    : falsity{.tag = 0, .args = {}}
-    , truth{.tag = 1, .args = {}}
-    , zero{.tag = 2, .args = {}}
-    , true_constant{feature::constant{.literal = &truth}}
-    , zero_constant{feature::constant{.literal = &zero}}
-    , false_constant{feature::constant{.literal = &falsity}}
+    : falsity{.ctor = 0, .args = {}}
+    , truth{.ctor = 1, .args = {}}
+    , zero{.ctor = 2, .args = {}}
+    , true_constant{feature::constant{.literal = truth}}
+    , zero_constant{feature::constant{.literal = zero}}
+    , false_constant{feature::constant{.literal = falsity}}
     , first_variable{feature::var{.index = 0}}
     , second_variable{feature::var{.index = 1}}
     , constants{
-          constant_operand{.expression = true_constant, .literal = &truth, .type = 0},
-          constant_operand{.expression = zero_constant, .literal = &zero, .type = 1},
-          constant_operand{.expression = false_constant, .literal = &falsity, .type = 0}}
+          constant_operand{.expression = true_constant, .literal = truth, .type = 0},
+          constant_operand{.expression = zero_constant, .literal = zero, .type = 1},
+          constant_operand{.expression = false_constant, .literal = falsity, .type = 0}}
     , features{
           candidate{.expression = first_variable, .cost = 1,
-                    .observed = typed_column{.type = 0, .cells = {&falsity, &truth}}},
+                    .observed = typed_column{.type = 0, .cells = {falsity, truth}}},
           candidate{.expression = second_variable, .cost = 1,
-                    .observed = typed_column{.type = 1, .cells = {&zero, &truth}}}}
+                    .observed = typed_column{.type = 1, .cells = {zero, truth}}}}
     , boolean_constants{0, 2}
     , nat_constants{1}
     , boolean_features{0}
@@ -119,9 +121,9 @@ TEST_F(OperandTableTest, AnOperandsExpressionComesFromItsStore) {
 }
 
 TEST_F(OperandTableTest, AConstantGivesItsLiteralOnEveryRowAndAFeatureItsCell) {
-    EXPECT_EQ(table.cell(0, 1), &truth);
-    EXPECT_EQ(table.cell(3, 0), &falsity);
-    EXPECT_EQ(table.cell(3, 1), &truth);
+    EXPECT_EQ(*table.cell(0, 1), truth);
+    EXPECT_EQ(*table.cell(3, 0), falsity);
+    EXPECT_EQ(*table.cell(3, 1), truth);
 }
 
 TEST_F(OperandTableTest, WithNoFeaturesEveryOperandIsAConstant) {

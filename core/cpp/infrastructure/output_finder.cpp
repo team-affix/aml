@@ -1,5 +1,7 @@
 #include "infrastructure/output_finder.hpp"
 
+namespace AML {
+
 std::optional<feature> output_finder::find(
     const std::vector<candidate>& candidates, const typed_column& labels) const {
     const candidate* cheapest = nullptr;
@@ -13,4 +15,6 @@ std::optional<feature> output_finder::find(
     if (cheapest == nullptr)
         return std::nullopt;
     return cheapest->expression;
+}
+
 }

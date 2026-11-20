@@ -6,6 +6,8 @@
 #include "value_objects/prim_application.hpp"
 #include "value_objects/prim_id.hpp"
 
+namespace AML {
+
 // Stores the primitive applications a synthesis session has tried.
 struct application_log {
     application_log();
@@ -16,5 +18,7 @@ struct application_log {
 private:
     std::vector<prim_application> applications_;
 };
+
+}
 
 #endif
