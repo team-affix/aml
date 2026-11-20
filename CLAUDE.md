@@ -82,6 +82,10 @@ docs/                                      design notes (see docs/continuous-doc
   - **Hawk** (`hawk_*`): Razor with best-path memory, the `mcts` submodule's `best_path_grafter`: an episode whose
     cost is at most the cheapest so far adds its whole path, rollout included, to the tree, so it is never forgotten
     (CadiaPlayer's single-agent enhancement). Selection and backups stay UCT's.
+  - **Kite** (`kite_*`): Razor with order-tiered choices. A feature's order is 0 for a variable or a constant and one
+    more than its highest-order argument for an application. Each primitive argument and each match's feature is
+    chosen highest order first: a two-way choice takes the highest order present or descends to the next, then that
+    order's options are split as usual. A rollout so builds on the highest-order feature half the time.
 
 ### Per-bin columns
 
@@ -102,8 +106,11 @@ data points are never re-read.
 - Partition: `leaf_detector`, `output_finder`, `uniform_value_finder`, `bound_argument_chooser`, `bin_splitter`,
   `model_builder`.
 - Choices: `first_option_chooser`, `mcts_option_chooser`, `binary_option_chooser`; each chooses an index among
-  `option_count` options. MCTS sees them as an `option_range` (a count, not a vector).
-- Cost and inference: `value_sizer`, `feature_sizer`, `model_sizer`, `feature_evaluator`, `model_evaluator`.
+  `option_count` options. `tiered_option_chooser` chooses among options by their orders, and `tiered_argument_chooser`
+  and `tiered_feature_chooser` use it for arguments and for a match's feature. MCTS sees them as an `option_range`
+  (a count, not a vector).
+- Cost and inference: `value_sizer`, `feature_sizer`, `feature_order_measurer`, `model_sizer`, `feature_evaluator`,
+  `model_evaluator`.
 - Episodes: `model_episode`, `mcts_episode`.
 
 ## Build & test
