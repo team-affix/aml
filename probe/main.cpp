@@ -18,10 +18,10 @@
 #include <unistd.h>
 #include "infrastructure/falcon_manifest.hpp"
 #include "infrastructure/schema.hpp"
-#include "probe/bool_xor.hpp"
 #include "probe/list_primitives.hpp"
 #include "probe/nat_mod.hpp"
 #include "support/bool_not.hpp"
+#include "support/bool_xor.hpp"
 
 namespace {
 

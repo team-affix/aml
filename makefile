@@ -40,6 +40,9 @@ CORE_DEBUG_FAST_BIN = build/core_debug_fast
 # The probe (probe/): a developer's entry point outside the core library, built against the release library.
 PROBE_BIN = build/probe
 
+# The Kestrel parity proof (research/kestrel_parity/): the exact recorded run, with its settings fixed in its source.
+KESTREL_PARITY_BIN = build/kestrel_parity
+
 # ==============================================================================
 # Object lists  (object files live in build/obj/<variant>/)
 # ==============================================================================
@@ -91,7 +94,7 @@ CORE_DEBUG_FAST_GTEST_DEP = $(CORE_DEBUG_FAST_GTEST_OBJ:.o=.d)
 # User-facing targets
 # ==============================================================================
 
-.PHONY: all core core_debug core_debug_fast test test_fast probe clean
+.PHONY: all core core_debug core_debug_fast test test_fast probe kestrel_parity clean
 
 all: core core_debug core_debug_fast
 
@@ -108,6 +111,8 @@ test_fast: core_debug_fast
 	$(CORE_DEBUG_FAST_BIN)
 
 probe: $(PROBE_BIN)
+
+kestrel_parity: $(KESTREL_PARITY_BIN)
 
 clean:
 	rm -rf build
@@ -143,6 +148,12 @@ PROBE_SRC = $(shell find probe core/test/support -name '*.cpp' | sort)
 
 $(PROBE_BIN): $(PROBE_SRC) $(CORE_LIB) | build
 	$(CXX) $(CXXFLAGS) $(RELEASE_CXXFLAGS) -Icore/test -o $@ $(PROBE_SRC) \
+	    -Lbuild -laml_core
+
+KESTREL_PARITY_SRC = research/kestrel_parity/kestrel_parity.cpp $(shell find core/test/support -name '*.cpp' | sort)
+
+$(KESTREL_PARITY_BIN): $(KESTREL_PARITY_SRC) $(CORE_LIB) | build
+	$(CXX) $(CXXFLAGS) $(RELEASE_CXXFLAGS) -Icore/test -o $@ $(KESTREL_PARITY_SRC) \
 	    -Lbuild -laml_core
 
 # ==============================================================================

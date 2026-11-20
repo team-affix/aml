@@ -1,4 +1,4 @@
-#include "probe/bool_xor.hpp"
+#include "support/bool_xor.hpp"
 #include "debug_assert.hpp"
 
 bool_xor::bool_xor(AML::ctor_id false_ctor, AML::ctor_id true_ctor)

@@ -65,6 +65,8 @@ mcts/ googletest/                          git submodules, not ours to edit
 debug_assert.hpp                           DEBUG_ASSERT(cond): throws std::logic_error under -DDEBUG
 docs/                                      design notes (see docs/continuous-documentation.md)
 probe/                                     developer entry point outside the library (make probe); swappable example
+research/                                  experiments and their records; research/kestrel_parity is the fixed Kestrel
+                                           parity proof (make kestrel_parity), never to be edited
 ```
 
 ## Architecture

@@ -16,7 +16,7 @@ root over 25 minutes. Kestrel, Kite with mixmax selection, builds them up to 8.
 
 ## Result
 
-Seed 1, `kestrel_parity 5 1 1 3000`, about 400 episodes per second (1,258,909 episodes):
+`build/kestrel_parity`, about 400 episodes per second (1,258,909 episodes):
 
 | Minute | Best cost | Xors at the best model's root | Episodes in the last minute by root xors |
 |---|---|---|---|
@@ -47,8 +47,7 @@ under 1% at minute 20), so the search had not converged. Resident memory grew to
 
 `c5_w1_seed1_3000s.log` is the run's log: every new best model with the episode that found it and its root, and a
 progress line each minute. It was printed by the experiment driver this program was cut down from; the episodes are
-the same. Rerunning `kestrel_parity 5 1 1 300` gave the same 18 new best models, at the same episodes, as the log's
-first five minutes.
+the same. The program's first five minutes gave the same 18 new best models, at the same episodes, as the log's.
 
 ### Other settings (seed 1, 25 minutes, same data and primitives)
 
@@ -75,16 +74,16 @@ worth that episode, and the search follows it.
 
 ## Reproducing
 
-From the repository root:
+`kestrel_parity.cpp` is this run and nothing else: every setting above is a constant in its source, and it takes no
+arguments. From the repository root:
 
 ```bash
-make core
+make kestrel_parity
 ```
 
 ```bash
-g++ -std=c++20 -O3 -I. -Icore/hpp -Imcts/core/hpp -Icore/test research/kestrel_parity/kestrel_parity.cpp probe/bool_xor.cpp core/test/support/bool_and.cpp core/test/support/bool_or.cpp core/test/support/bool_not.cpp -Lbuild -laml_core -o build/kestrel_parity
+./build/kestrel_parity
 ```
 
-```bash
-build/kestrel_parity 5 1 1 3000
-```
+It runs for 3000 seconds. The episodes, and so every new best model and the episode that finds it, are the same on
+any machine; how far it gets in 3000 seconds depends on the machine's speed.

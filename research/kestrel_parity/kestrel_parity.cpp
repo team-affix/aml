@@ -1,10 +1,13 @@
-// Kestrel on 10-bit parity: how many nested xors does the search put at the root of its models? Trains Kestrel on
-// every row of the 10-bit truth table with xor, and, or and not, and prints its progress: each new best model with how
-// many xors its root holds, and at every report the share of the episodes since the last report whose root holds
-// 0, 1, ..., 9 and 10 or more xors. Episodes are deterministic for a given seed; only the times depend on the machine.
+// Kestrel on 10-bit parity: the proof that Kestrel builds deep xor chains at the root of its models. It is the exact
+// run recorded in README.md, with every setting fixed below; change nothing here, or it is no longer that run. It
+// trains Kestrel on every row of the 10-bit truth table with xor, and, or and not for 3000 seconds, and prints each
+// new best model with how many xors its root holds, and at every report the share of the episodes since the last
+// report whose root holds 0, 1, ..., 9 and 10 or more xors. Episodes are deterministic; only the times depend on the
+// machine.
 //
-// Build and run from the repository root, as README.md shows:
-//   build/kestrel_parity <exploration_constant> <best_weight> <seed> <seconds>      e.g. build/kestrel_parity 5 1 1 3000
+// Build and run from the repository root:
+//   make kestrel_parity
+//   ./build/kestrel_parity
 
 #include <algorithm>
 #include <chrono>
@@ -12,26 +15,30 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
-#include <cstdlib>
 #include <string>
 #include <variant>
 #include <vector>
 #include <unistd.h>
 #include "infrastructure/kestrel_runtime.hpp"
 #include "infrastructure/schema.hpp"
-#include "probe/bool_xor.hpp"
 #include "support/bool_and.hpp"
 #include "support/bool_not.hpp"
 #include "support/bool_or.hpp"
+#include "support/bool_xor.hpp"
 
 namespace {
 
-const size_t k_bits = 10;               // parity over this many input bits; the training set has 2^bits rows
-const size_t k_max_applications = 9;    // synthesis applications per session
-const double k_report_seconds = 60;     // seconds between progress lines
-const size_t k_max_rss_mb = 4000;       // stop once resident memory passes this (checked every 1,000 episodes)
-const size_t k_model_lines = 40;        // lines of the best model printed at the end
-const size_t k_xor_buckets = 11;        // 0 to 9 xors, then 10 or more
+// The run's settings.
+const size_t k_bits = 10;                 // parity over this many input bits; the training set has 2^bits rows
+const size_t k_max_applications = 9;      // synthesis applications per session
+const double k_exploration_constant = 5;  // c, on ucb1's normalized [0, 1] scale
+const double k_best_weight = 1;           // w: a node is read as (1 - w) * mean + w * best
+const uint32_t k_seed = 1;
+const double k_seconds = 3000;            // stop after this many seconds
+const double k_report_seconds = 60;       // seconds between progress lines
+const size_t k_max_rss_mb = 4000;         // stop once resident memory passes this (checked every 1,000 episodes)
+const size_t k_model_lines = 40;          // lines of the best model printed at the end
+const size_t k_xor_buckets = 11;          // 0 to 9 xors, then 10 or more
 const char* const k_primitive_names[] = {"xor", "and", "or", "not"};
 
 volatile std::sig_atomic_t stop_requested = 0;
@@ -167,16 +174,7 @@ double seconds_since(std::chrono::steady_clock::time_point start) {
 
 }
 
-int main(int argc, char** argv) {
-    if (argc != 5) {
-        std::fprintf(stderr, "usage: %s <exploration_constant> <best_weight> <seed> <seconds>\n", argv[0]);
-        return 1;
-    }
-    const double exploration_constant = std::atof(argv[1]);
-    const double best_weight = std::atof(argv[2]);
-    const uint32_t seed = static_cast<uint32_t>(std::atoi(argv[3]));
-    const double seconds = std::atof(argv[4]);
-
+int main() {
     AML::schema types;
     const AML::type_id boolean = types.declare_type();
     const AML::ctor_id false_ctor = types.declare_ctor(boolean, {});
@@ -198,11 +196,11 @@ int main(int argc, char** argv) {
 
     AML::kestrel_runtime runtime(types, primitives, constants, training,
                                  AML::kestrel_options{.max_applications = k_max_applications,
-                                                      .exploration_constant = exploration_constant,
-                                                      .best_weight = best_weight, .seed = seed});
+                                                      .exploration_constant = k_exploration_constant,
+                                                      .best_weight = k_best_weight, .seed = k_seed});
     std::printf("Kestrel on %zu-bit parity (%zu rows), xor/and/or/not: max applications %zu, c %.3g, best weight "
                 "%.3g, seed %u, %.0f s\n", k_bits, training.labels.cells.size(), k_max_applications,
-                exploration_constant, best_weight, seed, seconds);
+                k_exploration_constant, k_best_weight, k_seed, k_seconds);
     std::fflush(stdout);
     std::signal(SIGINT, request_stop);
 
@@ -236,7 +234,7 @@ int main(int argc, char** argv) {
             window = empty_tally();
         }
         std::fflush(stdout);
-        if (elapsed >= seconds) {
+        if (elapsed >= k_seconds) {
             stop_reason = "time limit";
             break;
         }
