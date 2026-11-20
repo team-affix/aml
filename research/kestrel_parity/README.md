@@ -30,8 +30,7 @@ root over 25 minutes. Kestrel, Kite with mixmax selection, builds them up to 8.
 | 44 | 23 | 8 | 7: 49%, 6: 26% |
 | 48 | **21** (found at minute 47) | **8** | 7: 57%, 6: 22% |
 
-The best model, found at episode 1,162,451 (the log records its root; its branches are the only ones its cost and an
-exact fit allow):
+The best model, found at episode 1,162,451:
 
 ```
 match xor(xor(x5, xor(xor(xor(x3, xor(xor(x1, xor(x6, x4)), x0)), x2), x9)), x8)
@@ -47,7 +46,9 @@ under 1% at minute 20), so the search had not converged. Resident memory grew to
 
 `c5_w1_seed1_3000s.log` is the run's log: every new best model with the episode that found it and its root, and a
 progress line each minute. It was printed by the experiment driver this program was cut down from; the episodes are
-the same. The program's first five minutes gave the same 18 new best models, at the same episodes, as the log's.
+the same. `proof_check.log` is this program's own full run (`./build/research/kestrel_parity`, 3000 seconds, 1,317,959
+episodes on the same machine): its 42 new best models are the log's, at the same episodes, and it ends on the model
+above, printed in full.
 
 ### Other settings (seed 1, 25 minutes, same data and primitives)
 
