@@ -65,6 +65,7 @@ mcts/ googletest/                          git submodules, not ours to edit
 debug_assert.hpp                           DEBUG_ASSERT(cond): throws std::logic_error under -DDEBUG
 docs/                                      design notes (see docs/continuous-documentation.md)
 probe/                                     developer entry point outside the library (make probe); swappable example
+research/                                  experiments and their records; proofs build as make research/<name>
 ```
 
 ## Architecture
@@ -151,6 +152,9 @@ data points are never re-read.
 - The makefile `find`s every `.cpp` under `core/cpp`, `core/test` and `mcts/core/cpp`.
   **A new file is picked up automatically, so don't edit the makefile to register it.**
 - CI (`.github/workflows/ci.yml`) builds and runs `core_debug_fast`.
+- A research proof (`research/<name>/`, e.g. `kestrel_parity`) is one recorded run with its settings fixed in its
+  source; `make research/<name>` builds it into `build/research/<name>`. Never edit a proof's settings; a new
+  experiment gets a new proof and a new `research/<name>` target.
 
 ## Code style — the rules
 

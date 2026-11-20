@@ -1,0 +1,68 @@
+prims xaon
+beta 0.25, A 0.01, r 0.5
+Root-only Kite on 10-bit parity (1024 rows): max applications 9, c 0.25, seed 1
+  new best 2283 at 0.0s (episode 1) [0 xors]: match x4
+  new best 2240 at 0.0s (episode 6) [0 xors]: match x3
+  new best 2131 at 0.1s (episode 16) [0 xors]: match x3
+  new best 2093 at 0.7s (episode 243) [0 xors]: match x6
+  new best 2074 at 1.1s (episode 379) [0 xors]: match x3
+  new best 2070 at 1.9s (episode 643) [0 xors]: match x3
+  new best 2061 at 2.9s (episode 1003) [0 xors]: match x1
+  new best 2054 at 5.6s (episode 1927) [0 xors]: match x8
+  new best 1972 at 6.5s (episode 2255) [0 xors]: match x9
+  new best 1966 at 8.7s (episode 3012) [0 xors]: match x2
+  new best 1953 at 12.0s (episode 4152) [2 xors]: match xor(xor(x6, x2), x0)
+  new best 1949 at 12.4s (episode 4261) [1 xors]: match xor(x6, x1)
+  new best 1884 at 12.6s (episode 4352) [1 xors]: match xor(x6, x1)
+  new best 1832 at 12.7s (episode 4391) [1 xors]: match xor(x6, x1)
+  new best 1820 at 15.3s (episode 5250) [1 xors]: match xor(x6, x1)
+  new best 1664 at 16.6s (episode 5711) [1 xors]: match xor(x6, x1)
+[    20s] episodes 6886 (344/s) | rss 6 MB | best 1664 | commitments 0 | last 20s: mean cost 2233 | root xors 0:61.1% 1:38.8% 2:0.1%
+[    40s] episodes 13846 (346/s) | rss 6 MB | best 1664 | commitments 0 | last 20s: mean cost 2150 | root xors 0:0.1% 1:99.9% 2:0.0%
+[    60s] episodes 20704 (345/s) | rss 6 MB | best 1664 | commitments 0 | last 20s: mean cost 2152 | root xors 0:0.1% 1:99.9% 2:0.0%
+
+Stopped (time limit) after 60.0s: 20704 episodes, 0 commitments, rss 6 MB
+Whole run: mean cost 2178 | root xors 0:20.4% 1:79.6% 2:0.0%
+Root: 20704 visits | stop 4119 (mean -2286.2) | continue 16585 (mean -2151.1) | reward bounds of means: normalized stop 0.2864, continue 0.5757
+Best model, cost 1664:
+  match xor(x6, x1)
+    F ->
+      match x3
+        F ->
+          match xor(xor(xor(x2, x7), x4), x8)
+            F ->
+              match x5
+                F ->
+                  match not(x1)
+                    F ->
+                      match x4
+                        F ->
+                          match x8
+                            F ->
+                              match and(not(x9), or(x0, x9))
+                                F ->
+                                  match not(x2)
+                                    F ->
+                                      match x9
+                                        F ->
+                                          leaf x0
+                                        T ->
+                                          match x0
+                                            F ->
+                                              leaf x1
+                                            T ->
+                                              leaf x3
+                                    T ->
+                                      match not(x9)
+                                        F ->
+                                          match x0
+                                            F ->
+                                              leaf x1
+                                            T ->
+                                              leaf x2
+                                        T ->
+                                          leaf x0
+                                T ->
+                                  leaf x0
+                            T ->
+  (cut at 40 lines; raise k_model_lines to show more)
