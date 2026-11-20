@@ -110,6 +110,10 @@ probe/                                     developer entry point outside the lib
   - **Falcon** (`falcon_*`): Osprey without splitting choices: every choice (a primitive, each argument, a match's
     feature, a funnel's bound argument) is one MCTS choice among all its options, with no two-way splitting and no
     order tiers; stopping or continuing synthesis stays a two-way choice. Commits follow the best episode's path.
+  - **Heron** (`heron_*`): Falcon's flat choices without commitments, selecting with the `mcts` submodule's
+    `focus_ucb1`: at a node with N visits, the first child in index order whose normalized mean is within
+    A·N^(−r) of the best gets a constant bonus β (`focus_width`, `focus_rate`, `focus_bonus`), so interchangeable
+    choices stop splitting the visits evenly while the shrinking band lets any real difference win.
 
 ### Per-bin columns
 
