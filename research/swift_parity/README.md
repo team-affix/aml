@@ -60,7 +60,9 @@ stays there, so this seed is a good draw, not the typical run.
 ## Reproducing
 
 `swift_parity.cpp` is this run and nothing else: every setting above is a constant in its source, and it takes no
-arguments. From the repository root:
+arguments. At the end it checks the result itself: the best model must cost 19, be a leaf with 9 xors, and be right on
+all 1024 rows. It prints `PROOF PASSED` and exits with 0, or `PROOF FAILED` with what it found and exits with 1. From
+the repository root:
 
 ```bash
 make research/swift_parity

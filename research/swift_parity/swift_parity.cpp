@@ -3,7 +3,9 @@
 // is no longer that run. It trains Swift on every row of the 10-bit truth table with xor, and, or and not for a fixed
 // number of episodes, so it does the same work on any machine, and prints each new best model with how many xors its
 // root holds, and every few thousand episodes the share of the episodes since the last report whose root holds 0, 1,
-// ..., 9 and 10 or more xors. Episodes are deterministic; only the times depend on the machine.
+// ..., 9 and 10 or more xors. Episodes are deterministic; only the times depend on the machine. At the end it checks
+// that the best model is the full parity function, right on every row, prints PROOF PASSED or PROOF FAILED, and exits
+// with 0 or 1.
 //
 // Build and run from the repository root:
 //   make research/swift_parity
@@ -15,6 +17,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -38,6 +41,10 @@ const double k_made_weight = 0.5;         // in rollouts, the probability of a m
 const uint32_t k_seed = 2;
 const size_t k_episodes = 25000;          // stop after this many episodes
 const size_t k_report_episodes = 5000;    // episodes between progress lines
+
+// What the proof must derive: the full parity function as one leaf, the xor of all ten bits.
+const size_t k_expected_cost = 19;
+const size_t k_expected_xors = 9;
 const size_t k_max_rss_mb = 4000;         // stop once resident memory passes this (checked every 1,000 episodes)
 const size_t k_model_lines = 40;          // lines of the best model printed at the end
 const size_t k_xor_buckets = 11;          // 0 to 9 xors, then 10 or more
@@ -253,10 +260,32 @@ int main() {
     std::printf("Whole run: ");
     print_tally(whole_run);
     std::printf("\n");
-    if (!runtime.best_model().has_value())
-        return 0;
+    if (!runtime.best_model().has_value()) {
+        std::printf("\nPROOF FAILED: no model was built\n");
+        return 1;
+    }
     std::printf("Best model, cost %zu:\n", runtime.best_cost());
     size_t lines = 0;
     print_model(runtime.best_model().value(), true_ctor, 0, lines);
-    return 0;
+
+    // The proof's claim: the best model is the full parity function, a single leaf of nine xors (cost 19), and it is
+    // right on every row.
+    const AML::model_node& best = runtime.best_model().value();
+    const bool is_leaf = std::holds_alternative<AML::model_node::leaf>(best.content);
+    size_t wrong_rows = 0;
+    for (size_t row = 0; row < training.labels.cells.size(); ++row) {
+        std::vector<AML::value> inputs;
+        for (const AML::typed_column& input : training.inputs)
+            inputs.push_back(input.cells[row]);
+        const std::optional<AML::value> inferred = runtime.infer(inputs);
+        const bool right = inferred.has_value() && inferred.value() == training.labels.cells[row];
+        wrong_rows += right ? 0 : 1;
+    }
+    const bool passed = runtime.best_cost() == k_expected_cost && is_leaf && root_xors(best) == k_expected_xors &&
+                        wrong_rows == 0;
+    std::printf("\nPROOF %s: best cost %zu (expected %zu), %s, %zu xors at the root (expected %zu), %zu of %zu rows "
+                "wrong\n", passed ? "PASSED" : "FAILED", runtime.best_cost(), k_expected_cost,
+                is_leaf ? "a leaf" : "not a leaf", root_xors(best), k_expected_xors, wrong_rows,
+                training.labels.cells.size());
+    return passed ? 0 : 1;
 }
