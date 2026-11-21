@@ -7,6 +7,7 @@
 #include "infrastructure/schema.hpp"
 #include "infrastructure/scout_runtime.hpp"
 #include "support/value_equality.hpp"
+#include "value_objects/bin_view.hpp"
 #include "value_objects/typed_constant.hpp"
 #include "value_objects/typed_primitive.hpp"
 
@@ -176,7 +177,7 @@ TEST_F(KestrelIntegrationTest, TheRootsBestRewardIsTheBestModelsNegatedCost) {
     kestrel_manifest manifest(types, {bool_equality}, options);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 100; ++episode) {
-        manifest.mcts_episode_.run(training);
+        manifest.mcts_episode_.run(bin_view::of(training));
         EXPECT_EQ(manifest.best_rewards_.get_value(0), -static_cast<double>(manifest.best_model_tracker_.best_cost()));
     }
 }

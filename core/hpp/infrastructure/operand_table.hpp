@@ -83,7 +83,8 @@ const value* OPERAND_TABLE::cell(size_t operand, size_t row) const {
     const std::vector<constant_operand>& constants = get_constants_.constants();
     if (operand < constants.size())
         return &constants[operand].literal;
-    return &get_features_.candidates().at(operand - constants.size()).observed.cells.at(row);
+    const column_view& observed = get_features_.candidates().at(operand - constants.size()).observed;
+    return &(*observed.cells)[(*observed.rows)[row]];
 }
 
 #undef OPERAND_TABLE

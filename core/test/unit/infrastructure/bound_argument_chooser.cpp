@@ -11,7 +11,7 @@ using ::testing::Return;
 namespace {
 
 struct MockFindVariableCandidates {
-    MOCK_METHOD(std::vector<candidate>, find, (const bin&, var_id), (const));
+    MOCK_METHOD(std::vector<candidate>, find, (const bin_view&, var_id), (const));
 };
 
 struct MockChooseBoundArgument {
@@ -25,7 +25,7 @@ struct BoundArgumentChooserTest : public ::testing::Test {
     value truth;
     feature first_bound_argument;
     feature second_argument;
-    bin data;
+    bin_view data;
     candidate first_bound_argument_candidate;
     candidate second_argument_candidate;
     NiceMock<MockFindVariableCandidates> find_variable_candidates;
@@ -39,10 +39,10 @@ BoundArgumentChooserTest::BoundArgumentChooserTest()
     , truth{.ctor = 1, .args = {}}
     , first_bound_argument{feature::var{.index = 1}}
     , second_argument{feature::var{.index = 2}}
-    , data{.inputs = {typed_column{.type = 0, .cells = {falsity, truth}},
-                     typed_column{.type = 0, .cells = {truth, falsity}},
-                     typed_column{.type = 0, .cells = {falsity, truth}}},
-           .labels = typed_column{.type = 0, .cells = {falsity, truth}}}
+    , data(bin_view::of(bin{.inputs = {typed_column{.type = 0, .cells = {falsity, truth}},
+                                      typed_column{.type = 0, .cells = {truth, falsity}},
+                                      typed_column{.type = 0, .cells = {falsity, truth}}},
+                            .labels = typed_column{.type = 0, .cells = {falsity, truth}}}))
     , first_bound_argument_candidate{.expression = first_bound_argument, .cost = 1, .observed = data.inputs[1]}
     , second_argument_candidate{.expression = second_argument, .cost = 1, .observed = data.inputs[2]}
     , find_variable_candidates()

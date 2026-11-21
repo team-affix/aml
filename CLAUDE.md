@@ -123,9 +123,12 @@ research/                                  experiments and their records; proofs
 ### Per-bin columns
 
 A `bin` is columns aligned by row: `inputs[v]` is variable v's column (the data points' own inputs first, then
-arguments bound by the matches above), and `labels`. Synthesis applies primitives row-wise to operands
-(`operand_applier`); observational equivalence keeps the cheapest feature per column (`cheapest_feature_index`). Raw
-data points are never re-read.
+arguments bound by the matches above), and `labels`. Users give their data as a `bin` of dense `typed_column`s; model
+building reads it as a `bin_view`, whose columns are `column_view`s (shared cells and the rows they select), and a
+runtime views its training data once. So splitting a bin (`bin_splitter`) shares its parent's cells and only selects
+rows (a constructor's bound arguments are the only new cells), and a variable's candidate shares its bin's column.
+Synthesis applies primitives row-wise to operands (`operand_applier`); observational equivalence keeps the cheapest
+feature per column (`cheapest_feature_index`). Raw data points are never re-read.
 
 ### Components (one mechanism each)
 

@@ -12,7 +12,7 @@ using ::testing::Return;
 namespace {
 
 struct MockFindUniformValue {
-    MOCK_METHOD(std::optional<const value*>, find, (const column&), (const));
+    MOCK_METHOD(std::optional<const value*>, find, (const column_view&), (const));
 };
 
 struct LeafDetectorTest : public ::testing::Test {
@@ -27,7 +27,8 @@ struct LeafDetectorTest : public ::testing::Test {
 
     void SetUp() override {
         ON_CALL(find_uniform_value, find(_)).WillByDefault(Return(std::nullopt));
-        ON_CALL(find_uniform_value, find(column{truth, truth})).WillByDefault(Return(&truth));
+        ON_CALL(find_uniform_value, find(column_view::of(typed_column{.type = 0, .cells = {truth, truth}})))
+            .WillByDefault(Return(&truth));
     }
 };
 
@@ -42,47 +43,47 @@ LeafDetectorTest::LeafDetectorTest()
 }
 
 TEST_F(LeafDetectorTest, LabelsThatAgreeGiveTheirLabelAsAConstant) {
-    const bin data{.inputs = {typed_column{.type = 0, .cells = {truth, falsity}}},
-                   .labels = typed_column{.type = 0, .cells = {truth, truth}}};
+    const bin_view data = bin_view::of(bin{.inputs = {typed_column{.type = 0, .cells = {truth, falsity}}},
+                   .labels = typed_column{.type = 0, .cells = {truth, truth}}});
     EXPECT_EQ(detector.detect(data), std::optional<feature>(true_constant));
 }
 
 TEST_F(LeafDetectorTest, LabelsThatDisagreeAndMatchNoVariableGiveNothing) {
-    const bin data{.inputs = {typed_column{.type = 0, .cells = {truth, truth}}},
-                   .labels = typed_column{.type = 0, .cells = {truth, falsity}}};
+    const bin_view data = bin_view::of(bin{.inputs = {typed_column{.type = 0, .cells = {truth, truth}}},
+                   .labels = typed_column{.type = 0, .cells = {truth, falsity}}});
     EXPECT_FALSE(detector.detect(data).has_value());
 }
 
 TEST_F(LeafDetectorTest, AVariableWhoseColumnIsTheLabelsIsTheOutput) {
-    const bin data{
+    const bin_view data = bin_view::of(bin{
         .inputs = {typed_column{.type = 0, .cells = {truth, truth}},
                   typed_column{.type = 0, .cells = {falsity, truth}}},
-        .labels = typed_column{.type = 0, .cells = {falsity, truth}}};
+        .labels = typed_column{.type = 0, .cells = {falsity, truth}}});
     EXPECT_EQ(detector.detect(data), std::optional<feature>(second_variable));
 }
 
 TEST_F(LeafDetectorTest, TheFirstMatchingVariableWins) {
-    const bin data{
+    const bin_view data = bin_view::of(bin{
         .inputs = {typed_column{.type = 0, .cells = {falsity, truth}},
                   typed_column{.type = 0, .cells = {falsity, truth}}},
-        .labels = typed_column{.type = 0, .cells = {falsity, truth}}};
+        .labels = typed_column{.type = 0, .cells = {falsity, truth}}});
     EXPECT_EQ(detector.detect(data), std::optional<feature>(first_variable));
 }
 
 TEST_F(LeafDetectorTest, AMatchingVariableIsPreferredToAgreeingLabels) {
-    const bin data{.inputs = {typed_column{.type = 0, .cells = {truth, truth}}},
-                   .labels = typed_column{.type = 0, .cells = {truth, truth}}};
+    const bin_view data = bin_view::of(bin{.inputs = {typed_column{.type = 0, .cells = {truth, truth}}},
+                   .labels = typed_column{.type = 0, .cells = {truth, truth}}});
     EXPECT_EQ(detector.detect(data), std::optional<feature>(first_variable));
 }
 
 TEST_F(LeafDetectorTest, ABinWithoutVariablesCanStillBeAConstantLeaf) {
-    const bin data{.inputs = {}, .labels = typed_column{.type = 0, .cells = {truth, truth}}};
+    const bin_view data = bin_view::of(bin{.inputs = {}, .labels = typed_column{.type = 0, .cells = {truth, truth}}});
     EXPECT_EQ(detector.detect(data), std::optional<feature>(true_constant));
 }
 
 TEST_F(LeafDetectorTest, AVariableOfAnotherTypeIsNotTheOutputEvenWithTheSameCells) {
-    const bin data{
+    const bin_view data = bin_view::of(bin{
         .inputs = {typed_column{.type = 4, .cells = {falsity, truth}}},
-        .labels = typed_column{.type = 0, .cells = {falsity, truth}}};
+        .labels = typed_column{.type = 0, .cells = {falsity, truth}}});
     EXPECT_FALSE(detector.detect(data).has_value());
 }

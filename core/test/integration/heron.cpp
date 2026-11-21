@@ -7,6 +7,7 @@
 #include "infrastructure/schema.hpp"
 #include "infrastructure/scout_runtime.hpp"
 #include "support/value_equality.hpp"
+#include "value_objects/bin_view.hpp"
 #include "value_objects/typed_constant.hpp"
 #include "value_objects/typed_primitive.hpp"
 
@@ -166,7 +167,7 @@ TEST_F(HeronIntegrationTest, APrimitiveIsChosenInOneChoiceAmongAllPrimitives) {
     heron_manifest manifest(types, {bool_equality, bool_equality, bool_equality}, options);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 50; ++episode)
-        manifest.mcts_episode_.run(training);
+        manifest.mcts_episode_.run(bin_view::of(training));
     // The root chooses between stopping (0) and continuing (1) synthesis; continuing, one choice picks the primitive.
     const mcts_tree_node_id continued = manifest.tree_walker_.walk(0, 1);
     for (mcts_choice primitive = 0; primitive < 3; ++primitive)
@@ -190,7 +191,7 @@ TEST_F(HeronIntegrationTest, InterchangeablePrimitivesConcentrateOnTheFirst) {
     heron_manifest manifest(types, {bool_equality, bool_equality, bool_equality}, options);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 2000; ++episode)
-        manifest.mcts_episode_.run(training);
+        manifest.mcts_episode_.run(bin_view::of(training));
     // The three primitives are the same, so their children's means are near ties; the first gets the focus bonus and
     // more than 1.25 times the visits of each other.
     const mcts_tree_node_id continued = manifest.tree_walker_.walk(0, 1);
@@ -206,7 +207,7 @@ TEST_F(HeronIntegrationTest, WithoutABonusInterchangeablePrimitivesShareTheVisit
     heron_manifest manifest(types, {bool_equality, bool_equality, bool_equality}, no_bonus);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 2000; ++episode)
-        manifest.mcts_episode_.run(training);
+        manifest.mcts_episode_.run(bin_view::of(training));
     const mcts_tree_node_id continued = manifest.tree_walker_.walk(0, 1);
     const size_t first = manifest.visits_.get_visits(manifest.tree_walker_.walk(continued, 0));
     for (mcts_choice primitive = 1; primitive < 3; ++primitive)

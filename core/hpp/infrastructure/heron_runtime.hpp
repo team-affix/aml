@@ -7,6 +7,7 @@
 #include "infrastructure/heron_manifest.hpp"
 #include "infrastructure/schema.hpp"
 #include "value_objects/bin.hpp"
+#include "value_objects/bin_view.hpp"
 #include "value_objects/episode_outcome.hpp"
 #include "value_objects/heron_options.hpp"
 #include "value_objects/model_node.hpp"
@@ -29,7 +30,7 @@ struct heron_runtime {
     std::optional<value> infer(const std::vector<value>& inputs) const;
 private:
     heron_manifest manifest_;
-    bin training_;
+    bin_view training_;
 };
 
 }

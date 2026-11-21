@@ -3,7 +3,7 @@
 namespace AML {
 
 std::optional<feature> output_finder::find(
-    const std::vector<candidate>& candidates, const typed_column& labels) const {
+    const std::vector<candidate>& candidates, const column_view& labels) const {
     const candidate* cheapest = nullptr;
     for (const candidate& entry : candidates) {
         if (entry.observed != labels)

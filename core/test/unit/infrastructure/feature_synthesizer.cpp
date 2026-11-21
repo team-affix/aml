@@ -17,7 +17,7 @@ using ::testing::ReturnRef;
 namespace {
 
 struct MockStartSession {
-    MOCK_METHOD(void, start, (const bin&));
+    MOCK_METHOD(void, start, (const bin_view&));
 };
 
 struct MockCountApplications {
@@ -45,7 +45,7 @@ struct MockGetFeatures {
 };
 
 struct MockFindOutput {
-    MOCK_METHOD(std::optional<const feature*>, find, (const std::vector<candidate>&, const typed_column&), (const));
+    MOCK_METHOD(std::optional<const feature*>, find, (const std::vector<candidate>&, const column_view&), (const));
 };
 
 using synthesizer_t = feature_synthesizer<
@@ -65,7 +65,7 @@ struct FeatureSynthesizerTest : public ::testing::Test {
     synthesizer_t make(size_t max_applications);
     value falsity;
     value truth;
-    bin data;
+    bin_view data;
     std::vector<candidate> features;
     feature truth_output;
     NiceMock<MockStartSession> start_session;
@@ -90,8 +90,8 @@ struct FeatureSynthesizerTest : public ::testing::Test {
 FeatureSynthesizerTest::FeatureSynthesizerTest()
     : falsity{.ctor = 0, .args = {}}
     , truth{.ctor = 1, .args = {}}
-    , data{.inputs = {typed_column{.type = 0, .cells = {falsity, truth}}},
-           .labels = typed_column{.type = 0, .cells = {falsity, truth}}}
+    , data(bin_view::of(bin{.inputs = {typed_column{.type = 0, .cells = {falsity, truth}}},
+                            .labels = typed_column{.type = 0, .cells = {falsity, truth}}}))
     , features()
     , truth_output{feature::constant{.literal = truth}} {}
 

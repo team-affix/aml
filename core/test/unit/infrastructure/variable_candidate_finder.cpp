@@ -17,7 +17,7 @@ struct MockSizeFeature {
 };
 
 struct MockFindUniformValue {
-    MOCK_METHOD(std::optional<const value*>, find, (const column&), (const));
+    MOCK_METHOD(std::optional<const value*>, find, (const column_view&), (const));
 };
 
 struct VariableCandidateFinderTest : public ::testing::Test {
@@ -26,7 +26,7 @@ struct VariableCandidateFinderTest : public ::testing::Test {
     value truth;
     feature first;
     feature third;
-    bin data;
+    bin_view data;
     NiceMock<MockSizeFeature> size_feature;
     NiceMock<MockFindUniformValue> find_uniform_value;
     variable_candidate_finder<NiceMock<MockSizeFeature>, NiceMock<MockFindUniformValue>> finder{
@@ -34,9 +34,12 @@ struct VariableCandidateFinderTest : public ::testing::Test {
 
     void SetUp() override {
         ON_CALL(size_feature, size(_)).WillByDefault(Return(1));
-        ON_CALL(find_uniform_value, find(column{falsity, truth})).WillByDefault(Return(std::nullopt));
-        ON_CALL(find_uniform_value, find(column{truth, falsity})).WillByDefault(Return(std::nullopt));
-        ON_CALL(find_uniform_value, find(column{truth, truth})).WillByDefault(Return(&truth));
+        ON_CALL(find_uniform_value, find(column_view::of(typed_column{.type = 0, .cells = {falsity, truth}})))
+            .WillByDefault(Return(std::nullopt));
+        ON_CALL(find_uniform_value, find(column_view::of(typed_column{.type = 3, .cells = {truth, falsity}})))
+            .WillByDefault(Return(std::nullopt));
+        ON_CALL(find_uniform_value, find(column_view::of(typed_column{.type = 0, .cells = {truth, truth}})))
+            .WillByDefault(Return(&truth));
     }
 };
 
@@ -45,12 +48,12 @@ VariableCandidateFinderTest::VariableCandidateFinderTest()
     , truth{.ctor = 1, .args = {}}
     , first{feature::var{.index = 0}}
     , third{feature::var{.index = 2}}
-    , data{
+    , data(bin_view::of(bin{
           .inputs = {
               typed_column{.type = 0, .cells = {falsity, truth}},
               typed_column{.type = 0, .cells = {truth, truth}},
               typed_column{.type = 3, .cells = {truth, falsity}}},
-          .labels = typed_column{.type = 0, .cells = {falsity, truth}}}
+          .labels = typed_column{.type = 0, .cells = {falsity, truth}}}))
     , size_feature()
     , find_uniform_value() {}
 
@@ -82,6 +85,15 @@ TEST_F(VariableCandidateFinderTest, ACandidateKeepsItsVariablesType) {
 }
 
 TEST_F(VariableCandidateFinderTest, AnEmptyScopeFindsNothing) {
-    const bin no_variables{.inputs = {}, .labels = typed_column{.type = 0, .cells = {falsity, truth}}};
+    const bin_view no_variables =
+        bin_view::of(bin{.inputs = {}, .labels = typed_column{.type = 0, .cells = {falsity, truth}}});
     EXPECT_TRUE(finder.find(no_variables, 0).empty());
+}
+
+TEST_F(VariableCandidateFinderTest, ACandidateSharesItsVariablesColumnInsteadOfCopyingIt) {
+    const std::vector<candidate> found = finder.find(data, 0);
+    ASSERT_EQ(found.size(), 2u);
+    EXPECT_EQ(found[0].observed.cells, data.inputs[0].cells);
+    EXPECT_EQ(found[0].observed.rows, data.inputs[0].rows);
+    EXPECT_EQ(found[1].observed.cells, data.inputs[2].cells);
 }

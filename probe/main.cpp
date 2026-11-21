@@ -22,6 +22,7 @@
 #include "probe/nat_mod.hpp"
 #include "support/bool_not.hpp"
 #include "support/bool_xor.hpp"
+#include "value_objects/bin_view.hpp"
 
 namespace {
 
@@ -233,6 +234,7 @@ int main() {
         {.type = types.nat, .literal = one},
         {.type = types.nat, .literal = two}};
     const AML::bin training = odd_length_training(types);
+    const AML::bin_view viewed = AML::bin_view::of(training);
 
     // The manifest directly, not falcon_runtime: the probe also watches the commitments, which no runtime exposes.
     AML::falcon_manifest manifest(schema, primitives,
@@ -260,7 +262,7 @@ int main() {
     double next_report = k_report_seconds;
     const char* stop_reason = "Ctrl-C";
     while (stop_requested == 0) {
-        const AML::episode_outcome outcome = manifest.mcts_episode_.run(training);
+        const AML::episode_outcome outcome = manifest.mcts_episode_.run(viewed);
         ++episode;
         window_cost += static_cast<double>(outcome.cost);
         ++window_episodes;

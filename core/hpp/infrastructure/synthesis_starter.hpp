@@ -3,7 +3,7 @@
 
 #include <utility>
 #include <vector>
-#include "value_objects/bin.hpp"
+#include "value_objects/bin_view.hpp"
 #include "value_objects/candidate.hpp"
 
 namespace AML {
@@ -21,7 +21,7 @@ struct synthesis_starter {
         IClearApplications& clear_applications,
         IFindVariableCandidates& find_variable_candidates,
         ITryInsertFeatureCandidate& try_insert_feature_candidate);
-    void start(const bin& data);
+    void start(const bin_view& data);
 private:
     IClearFeatureCandidates& clear_feature_candidates_;
     IClearApplications& clear_applications_;
@@ -44,7 +44,7 @@ SYNTHESIS_STARTER::synthesis_starter(
     , try_insert_feature_candidate_(try_insert_feature_candidate) {}
 
 SYNTHESIS_STARTER_TEMPLATE
-void SYNTHESIS_STARTER::start(const bin& data) {
+void SYNTHESIS_STARTER::start(const bin_view& data) {
     clear_feature_candidates_.clear();
     clear_applications_.clear();
     for (candidate& variable : find_variable_candidates_.find(data, 0))

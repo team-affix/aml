@@ -11,7 +11,7 @@ using ::testing::Return;
 namespace {
 
 struct MockRunEpisode {
-    MOCK_METHOD(episode_outcome, run, (const bin&));
+    MOCK_METHOD(episode_outcome, run, (const bin_view&));
 };
 
 struct MockSetReward {
@@ -26,7 +26,7 @@ struct MctsEpisodeTest : public ::testing::Test {
     MctsEpisodeTest();
     episode_outcome costing(size_t cost) const;
     value label;
-    bin training;
+    bin_view training;
     model_node model;
     NiceMock<MockRunEpisode> run_episode;
     NiceMock<MockSetReward> set_reward;
@@ -37,7 +37,7 @@ struct MctsEpisodeTest : public ::testing::Test {
 
 MctsEpisodeTest::MctsEpisodeTest()
     : label{.ctor = 0, .args = {}}
-    , training{.inputs = {}, .labels = typed_column{.type = 0, .cells = {label}}}
+    , training(bin_view::of(bin{.inputs = {}, .labels = typed_column{.type = 0, .cells = {label}}}))
     , model{model_node::leaf{.output = feature{feature::constant{.literal = label}}}}
     , run_episode()
     , set_reward()

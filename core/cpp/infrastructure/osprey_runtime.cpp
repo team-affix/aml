@@ -10,7 +10,7 @@ osprey_runtime::osprey_runtime(
     const bin& training,
     const osprey_options& options)
     : manifest_(types, primitives, options)
-    , training_(training) {
+    , training_(bin_view::of(training)) {
     manifest_.constant_seeder_.seed(constants);
 }
 

@@ -11,7 +11,7 @@ using ::testing::Return;
 namespace {
 
 struct MockBuildModel {
-    MOCK_METHOD(model_node, build, (const bin&));
+    MOCK_METHOD(model_node, build, (const bin_view&));
 };
 
 struct MockSizeModel {
@@ -26,7 +26,7 @@ struct ModelEpisodeTest : public ::testing::Test {
     ModelEpisodeTest();
     value label;
     feature label_output;
-    bin training;
+    bin_view training;
     model_node model;
     NiceMock<MockBuildModel> build_model;
     NiceMock<MockSizeModel> size_model;
@@ -37,7 +37,7 @@ struct ModelEpisodeTest : public ::testing::Test {
 
 ModelEpisodeTest::ModelEpisodeTest()
     : label{.ctor = 0, .args = {}}
-    , training{.inputs = {}, .labels = typed_column{.type = 0, .cells = {label}}}
+    , training(bin_view::of(bin{.inputs = {}, .labels = typed_column{.type = 0, .cells = {label}}}))
     , label_output{feature::constant{.literal = label}}
     , model{model_node::leaf{.output = label_output}}
     , build_model()

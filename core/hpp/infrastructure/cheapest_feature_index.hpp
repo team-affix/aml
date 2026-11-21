@@ -5,14 +5,13 @@
 #include <unordered_map>
 #include <vector>
 #include "value_objects/candidate.hpp"
-#include "value_objects/typed_column.hpp"
-#include "value_objects/typed_column_hash.hpp"
 #include "value_objects/type_id.hpp"
 
 namespace AML {
 
-// Stores the cheapest candidate seen for each typed column, in insertion order and by type. A cheaper candidate for a
-// typed column already held replaces the held one in place, so a replacement never changes a position's type.
+// Stores the cheapest candidate seen for each observed column (its type and the values it reads), in insertion order
+// and by type. A cheaper candidate for a column already held replaces the held one in place, so a replacement never
+// changes a position's type.
 struct cheapest_feature_index {
     cheapest_feature_index();
     void clear();

@@ -7,6 +7,7 @@
 #include <vector>
 #include "value_objects/candidate.hpp"
 #include "value_objects/column.hpp"
+#include "value_objects/column_view.hpp"
 #include "value_objects/feature.hpp"
 #include "value_objects/prim_id.hpp"
 #include "value_objects/type_id.hpp"
@@ -51,7 +52,8 @@ APP_CANDIDATE_FINDER_TEMPLATE
 std::optional<candidate> APP_CANDIDATE_FINDER::find(
     prim_id prim, type_id result_type, const std::vector<size_t>& args, size_t row_count) {
     column cells = apply_primitive_to_operands_.apply(prim, args, row_count);
-    if (find_uniform_value_.find(cells).has_value())
+    column_view observed = column_view::of(typed_column{.type = result_type, .cells = std::move(cells)});
+    if (find_uniform_value_.find(observed).has_value())
         return std::nullopt;
 
     std::vector<feature> arg_features;
@@ -59,10 +61,7 @@ std::optional<candidate> APP_CANDIDATE_FINDER::find(
         arg_features.push_back(get_operand_expression_.expression(operand));
     feature expression{feature::app{.prim = prim, .args = std::move(arg_features)}};
     const size_t cost = size_feature_.size(expression);
-    return candidate{
-        .expression = std::move(expression),
-        .cost = cost,
-        .observed = typed_column{.type = result_type, .cells = std::move(cells)}};
+    return candidate{.expression = std::move(expression), .cost = cost, .observed = std::move(observed)};
 }
 
 #undef APP_CANDIDATE_FINDER

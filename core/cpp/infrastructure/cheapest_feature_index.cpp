@@ -1,6 +1,7 @@
 #include "infrastructure/cheapest_feature_index.hpp"
 
 #include <utility>
+#include "value_objects/column_view_hash.hpp"
 
 namespace AML {
 
@@ -17,7 +18,7 @@ void cheapest_feature_index::clear() {
 }
 
 void cheapest_feature_index::try_insert(candidate entry) {
-    const size_t hashed = typed_column_hash{}(entry.observed);
+    const size_t hashed = column_view_hash{}(entry.observed);
     const auto [first, last] = slots_.equal_range(hashed);
     auto slot = first;
     while (slot != last && candidates_[slot->second].observed != entry.observed)

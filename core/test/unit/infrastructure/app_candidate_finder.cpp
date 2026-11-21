@@ -18,7 +18,7 @@ struct MockApplyPrimitiveToOperands {
 };
 
 struct MockFindUniformValue {
-    MOCK_METHOD(std::optional<const value*>, find, (const column&), (const));
+    MOCK_METHOD(std::optional<const value*>, find, (const column_view&), (const));
 };
 
 struct MockGetOperandExpression {
@@ -81,11 +81,14 @@ TEST_F(AppCandidateFinderTest, ThePrimitiveIsAppliedToTheOperandsOverTheRows) {
 
 TEST_F(AppCandidateFinderTest, AHeterogeneousApplicationIsACandidateOverTheOperandsExpressions) {
     EXPECT_EQ(finder.find(2, 5, {0, 1}, 2),
-              (candidate{.expression = application, .cost = 3, .observed = typed_column{.type = 5, .cells = result}}));
+              (candidate{.expression = application,
+                         .cost = 3,
+                         .observed = column_view::of(typed_column{.type = 5, .cells = result})}));
 }
 
 TEST_F(AppCandidateFinderTest, AHomogeneousApplicationGivesNoCandidateAndReadsNoExpression) {
-    ON_CALL(find_uniform_value, find(result)).WillByDefault(Return(&truth));
+    ON_CALL(find_uniform_value, find(column_view::of(typed_column{.type = 5, .cells = result})))
+        .WillByDefault(Return(&truth));
     EXPECT_CALL(get_operand_expression, expression(_)).Times(0);
     EXPECT_CALL(size_feature, size(_)).Times(0);
     EXPECT_FALSE(finder.find(2, 5, {0, 1}, 2).has_value());
@@ -103,6 +106,7 @@ TEST_F(AppCandidateFinderTest, TheFeatureIsMadeFromTheOperandsExpressionsInOrder
 }
 
 TEST_F(AppCandidateFinderTest, HomogeneityIsJudgedOnTheAppliedColumn) {
-    EXPECT_CALL(find_uniform_value, find(result)).WillOnce(Return(std::nullopt));
+    EXPECT_CALL(find_uniform_value, find(column_view::of(typed_column{.type = 5, .cells = result})))
+        .WillOnce(Return(std::nullopt));
     finder.find(2, 5, {0, 1}, 2);
 }

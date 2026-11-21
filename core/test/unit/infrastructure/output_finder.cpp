@@ -15,7 +15,8 @@ struct OutputFinderTest : public ::testing::Test {
     feature first;
     feature second;
     feature third;
-    typed_column labels;
+    column label_cells;
+    column_view labels;
     output_finder finder;
 };
 
@@ -25,11 +26,13 @@ OutputFinderTest::OutputFinderTest()
     , first{feature::var{.index = 0}}
     , second{feature::var{.index = 1}}
     , third{feature::var{.index = 2}}
-    , labels{.type = 0, .cells = {falsity, truth}}
+    , label_cells{falsity, truth}
+    , labels(column_view::of(typed_column{.type = 0, .cells = label_cells}))
     , finder() {}
 
 candidate OutputFinderTest::make(const feature& expression, size_t cost, const column& cells) {
-    return candidate{.expression = expression, .cost = cost, .observed = typed_column{.type = 0, .cells = cells}};
+    return candidate{
+        .expression = expression, .cost = cost, .observed = column_view::of(typed_column{.type = 0, .cells = cells})};
 }
 
 }
@@ -39,7 +42,7 @@ TEST_F(OutputFinderTest, NoCandidatesGiveNoOutput) {
 }
 
 TEST_F(OutputFinderTest, ACandidateWhoseColumnIsTheLabelsIsTheOutput) {
-    EXPECT_EQ(finder.find({make(first, 1, {truth, falsity}), make(second, 3, labels.cells)}, labels),
+    EXPECT_EQ(finder.find({make(first, 1, {truth, falsity}), make(second, 3, label_cells)}, labels),
               std::optional<feature>(second));
 }
 
@@ -50,18 +53,18 @@ TEST_F(OutputFinderTest, CandidatesThatDifferFromTheLabelsGiveNoOutput) {
 
 TEST_F(OutputFinderTest, TheCheapestMatchingCandidateWins) {
     const std::vector<candidate> matching{
-        make(first, 5, labels.cells), make(second, 2, labels.cells), make(third, 4, labels.cells)};
+        make(first, 5, label_cells), make(second, 2, label_cells), make(third, 4, label_cells)};
     EXPECT_EQ(finder.find(matching, labels),
               std::optional<feature>(second));
 }
 
 TEST_F(OutputFinderTest, TheFirstCandidateWinsATie) {
-    EXPECT_EQ(finder.find({make(first, 2, labels.cells), make(second, 2, labels.cells)}, labels),
+    EXPECT_EQ(finder.find({make(first, 2, label_cells), make(second, 2, label_cells)}, labels),
               std::optional<feature>(first));
 }
 
 TEST_F(OutputFinderTest, AColumnOfAnotherTypeIsNotTheOutputEvenWithTheSameCells) {
     const candidate other_type{
-        .expression = first, .cost = 1, .observed = typed_column{.type = 3, .cells = labels.cells}};
+        .expression = first, .cost = 1, .observed = column_view::of(typed_column{.type = 3, .cells = label_cells})};
     EXPECT_FALSE(finder.find({other_type}, labels).has_value());
 }

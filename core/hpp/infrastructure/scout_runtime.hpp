@@ -7,6 +7,7 @@
 #include "infrastructure/schema.hpp"
 #include "infrastructure/scout_manifest.hpp"
 #include "value_objects/bin.hpp"
+#include "value_objects/bin_view.hpp"
 #include "value_objects/episode_outcome.hpp"
 #include "value_objects/model_node.hpp"
 #include "value_objects/scout_options.hpp"
@@ -29,7 +30,7 @@ struct scout_runtime {
     std::optional<value> infer(const std::vector<value>& inputs) const;
 private:
     scout_manifest manifest_;
-    bin training_;
+    bin_view training_;
 };
 
 }
