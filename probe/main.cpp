@@ -18,7 +18,10 @@
 #include <unistd.h>
 #include "infrastructure/falcon_manifest.hpp"
 #include "infrastructure/schema.hpp"
-#include "probe/list_primitives.hpp"
+#include "probe/list_head.hpp"
+#include "probe/list_is_nil.hpp"
+#include "probe/list_length.hpp"
+#include "probe/list_tail.hpp"
 #include "probe/nat_mod.hpp"
 #include "support/bool_not.hpp"
 #include "support/bool_xor.hpp"

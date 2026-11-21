@@ -7,6 +7,7 @@
 using namespace AML;
 
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::NiceMock;
 using ::testing::Return;
 
@@ -72,6 +73,7 @@ TEST_F(VariableCandidateFinderTest, VariablesBeforeTheFirstAreSkipped) {
 }
 
 TEST_F(VariableCandidateFinderTest, ACandidateCostsItsFeaturesSize) {
+    EXPECT_CALL(size_feature, size(_)).Times(AnyNumber());
     EXPECT_CALL(size_feature, size(third)).WillOnce(Return(7));
     EXPECT_EQ(finder.find(data, 2).front().cost, 7u);
 }

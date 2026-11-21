@@ -5,8 +5,8 @@
 
 using namespace AML;
 
-using ::testing::AnyNumber;
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRef;
@@ -76,6 +76,7 @@ TEST_F(PrimitiveOptionFinderTest, NoWitnessesGiveNoOptions) {
 }
 
 TEST_F(PrimitiveOptionFinderTest, EveryPrimitivesTypeIsLookedUp) {
+    EXPECT_CALL(get_primitive_type, type(_)).Times(AnyNumber());
     EXPECT_CALL(get_primitive_type, type(0)).WillOnce(ReturnRef(unary));
     EXPECT_CALL(get_primitive_type, type(1)).WillOnce(ReturnRef(unary));
     EXPECT_CALL(get_primitive_type, type(2)).WillOnce(ReturnRef(unary));

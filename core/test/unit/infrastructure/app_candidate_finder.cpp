@@ -76,6 +76,7 @@ AppCandidateFinderTest::AppCandidateFinderTest()
 }
 
 TEST_F(AppCandidateFinderTest, ThePrimitiveIsAppliedToTheOperandsOverTheRows) {
+    EXPECT_CALL(apply_primitive_to_operands, apply(_, _, _)).Times(AnyNumber());
     EXPECT_CALL(apply_primitive_to_operands, apply(2, std::vector<size_t>{0, 1}, 2)).WillOnce(Return(result));
     finder.find(2, 5, {0, 1}, 2);
 }
@@ -96,6 +97,7 @@ TEST_F(AppCandidateFinderTest, AHomogeneousApplicationGivesNoCandidateAndReadsNo
 }
 
 TEST_F(AppCandidateFinderTest, TheResultsCostIsItsFeaturesSize) {
+    EXPECT_CALL(size_feature, size(_)).Times(AnyNumber());
     EXPECT_CALL(size_feature, size(application)).WillOnce(Return(11));
     EXPECT_EQ(finder.find(2, 5, {0, 1}, 2).value().cost, 11u);
 }

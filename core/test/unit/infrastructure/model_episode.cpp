@@ -4,6 +4,8 @@
 
 using namespace AML;
 
+using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
@@ -47,6 +49,9 @@ ModelEpisodeTest::ModelEpisodeTest()
 }
 
 TEST_F(ModelEpisodeTest, TheBuiltModelIsSizedAndOfferedAsTheBest) {
+    EXPECT_CALL(build_model, build(_)).Times(AnyNumber());
+    EXPECT_CALL(size_model, size(_)).Times(AnyNumber());
+    EXPECT_CALL(try_record_model, try_record(_, _)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(build_model, build(training)).WillOnce(Return(model));
     EXPECT_CALL(size_model, size(model)).WillOnce(Return(7));
@@ -55,6 +60,7 @@ TEST_F(ModelEpisodeTest, TheBuiltModelIsSizedAndOfferedAsTheBest) {
 }
 
 TEST_F(ModelEpisodeTest, EveryRunBuildsAFreshModel) {
+    EXPECT_CALL(build_model, build(_)).Times(AnyNumber());
     EXPECT_CALL(build_model, build(training)).Times(2).WillRepeatedly(Return(model));
     episode.run(training);
     episode.run(training);
@@ -62,6 +68,8 @@ TEST_F(ModelEpisodeTest, EveryRunBuildsAFreshModel) {
 
 TEST_F(ModelEpisodeTest, EachRunsCostIsOfferedWithItsOwnModel) {
     const model_node other{model_node::empty{}};
+    EXPECT_CALL(build_model, build(_)).Times(AnyNumber());
+    EXPECT_CALL(try_record_model, try_record(_, _)).Times(AnyNumber());
     EXPECT_CALL(build_model, build(training)).WillOnce(Return(model)).WillOnce(Return(other));
     ON_CALL(size_model, size(model)).WillByDefault(Return(4));
     ON_CALL(size_model, size(other)).WillByDefault(Return(0));

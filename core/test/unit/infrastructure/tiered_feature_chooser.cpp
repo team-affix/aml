@@ -7,6 +7,7 @@
 using namespace AML;
 
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRef;
@@ -57,6 +58,7 @@ TieredFeatureChooserTest::TieredFeatureChooserTest()
 }
 
 TEST_F(TieredFeatureChooserTest, ChoosesByTheOrdersOfTheSessionsFeaturesInStoreOrder) {
+    EXPECT_CALL(choose_option, choose(_)).Times(AnyNumber());
     EXPECT_CALL(choose_option, choose(std::vector<size_t>{0, 2, 0})).WillOnce(Return(1));
     EXPECT_EQ(chooser.choose(3), 1u);
 }
@@ -68,6 +70,7 @@ TEST_F(TieredFeatureChooserTest, ReturnsThePositionTheOptionChooserGives) {
 
 TEST_F(TieredFeatureChooserTest, ASingleFeatureIsStillChosenThrough) {
     features = {candidate{.expression = x1, .cost = 1, .observed = {}}};
+    EXPECT_CALL(choose_option, choose(_)).Times(AnyNumber());
     EXPECT_CALL(choose_option, choose(std::vector<size_t>{0})).WillOnce(Return(0));
     EXPECT_EQ(chooser.choose(1), 0u);
 }

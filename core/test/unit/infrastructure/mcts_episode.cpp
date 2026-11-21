@@ -4,6 +4,8 @@
 
 using namespace AML;
 
+using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
@@ -50,6 +52,8 @@ episode_outcome MctsEpisodeTest::costing(size_t cost) const {
 }
 
 TEST_F(MctsEpisodeTest, TheNegatedCostRewardsThePathBeforeTheEpisodeEnds) {
+    EXPECT_CALL(run_episode, run(_)).Times(AnyNumber());
+    EXPECT_CALL(set_reward, set_value(_)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(run_episode, run(training)).WillOnce(Return(costing(7)));
     EXPECT_CALL(set_reward, set_value(-7.0));
@@ -59,11 +63,14 @@ TEST_F(MctsEpisodeTest, TheNegatedCostRewardsThePathBeforeTheEpisodeEnds) {
 
 TEST_F(MctsEpisodeTest, AFreeModelIsRewardedWithZero) {
     ON_CALL(run_episode, run(training)).WillByDefault(Return(costing(0)));
+    EXPECT_CALL(set_reward, set_value(_)).Times(AnyNumber());
     EXPECT_CALL(set_reward, set_value(0.0));
     episode.run(training);
 }
 
 TEST_F(MctsEpisodeTest, ACostlierModelEarnsALowerReward) {
+    EXPECT_CALL(run_episode, run(_)).Times(AnyNumber());
+    EXPECT_CALL(set_reward, set_value(_)).Times(AnyNumber());
     EXPECT_CALL(run_episode, run(training)).WillOnce(Return(costing(3))).WillOnce(Return(costing(9)));
     InSequence order;
     EXPECT_CALL(set_reward, set_value(-3.0));

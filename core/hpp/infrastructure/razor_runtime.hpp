@@ -4,8 +4,8 @@
 #include <cstddef>
 #include <optional>
 #include <vector>
-#include "infrastructure/schema.hpp"
 #include "infrastructure/razor_manifest.hpp"
+#include "infrastructure/schema.hpp"
 #include "value_objects/bin.hpp"
 #include "value_objects/bin_view.hpp"
 #include "value_objects/episode_outcome.hpp"

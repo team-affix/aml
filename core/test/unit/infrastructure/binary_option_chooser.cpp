@@ -6,12 +6,12 @@
 
 using namespace AML;
 
+using ::testing::_;
 using ::testing::AnyNumber;
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRoundRobin;
-using ::testing::_;
 
 namespace {
 
@@ -32,6 +32,7 @@ TEST_F(BinaryOptionChooserTest, ASingleOptionIsChosenWithoutAsking) {
 }
 
 TEST_F(BinaryOptionChooserTest, TwoOptionsAreOneTwoWayChoice) {
+    EXPECT_CALL(choose_half, choose(_)).Times(AnyNumber());
     EXPECT_CALL(choose_half, choose(2)).WillOnce(Return(1));
     EXPECT_EQ(chooser.choose(2), 1u);
 }
@@ -45,6 +46,7 @@ TEST_F(BinaryOptionChooserTest, EveryQuestionIsTwoWay) {
 }
 
 TEST_F(BinaryOptionChooserTest, EachAnswerKeepsTheChosenHalf) {
+    EXPECT_CALL(choose_half, choose(_)).Times(AnyNumber());
     InSequence order;
     // [0, 13) → upper [7, 13) → lower [7, 10) → upper [9, 10).
     EXPECT_CALL(choose_half, choose(2)).WillOnce(Return(1));
@@ -54,6 +56,7 @@ TEST_F(BinaryOptionChooserTest, EachAnswerKeepsTheChosenHalf) {
 }
 
 TEST_F(BinaryOptionChooserTest, AnOddRangesLowerHalfTakesTheExtraIndex) {
+    EXPECT_CALL(choose_half, choose(_)).Times(AnyNumber());
     InSequence order;
     // [0, 3) → lower [0, 2) → upper [1, 2).
     EXPECT_CALL(choose_half, choose(2)).WillOnce(Return(0));
@@ -62,12 +65,14 @@ TEST_F(BinaryOptionChooserTest, AnOddRangesLowerHalfTakesTheExtraIndex) {
 }
 
 TEST_F(BinaryOptionChooserTest, AlwaysKeepingTheLowerHalfGivesTheFirstOption) {
+    EXPECT_CALL(choose_half, choose(_)).Times(AnyNumber());
     // [0, 13) → [0, 7) → [0, 4) → [0, 2) → [0, 1).
     EXPECT_CALL(choose_half, choose(2)).Times(4).WillRepeatedly(Return(0));
     EXPECT_EQ(chooser.choose(13), 0u);
 }
 
 TEST_F(BinaryOptionChooserTest, AlwaysKeepingTheUpperHalfGivesTheLastOption) {
+    EXPECT_CALL(choose_half, choose(_)).Times(AnyNumber());
     // [0, 13) → [7, 13) → [10, 13) → [12, 13).
     EXPECT_CALL(choose_half, choose(2)).Times(3).WillRepeatedly(Return(1));
     EXPECT_EQ(chooser.choose(13), 12u);
@@ -90,6 +95,7 @@ TEST_F(BinaryOptionChooserTest, EveryOptionIsReachableAndNoneLiesOutside) {
 }
 
 TEST_F(BinaryOptionChooserTest, EachChoiceStartsFromTheFullRange) {
+    EXPECT_CALL(choose_half, choose(_)).Times(AnyNumber());
     EXPECT_CALL(choose_half, choose(2)).WillRepeatedly(Return(1));
     EXPECT_EQ(chooser.choose(4), 3u);
     EXPECT_EQ(chooser.choose(4), 3u);

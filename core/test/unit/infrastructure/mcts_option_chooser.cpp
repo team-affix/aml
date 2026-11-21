@@ -5,10 +5,11 @@
 
 using namespace AML;
 
+using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::NiceMock;
 using ::testing::Property;
 using ::testing::Return;
-using ::testing::_;
 
 namespace {
 
@@ -31,12 +32,14 @@ struct MctsOptionChooserTest : public ::testing::Test {
 }
 
 TEST_F(MctsOptionChooserTest, MctsChoosesAmongTheOptionsIndices) {
+    EXPECT_CALL(choose_choice, choose(_, _)).Times(AnyNumber());
     EXPECT_CALL(choose_choice, choose(Property(&option_range::size, 3u), Property(&option_range::size, 3u)))
         .WillOnce(Return(2));
     EXPECT_EQ(chooser.choose(3), 2u);
 }
 
 TEST_F(MctsOptionChooserTest, ASingleOptionIsStillOfferedToMcts) {
+    EXPECT_CALL(choose_choice, choose(_, _)).Times(AnyNumber());
     EXPECT_CALL(choose_choice, choose(Property(&option_range::size, 1u), Property(&option_range::size, 1u)))
         .WillOnce(Return(0));
     EXPECT_EQ(chooser.choose(1), 0u);

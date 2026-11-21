@@ -6,6 +6,8 @@
 
 using namespace AML;
 
+using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::NiceMock;
 using ::testing::ReturnRef;
 
@@ -121,6 +123,7 @@ TEST_F(BinSplitterTest, EveryChildKeepsTheParentsVariablesFirst) {
 TEST_F(BinSplitterTest, TheScrutineesTypeGivesTheConstructors) {
     const bin_view parent = bin_view::of(bin{.inputs = {typed_column{.type = 0, .cells = {truth, falsity}}},
                                              .labels = typed_column{.type = 0, .cells = {truth, falsity}}});
+    EXPECT_CALL(get_type_def, def(_)).Times(AnyNumber());
     EXPECT_CALL(get_type_def, def(0)).WillOnce(ReturnRef(boolean));
     EXPECT_EQ(splitter.split(parent, parent.inputs[0]).size(), 2u);
 }

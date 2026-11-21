@@ -6,8 +6,8 @@
 
 using namespace AML;
 
-using ::testing::AnyNumber;
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
@@ -141,11 +141,13 @@ TEST_F(ModelBuilderTest, ADetectedOutputBecomesALeafWithoutSynthesis) {
 }
 
 TEST_F(ModelBuilderTest, ABinWithNoDetectedOutputIsSynthesized) {
+    EXPECT_CALL(synthesize_features, synthesize(_)).Times(AnyNumber());
     EXPECT_CALL(synthesize_features, synthesize(root)).WillOnce(ReturnRef(features));
     builder.build(root);
 }
 
 TEST_F(ModelBuilderTest, ASynthesizedOutputBecomesALeafWithoutAMatch) {
+    EXPECT_CALL(find_output, find(_, _)).Times(AnyNumber());
     EXPECT_CALL(find_output, find(features, root.labels)).WillOnce(Return(second_feature));
     EXPECT_CALL(choose_feature, choose(_)).Times(0);
     EXPECT_CALL(split_bin, split(_, _)).Times(0);
@@ -153,6 +155,8 @@ TEST_F(ModelBuilderTest, ASynthesizedOutputBecomesALeafWithoutAMatch) {
 }
 
 TEST_F(ModelBuilderTest, OtherwiseTheBinMatchesOnTheChosenFeatureAndBuildsEachChild) {
+    EXPECT_CALL(choose_feature, choose(_)).Times(AnyNumber());
+    EXPECT_CALL(split_bin, split(_, _)).Times(AnyNumber());
     EXPECT_CALL(choose_feature, choose(2)).WillOnce(Return(1));
     EXPECT_CALL(split_bin, split(root, second_candidate.observed))
         .WillOnce(Return(std::vector<bin_view>{true_child, false_child}));
@@ -161,6 +165,7 @@ TEST_F(ModelBuilderTest, OtherwiseTheBinMatchesOnTheChosenFeatureAndBuildsEachCh
 }
 
 TEST_F(ModelBuilderTest, TheScrutineeOutlivesTheSessionItCameFrom) {
+    EXPECT_CALL(choose_feature, choose(_)).Times(AnyNumber());
     EXPECT_CALL(choose_feature, choose(2)).WillOnce(Return(1));
     ON_CALL(split_bin, split(root, second_candidate.observed))
         .WillByDefault(Return(std::vector<bin_view>{true_child, false_child}));
@@ -180,6 +185,8 @@ TEST_F(ModelBuilderTest, EmptyChildrenBecomeEmptyBranches) {
 }
 
 TEST_F(ModelBuilderTest, AMatchWhoseRowsShareOneConstructorFunnelsIntoAChosenBoundArgument) {
+    EXPECT_CALL(split_bin, split(_, _)).Times(AnyNumber());
+    EXPECT_CALL(choose_bound_argument, choose(_, _)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(split_bin, split(root, first_candidate.observed))
         .WillOnce(Return(std::vector<bin_view>{no_rows_child, funnel_child}));
@@ -221,6 +228,7 @@ TEST_F(ModelBuilderTest, ArgumentsAreChosenFromThoseTheMatchJustBound) {
     ON_CALL(split_bin, split(wide_root, first_candidate.observed))
         .WillByDefault(Return(std::vector<bin_view>{no_rows_child, funnel_child}));
     ON_CALL(split_bin, split(funnel_child, _)).WillByDefault(Return(std::vector<bin_view>{false_child, true_child}));
+    EXPECT_CALL(choose_bound_argument, choose(_, _)).Times(AnyNumber());
     EXPECT_CALL(choose_bound_argument, choose(funnel_child, 2)).WillOnce(Return(second_argument_candidate));
     builder.build(wide_root);
 }

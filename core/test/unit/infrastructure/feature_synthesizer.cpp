@@ -6,9 +6,9 @@
 
 using namespace AML;
 
+using ::testing::_;
 using ::testing::AnyNumber;
 using ::testing::AtLeast;
-using ::testing::_;
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
@@ -105,6 +105,7 @@ synthesizer_t FeatureSynthesizerTest::make(size_t max_applications) {
 
 TEST_F(FeatureSynthesizerTest, TheSessionIsStartedOverTheBinFirst) {
     synthesizer_t synthesizer = make(3);
+    EXPECT_CALL(start_session, start(_)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(start_session, start(data));
     EXPECT_CALL(find_primitive_options, find()).Times(AtLeast(1));
@@ -119,12 +120,15 @@ TEST_F(FeatureSynthesizerTest, TheStepChoosesOnlyBetweenStoppingAndContinuing) {
 
 TEST_F(FeatureSynthesizerTest, OnContinuingThePrimitiveIsChosenAmongTheWitnessedOnes) {
     synthesizer_t synthesizer = make(3);
+    EXPECT_CALL(choose_primitive, choose(_)).Times(AnyNumber());
     EXPECT_CALL(choose_primitive, choose(2)).WillOnce(Return(1));
     synthesizer.synthesize(data);
 }
 
 TEST_F(FeatureSynthesizerTest, OneWitnessedPrimitiveIsStillChosenAmongOneOption) {
     synthesizer_t synthesizer = make(3);
+    EXPECT_CALL(choose_primitive, choose(_)).Times(AnyNumber());
+    EXPECT_CALL(apply_chosen_primitive, apply(_, _)).Times(AnyNumber());
     ON_CALL(find_primitive_options, find()).WillByDefault(Return(std::vector<prim_id>{4}));
     EXPECT_CALL(choose_primitive, choose(1)).WillOnce(Return(0));
     EXPECT_CALL(apply_chosen_primitive, apply(4, 2));
@@ -133,6 +137,8 @@ TEST_F(FeatureSynthesizerTest, OneWitnessedPrimitiveIsStillChosenAmongOneOption)
 
 TEST_F(FeatureSynthesizerTest, EachApplicationIsPrecededByItsOwnStepAndPrimitiveChoice) {
     synthesizer_t synthesizer = make(5);
+    EXPECT_CALL(choose_primitive, choose(_)).Times(AnyNumber());
+    EXPECT_CALL(apply_chosen_primitive, apply(_, _)).Times(AnyNumber());
     EXPECT_CALL(choose_step, choose(2))
         .WillOnce(Return(1)).WillOnce(Return(1)).WillOnce(Return(1)).WillOnce(Return(0));
     EXPECT_CALL(choose_primitive, choose(2)).WillOnce(Return(0)).WillOnce(Return(1)).WillOnce(Return(0));
@@ -147,6 +153,7 @@ TEST_F(FeatureSynthesizerTest, EachApplicationIsPrecededByItsOwnStepAndPrimitive
 
 TEST_F(FeatureSynthesizerTest, TheChosenPrimitiveIsAppliedOverTheBinsRows) {
     synthesizer_t synthesizer = make(3);
+    EXPECT_CALL(apply_chosen_primitive, apply(_, _)).Times(AnyNumber());
     EXPECT_CALL(apply_chosen_primitive, apply(5, 2));
     synthesizer.synthesize(data);
 }
@@ -161,6 +168,7 @@ TEST_F(FeatureSynthesizerTest, ChoosingStopFirstChoosesNoPrimitiveAndAppliesNoth
 
 TEST_F(FeatureSynthesizerTest, TheSessionStopsAtTheCapWithoutAskingTheStep) {
     synthesizer_t synthesizer = make(2);
+    EXPECT_CALL(apply_chosen_primitive, apply(_, _)).Times(AnyNumber());
     EXPECT_CALL(count_applications, count()).WillOnce(Return(0)).WillOnce(Return(1)).WillRepeatedly(Return(2));
     EXPECT_CALL(choose_step, choose(_)).Times(2).WillRepeatedly(Return(1));
     EXPECT_CALL(choose_primitive, choose(_)).Times(2).WillRepeatedly(Return(0));
@@ -198,6 +206,8 @@ TEST_F(FeatureSynthesizerTest, AnOutputAmongTheStartingFeaturesStopsTheSessionAt
 
 TEST_F(FeatureSynthesizerTest, DerivingAnOutputStopsTheSessionBeforeTheNextStep) {
     synthesizer_t synthesizer = make(5);
+    EXPECT_CALL(find_output, find(_, _)).Times(AnyNumber());
+    EXPECT_CALL(apply_chosen_primitive, apply(_, _)).Times(AnyNumber());
     EXPECT_CALL(find_output, find(_, data.labels))
         .WillOnce(Return(std::nullopt))
         .WillRepeatedly(Return(&truth_output));

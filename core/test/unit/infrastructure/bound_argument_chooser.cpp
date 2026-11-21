@@ -5,6 +5,8 @@
 
 using namespace AML;
 
+using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::NiceMock;
 using ::testing::Return;
 
@@ -51,6 +53,8 @@ BoundArgumentChooserTest::BoundArgumentChooserTest()
 }
 
 TEST_F(BoundArgumentChooserTest, TheChosenHeterogeneousArgumentFromTheFirstArgumentOnIsTheScrutinee) {
+    EXPECT_CALL(find_variable_candidates, find(_, _)).Times(AnyNumber());
+    EXPECT_CALL(choose_bound_argument, choose(_)).Times(AnyNumber());
     EXPECT_CALL(find_variable_candidates, find(data, 1))
         .WillOnce(Return(std::vector<candidate>{first_bound_argument_candidate, second_argument_candidate}));
     EXPECT_CALL(choose_bound_argument, choose(2)).WillOnce(Return(1));
@@ -60,11 +64,13 @@ TEST_F(BoundArgumentChooserTest, TheChosenHeterogeneousArgumentFromTheFirstArgum
 TEST_F(BoundArgumentChooserTest, TheOnlyArgumentIsStillChosenThrough) {
     ON_CALL(find_variable_candidates, find(data, 2))
         .WillByDefault(Return(std::vector<candidate>{second_argument_candidate}));
+    EXPECT_CALL(choose_bound_argument, choose(_)).Times(AnyNumber());
     EXPECT_CALL(choose_bound_argument, choose(1)).WillOnce(Return(0));
     EXPECT_EQ(chooser.choose(data, 2), second_argument_candidate);
 }
 
 TEST_F(BoundArgumentChooserTest, ArgumentsAreFoundFromTheGivenFirstArgument) {
+    EXPECT_CALL(find_variable_candidates, find(_, _)).Times(AnyNumber());
     EXPECT_CALL(find_variable_candidates, find(data, 2))
         .WillOnce(Return(std::vector<candidate>{second_argument_candidate}));
     ON_CALL(choose_bound_argument, choose(1)).WillByDefault(Return(0));

@@ -6,6 +6,8 @@
 
 using namespace AML;
 
+using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::NiceMock;
 using ::testing::ReturnRef;
 
@@ -57,6 +59,7 @@ TEST_F(PrimitiveCallerTest, TheArgumentsGoToThePrimitiveAtThatId) {
 }
 
 TEST_F(PrimitiveCallerTest, ThePrimitiveIsLookedUpByItsId) {
+    EXPECT_CALL(get_primitive_function, function(_)).Times(AnyNumber());
     EXPECT_CALL(get_primitive_function, function(1)).WillOnce(ReturnRef(last));
     caller.call(1, {&zero});
 }

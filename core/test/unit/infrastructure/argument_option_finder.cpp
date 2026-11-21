@@ -5,8 +5,8 @@
 
 using namespace AML;
 
-using ::testing::AnyNumber;
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::NiceMock;
 using ::testing::Return;
 

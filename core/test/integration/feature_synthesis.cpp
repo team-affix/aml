@@ -32,11 +32,12 @@
 
 using namespace AML;
 
-using ::testing::Invoke;
+using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::InSequence;
+using ::testing::Invoke;
 using ::testing::NiceMock;
 using ::testing::Return;
-using ::testing::_;
 
 namespace {
 
@@ -177,6 +178,7 @@ feature_synthesizer_t FeatureSynthesisIntegrationTest::make(size_t max_applicati
 
 TEST_F(FeatureSynthesisIntegrationTest, StoppingAtOnceLeavesTheInputs) {
     feature_synthesizer_t synthesizer = make(10);
+    EXPECT_CALL(chooser, choose(_)).Times(AnyNumber());
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(0));
     const std::vector<candidate>& candidates = synthesizer.synthesize(bin_view::of(training));
     ASSERT_EQ(candidates.size(), 2u);
@@ -186,6 +188,7 @@ TEST_F(FeatureSynthesisIntegrationTest, StoppingAtOnceLeavesTheInputs) {
 
 TEST_F(FeatureSynthesisIntegrationTest, ChoosingEqualityOfTheInputsDerivesItAtCostThree) {
     feature_synthesizer_t synthesizer = make(10);
+    EXPECT_CALL(chooser, choose(_)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(1));
     EXPECT_CALL(chooser, choose(1)).WillOnce(Return(0));
@@ -203,6 +206,7 @@ TEST_F(FeatureSynthesisIntegrationTest, ChoosingEqualityOfTheInputsDerivesItAtCo
 
 TEST_F(FeatureSynthesisIntegrationTest, ATupleOfConstantsIsNeverOffered) {
     feature_synthesizer_t synthesizer = make(10);
+    EXPECT_CALL(chooser, choose(_)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(1));
     EXPECT_CALL(chooser, choose(1)).WillOnce(Return(0));
@@ -251,6 +255,7 @@ TEST_F(FeatureSynthesisIntegrationTest, ANewSessionForgetsTheLastOne) {
 
 TEST_F(FeatureSynthesisIntegrationTest, DerivingTheLabelsEndsTheSessionWithThemAsAFeature) {
     feature_synthesizer_t synthesizer = make(10);
+    EXPECT_CALL(chooser, choose(_)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(1));
     EXPECT_CALL(chooser, choose(1)).WillOnce(Return(0));

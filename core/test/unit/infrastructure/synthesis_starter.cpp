@@ -6,6 +6,7 @@
 using namespace AML;
 
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
@@ -72,11 +73,13 @@ TEST_F(SynthesisStarterTest, TheLastSessionIsForgottenBeforeTheNewOneIsSeeded) {
 }
 
 TEST_F(SynthesisStarterTest, TheBinsHeterogeneousVariablesBecomeTheFirstFeatures) {
+    EXPECT_CALL(try_insert_feature_candidate, try_insert(_)).Times(AnyNumber());
     EXPECT_CALL(try_insert_feature_candidate, try_insert(variable_candidate));
     starter.start(data);
 }
 
 TEST_F(SynthesisStarterTest, VariablesAreSoughtFromTheFirstVariable) {
+    EXPECT_CALL(find_variable_candidates, find(_, _)).Times(AnyNumber());
     EXPECT_CALL(find_variable_candidates, find(data, 0)).WillOnce(Return(std::vector<candidate>{}));
     starter.start(data);
 }
@@ -85,6 +88,7 @@ TEST_F(SynthesisStarterTest, EveryHeterogeneousVariableIsInsertedInOrder) {
     const candidate second{.expression = variable, .cost = 2, .observed = data.inputs[0]};
     ON_CALL(find_variable_candidates, find(data, 0))
         .WillByDefault(Return(std::vector<candidate>{variable_candidate, second}));
+    EXPECT_CALL(try_insert_feature_candidate, try_insert(_)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(try_insert_feature_candidate, try_insert(variable_candidate));
     EXPECT_CALL(try_insert_feature_candidate, try_insert(second));
