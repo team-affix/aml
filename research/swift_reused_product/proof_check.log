@@ -1,0 +1,28 @@
+Swift on (x * y + z)^2 - x * y, inputs 0 to 3 (64 rows), nine primitives: max applications 9, c 4, best weight 1, fresh weight 0.75, made weight 0.5, seed 1, 600000 episodes
+  new best 387 at 0.0s (episode 1): match y
+  new best 357 at 0.0s (episode 3): match x
+  new best 348 at 0.0s (episode 9): match x
+  new best 339 at 0.0s (episode 24): match z
+  new best 333 at 0.0s (episode 64): match mul(x, y)
+  new best 332 at 0.0s (episode 105): match x
+  new best 329 at 0.0s (episode 115): match pred(z)
+  new best 314 at 0.0s (episode 215): match x
+  new best 310 at 0.1s (episode 294): match x
+  new best 257 at 0.3s (episode 1350): match muladd(y, x, 1)
+  new best 247 at 1.7s (episode 7755): match muladd(y, x, z)
+  new best 245 at 5.5s (episode 24336): match muladd(y, x, 1)
+  new best 237 at 6.6s (episode 28676): match muladd(y, x, 0)
+[episode 100000,   23.0s] best 237 | last 100000 episodes: mean cost 381
+  new best 232 at 35.0s (episode 150638): match mul(x, y)
+[episode 200000,   47.0s] best 232 | last 100000 episodes: mean cost 381
+[episode 300000,   70.9s] best 232 | last 100000 episodes: mean cost 381
+  new best 230 at 71.7s (episode 303252): match muladd(x, y, 0)
+  new best 214 at 75.0s (episode 316496): match muladd(y, x, 0)
+[episode 400000,   95.2s] best 214 | last 100000 episodes: mean cost 379
+  new best 213 at 113.9s (episode 476337): match muladd(x, y, 0)
+[episode 500000,  119.7s] best 213 | last 100000 episodes: mean cost 379
+  new best 10 at 137.1s (episode 574584): leaf sub(square(add(z, mul(x, y))), mul(x, y))
+[episode 600000,  143.3s] best 10 | last 100000 episodes: mean cost 374
+
+Best model, cost 10: leaf sub(square(add(z, mul(x, y))), mul(x, y))
+PROOF PASSED: best cost 10 (expected 10), exactly the expected leaf, 0 of 64 training rows wrong, 0 of 200 unseen rows wrong
