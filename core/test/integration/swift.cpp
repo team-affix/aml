@@ -185,20 +185,20 @@ TEST_F(SwiftIntegrationTest, NextReturnsTheEpisodesModelAndItsCost) {
     }
 }
 
-TEST_F(SwiftIntegrationTest, OperandsOfOneRecencyAreChosenInOneChoice) {
+TEST_F(SwiftIntegrationTest, OperandsOfOneQuadrantAreChosenInOneChoice) {
     const bin training = xor_training();
     swift_manifest manifest(types, {bool_equality}, options);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 200; ++episode)
         manifest.mcts_episode_.run(bin_view::of(training));
     // Continuing (1), the one primitive (0); the first argument's operands (the constants false and true, then the
-    // variables x0 and x1) are all inputs or constants, recency 0, so there is no recency choice, only one among them.
+    // variables x0 and x1) are all given and fresh, one quadrant, so there is no quadrant choice, only one among them.
     const mcts_tree_node_id primitive = manifest.tree_walker_.walk(manifest.tree_walker_.walk(0, 1), 0);
     for (mcts_choice operand = 0; operand < 4; ++operand)
         EXPECT_GT(manifest.visits_.get_visits(manifest.tree_walker_.walk(primitive, operand)), 0u);
 }
 
-TEST_F(SwiftIntegrationTest, InputsOfOneRecencyAreMatchedOnInOneChoice) {
+TEST_F(SwiftIntegrationTest, InputsOfOneQuadrantAreMatchedOnInOneChoice) {
     const bin training = xor_training();
     swift_options no_synthesis = options;
     no_synthesis.max_applications = 0;

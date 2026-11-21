@@ -123,11 +123,13 @@ research/                                  experiments and their records; proofs
     its options (no two-way splitting; stopping or continuing synthesis stays two-way), as in Heron, with Kestrel's
     mixmax selection in place of focus ucb1. In rollouts, an argument and a match's feature are chosen by order tiers
     as in Kite (`rollout_tiered_option_chooser`), so random completions build on high-order features.
-  - **Swift** (`swift_*`): Merlin with choices by recency. An argument and a match's feature are chosen by how
-    recently their feature was created (`cheapest_feature_index` creation times; inputs and constants are 0,
-    `feature_recency_measurer`, `operand_recency_measurer`): in the tree one flat choice of recency, newest first,
-    then one among the options sharing it (`grouped_option_chooser`); in rollouts the newest half the time, else the
-    next (`tiered_option_chooser` over recencies, through `rollout_switching_option_chooser`).
+  - **Swift** (`swift_*`): Merlin with an argument and a match's feature chosen by quadrant. An operand is fresh until
+    the session uses it as an argument (`application_log::is_used`) and consumed after, and made if synthesized or
+    given if an input, a bound argument or a constant: made and fresh (a chain's tip), given and fresh, made and
+    consumed, given and consumed (`operand_quadrant_measurer`, `feature_quadrant_measurer`). In the tree one flat
+    choice picks a quadrant, made and fresh first, then one picks among its options (`grouped_option_chooser`); in
+    rollouts fresh is taken three times in four, then made or given evenly (`weighted_quadrant_chooser`, through
+    `rollout_switching_option_chooser`).
 
 ### Per-bin columns
 

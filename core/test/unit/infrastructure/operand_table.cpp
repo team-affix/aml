@@ -1,4 +1,3 @@
-#include <optional>
 #include <vector>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -145,12 +144,12 @@ TEST_F(OperandTableTest, ATypeWithOnlyFeaturesNumbersThemPastTheConstants) {
     EXPECT_EQ(table.operand_of_type(1, 0), 4u);
 }
 
-TEST_F(OperandTableTest, AFeaturesOperandGivesItsPositionInTheFeatureStore) {
-    EXPECT_EQ(table.find_feature_position(3), std::optional<size_t>(0));
-    EXPECT_EQ(table.find_feature_position(4), std::optional<size_t>(1));
+TEST_F(OperandTableTest, AFeaturesPositionGivesItsOperandPastEveryConstant) {
+    EXPECT_EQ(table.feature_operand(0), 3u);
+    EXPECT_EQ(table.feature_operand(1), 4u);
 }
 
-TEST_F(OperandTableTest, AConstantHasNoFeaturePosition) {
-    EXPECT_FALSE(table.find_feature_position(0).has_value());
-    EXPECT_FALSE(table.find_feature_position(2).has_value());
+TEST_F(OperandTableTest, WithNoConstantsAFeaturesOperandIsItsPosition) {
+    constants.clear();
+    EXPECT_EQ(table.feature_operand(1), 1u);
 }

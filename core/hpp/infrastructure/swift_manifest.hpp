@@ -14,7 +14,7 @@
 #include "infrastructure/constant_seeder.hpp"
 #include "infrastructure/constant_store.hpp"
 #include "infrastructure/feature_evaluator.hpp"
-#include "infrastructure/feature_recency_measurer.hpp"
+#include "infrastructure/feature_quadrant_measurer.hpp"
 #include "infrastructure/feature_sizer.hpp"
 #include "infrastructure/feature_synthesizer.hpp"
 #include "infrastructure/grouped_option_chooser.hpp"
@@ -31,7 +31,7 @@
 #include "infrastructure/model_evaluator.hpp"
 #include "infrastructure/model_sizer.hpp"
 #include "infrastructure/operand_applier.hpp"
-#include "infrastructure/operand_recency_measurer.hpp"
+#include "infrastructure/operand_quadrant_measurer.hpp"
 #include "infrastructure/operand_table.hpp"
 #include "infrastructure/option_range.hpp"
 #include "infrastructure/output_finder.hpp"
@@ -44,7 +44,6 @@
 #include "infrastructure/rollout_switching_option_chooser.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/synthesis_starter.hpp"
-#include "infrastructure/tiered_option_chooser.hpp"
 #include "infrastructure/tree_walker.hpp"
 #include "infrastructure/ucb1.hpp"
 #include "infrastructure/uct_backprop_path.hpp"
@@ -62,6 +61,7 @@
 #include "infrastructure/value_table.hpp"
 #include "infrastructure/variable_candidate_finder.hpp"
 #include "infrastructure/visits_table.hpp"
+#include "infrastructure/weighted_quadrant_chooser.hpp"
 #include "infrastructure/witness_detector.hpp"
 #include "value_objects/mcts_choice.hpp"
 #include "value_objects/mcts_tree_node_id.hpp"
@@ -70,12 +70,14 @@
 
 namespace AML {
 
-// Swift: Merlin with choices by recency. An argument and a match's feature are chosen by how recently their feature was
-// created: the inputs and constants, there from a session's start, are 0, and each synthesized feature its creation
-// time. In the search tree, one flat choice picks a recency (newest first, the inputs last) and, where several options
-// share it, one flat choice picks among them; in a rollout, the newest is taken half the time, else the next, and so
-// on, so random completions build on what was just made. The primitive, a funnel's bound argument and stopping or
-// continuing synthesis are chosen as in Merlin, with its mixmax selection: a node is read as (1 - w) * mean + w * best.
+// Swift: Merlin with arguments and a match's feature chosen by quadrant. Each operand is fresh until the session uses
+// it as an argument and consumed after, and made if synthesized or given if an input, a bound argument or a constant,
+// which puts it in one of four quadrants: made and fresh (the tip of a chain being built), given and fresh, made and
+// consumed, given and consumed. In the search tree, one flat choice picks a quadrant (made and fresh first) and, where
+// it holds several options, one flat choice picks among them; in a rollout, fresh is taken three times in four, then
+// made or given evenly, then any option of the quadrant, so random completions extend tips with fresh inputs. The
+// primitive, a funnel's bound argument and stopping or continuing synthesis are chosen as in Merlin, with its mixmax
+// selection: a node is read as (1 - w) * mean + w * best.
 struct swift_manifest {
     struct visits_table_t : monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map> {
         using monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map>::visits_table;
@@ -198,31 +200,33 @@ struct swift_manifest {
         : argument_option_finder<operand_table_t, operand_table_t, witness_detector_t> {
         using argument_option_finder<operand_table_t, operand_table_t, witness_detector_t>::argument_option_finder;
     };
-    struct feature_recency_measurer_t : feature_recency_measurer<cheapest_feature_index, cheapest_feature_index> {
-        using feature_recency_measurer<cheapest_feature_index, cheapest_feature_index>::feature_recency_measurer;
+    struct operand_quadrant_measurer_t : operand_quadrant_measurer<operand_table_t, application_log> {
+        using operand_quadrant_measurer<operand_table_t, application_log>::operand_quadrant_measurer;
     };
-    struct operand_recency_measurer_t : operand_recency_measurer<operand_table_t, feature_recency_measurer_t> {
-        using operand_recency_measurer<operand_table_t, feature_recency_measurer_t>::operand_recency_measurer;
+    struct feature_quadrant_measurer_t : feature_quadrant_measurer<operand_table_t, operand_quadrant_measurer_t> {
+        using feature_quadrant_measurer<operand_table_t, operand_quadrant_measurer_t>::feature_quadrant_measurer;
     };
     struct grouped_option_chooser_t : grouped_option_chooser<option_chooser_t, option_chooser_t> {
         using grouped_option_chooser<option_chooser_t, option_chooser_t>::grouped_option_chooser;
     };
-    struct tiered_option_chooser_t : tiered_option_chooser<option_chooser_t, option_chooser_t> {
-        using tiered_option_chooser<option_chooser_t, option_chooser_t>::tiered_option_chooser;
+    struct weighted_quadrant_chooser_t
+        : weighted_quadrant_chooser<option_chooser_t, option_chooser_t, option_chooser_t> {
+        using weighted_quadrant_chooser<
+            option_chooser_t, option_chooser_t, option_chooser_t>::weighted_quadrant_chooser;
     };
-    struct recency_option_chooser_t : rollout_switching_option_chooser<
-        monte_carlo::in_rollout_flag, grouped_option_chooser_t, tiered_option_chooser_t> {
+    struct quadrant_option_chooser_t : rollout_switching_option_chooser<
+        monte_carlo::in_rollout_flag, grouped_option_chooser_t, weighted_quadrant_chooser_t> {
         using rollout_switching_option_chooser<
             monte_carlo::in_rollout_flag, grouped_option_chooser_t,
-            tiered_option_chooser_t>::rollout_switching_option_chooser;
+            weighted_quadrant_chooser_t>::rollout_switching_option_chooser;
     };
     struct argument_chooser_t
-        : keyed_argument_chooser<argument_option_finder_t, operand_recency_measurer_t, recency_option_chooser_t> {
+        : keyed_argument_chooser<argument_option_finder_t, operand_quadrant_measurer_t, quadrant_option_chooser_t> {
         using keyed_argument_chooser<
-            argument_option_finder_t, operand_recency_measurer_t, recency_option_chooser_t>::keyed_argument_chooser;
+            argument_option_finder_t, operand_quadrant_measurer_t, quadrant_option_chooser_t>::keyed_argument_chooser;
     };
-    struct feature_chooser_t : keyed_feature_chooser<feature_recency_measurer_t, recency_option_chooser_t> {
-        using keyed_feature_chooser<feature_recency_measurer_t, recency_option_chooser_t>::keyed_feature_chooser;
+    struct feature_chooser_t : keyed_feature_chooser<feature_quadrant_measurer_t, quadrant_option_chooser_t> {
+        using keyed_feature_chooser<feature_quadrant_measurer_t, quadrant_option_chooser_t>::keyed_feature_chooser;
     };
     struct primitive_applier_t : primitive_applier<
         primitive_store, argument_chooser_t, application_log, app_candidate_finder_t, cheapest_feature_index> {
@@ -318,11 +322,11 @@ struct swift_manifest {
     mcts_chooser_t               mcts_chooser_;
     terminator_t                 terminator_;
     option_chooser_t             option_chooser_;
-    feature_recency_measurer_t   feature_recency_measurer_;
-    operand_recency_measurer_t   operand_recency_measurer_;
+    operand_quadrant_measurer_t  operand_quadrant_measurer_;
+    feature_quadrant_measurer_t  feature_quadrant_measurer_;
     grouped_option_chooser_t     grouped_option_chooser_;
-    tiered_option_chooser_t      tiered_option_chooser_;
-    recency_option_chooser_t     recency_option_chooser_;
+    weighted_quadrant_chooser_t  weighted_quadrant_chooser_;
+    quadrant_option_chooser_t    quadrant_option_chooser_;
     argument_chooser_t           argument_chooser_;
     feature_chooser_t            feature_chooser_;
     primitive_applier_t          primitive_applier_;
