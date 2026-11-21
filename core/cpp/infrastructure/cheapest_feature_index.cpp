@@ -9,9 +9,13 @@ cheapest_feature_index::cheapest_feature_index()
     : candidates_()
     , slots_()
     , by_type_()
-    , none_() {}
+    , none_()
+    , creation_times_()
+    , last_creation_time_(0) {}
 
 void cheapest_feature_index::clear() {
+    last_creation_time_ = 0;
+    creation_times_.clear();
     by_type_.clear();
     slots_.clear();
     candidates_.clear();
@@ -29,6 +33,7 @@ void cheapest_feature_index::try_insert(candidate entry) {
             by_type_.resize(type + 1);
         by_type_[type].push_back(candidates_.size());
         slots_.emplace(hashed, candidates_.size());
+        creation_times_.push_back(++last_creation_time_);
         candidates_.push_back(std::move(entry));
         return;
     }
@@ -46,6 +51,10 @@ const std::vector<size_t>& cheapest_feature_index::features_of_type(type_id type
     if (type >= by_type_.size())
         return none_;
     return by_type_[type];
+}
+
+size_t cheapest_feature_index::creation_time(size_t position) const {
+    return creation_times_.at(position);
 }
 
 }
