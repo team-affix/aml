@@ -11,9 +11,9 @@ Swift on (x + y)^2 * z, inputs 0 to 3 (64 rows), add/sub/mul/square: max applica
 [episode   4000,    0.8s] best 206 | last 2000 episodes: mean cost 361
   new best 9 at 0.9s (episode 4726): leaf mul(mul(add(x, y), add(x, y)), z)
 [episode   6000,    1.2s] best 9 | last 2000 episodes: mean cost 329
-[episode   8000,    1.6s] best 9 | last 2000 episodes: mean cost 303
+[episode   8000,    1.7s] best 9 | last 2000 episodes: mean cost 303
   new best 6 at 2.0s (episode 9382): leaf mul(square(add(x, y)), z)
 [episode  10000,    2.1s] best 6 | last 2000 episodes: mean cost 290
 
 Best model, cost 6: leaf mul(square(add(x, y)), z)
-PROOF PASSED: best cost 6 (expected 6), a leaf, 0 of 64 training rows wrong, 0 of 152 unseen rows wrong
+PROOF PASSED: best cost 6 (expected 6), exactly leaf mul(square(add(x, y)), z), 0 of 64 training rows wrong, 0 of 152 unseen rows wrong

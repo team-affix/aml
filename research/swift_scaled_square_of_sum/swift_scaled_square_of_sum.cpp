@@ -5,8 +5,8 @@
 // (2n + 1), so a number takes about log2 of its value in nodes. Swift trains on every (x, y, z) with each input from 0
 // to 3, with add, sub (truncated at zero), mul and square, for a fixed number of episodes, so it does the same work on
 // any machine. It prints each new best model and every few thousand episodes a progress line. At the end it checks
-// that the best model is the formula, right on every training row and on every unseen row with inputs up to 5, prints
-// PROOF PASSED or PROOF FAILED, and exits with 0 or 1.
+// that the best model is exactly the leaf mul(square(add(x, y)), z), right on every training row and on every unseen
+// row with inputs up to 5, prints PROOF PASSED or PROOF FAILED, and exits with 0 or 1.
 //
 // Build and run from the repository root:
 //   make research/swift_scaled_square_of_sum
@@ -41,6 +41,18 @@ const size_t k_largest = size_t{1} << 40; // every primitive's result is capped 
 // What the proof must derive: the formula as one leaf, mul(square(add(x, y)), z), cost 6.
 const size_t k_expected_cost = 6;
 const char* const k_primitive_names[] = {"add", "sub", "mul", "square"};
+const AML::prim_id k_add = 0;
+const AML::prim_id k_mul = 2;
+const AML::prim_id k_square = 3;
+
+AML::feature expected_formula() {
+    const AML::feature x{AML::feature::var{.index = 0}};
+    const AML::feature y{AML::feature::var{.index = 1}};
+    const AML::feature z{AML::feature::var{.index = 2}};
+    const AML::feature sum{AML::feature::app{.prim = k_add, .args = {x, y}}};
+    const AML::feature square{AML::feature::app{.prim = k_square, .args = {sum}}};
+    return AML::feature{AML::feature::app{.prim = k_mul, .args = {square, z}}};
+}
 
 size_t target(size_t x, size_t y, size_t z) {
     return (x + y) * (x + y) * z;
@@ -201,8 +213,8 @@ int main() {
     const AML::model_node& best = runtime.best_model().value();
     std::printf("\nBest model, cost %zu: %s\n", runtime.best_cost(), show_root(best, naturals).c_str());
 
-    // The proof's claim: the best model is the formula as one leaf (cost 6), right on every training row and on every
-    // unseen row up to k_max_unseen_input.
+    // The proof's claim: the best model is exactly the leaf mul(square(add(x, y)), z) (cost 6), right on every training
+    // row and on every unseen row up to k_max_unseen_input.
     size_t wrong_training = 0;
     size_t wrong_unseen = 0;
     size_t unseen = 0;
@@ -219,10 +231,12 @@ int main() {
             }
         }
     }
-    const bool is_leaf = std::holds_alternative<AML::model_node::leaf>(best.content);
-    const bool passed = runtime.best_cost() == k_expected_cost && is_leaf && wrong_training == 0 && wrong_unseen == 0;
+    const AML::model_node::leaf* leaf = std::get_if<AML::model_node::leaf>(&best.content);
+    const bool exact = leaf != nullptr && leaf->output == expected_formula();
+    const bool passed = runtime.best_cost() == k_expected_cost && exact && wrong_training == 0 && wrong_unseen == 0;
     std::printf("PROOF %s: best cost %zu (expected %zu), %s, %zu of %zu training rows wrong, %zu of %zu unseen rows "
                 "wrong\n", passed ? "PASSED" : "FAILED", runtime.best_cost(), k_expected_cost,
-                is_leaf ? "a leaf" : "not a leaf", wrong_training, training.labels.cells.size(), wrong_unseen, unseen);
+                exact ? "exactly leaf mul(square(add(x, y)), z)" : "not leaf mul(square(add(x, y)), z)", wrong_training,
+                training.labels.cells.size(), wrong_unseen, unseen);
     return passed ? 0 : 1;
 }

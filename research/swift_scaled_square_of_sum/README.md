@@ -33,10 +33,11 @@ experiment it was cut down from.
 
 ## Reproducing
 
-`swift_scaled_square_of_sum.cpp` is this run and nothing else: every setting is a constant in its source, its primitives are
-defined in it, and it takes no arguments. At the end it checks the result itself: the best model must cost 6, be a
-leaf, and be right on every training and unseen row. It prints `PROOF PASSED` and exits with 0, or `PROOF FAILED`
-with what it found and exits with 1. From the repository root:
+`swift_scaled_square_of_sum.cpp` is this run and nothing else: every setting is a constant in its source (the
+seed is 1), its primitives are defined in it, and it takes no arguments, so every run makes the same episodes. At the
+end it checks the result itself: the best model must cost 6, be exactly the leaf `mul(square(add(x, y)), z)`, and be
+right on every training and unseen row. It prints `PROOF PASSED` and exits with 0, or `PROOF FAILED` with what it
+found and exits with 1. From the repository root:
 
 ```bash
 make research/swift_scaled_square_of_sum
