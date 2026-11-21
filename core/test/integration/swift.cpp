@@ -50,7 +50,8 @@ SwiftIntegrationTest::SwiftIntegrationTest()
     , constants{
           typed_constant{.type = boolean, .literal = falsity}, typed_constant{.type = boolean, .literal = truth},
           typed_constant{.type = nat, .literal = value{.ctor = zero_ctor, .args = {}}}}
-    , options{.max_applications = 2, .exploration_constant = 4.0, .best_weight = 1.0, .seed = 7} {}
+    , options{.max_applications = 2, .exploration_constant = 4.0, .best_weight = 1.0, .fresh_weight = 0.75,
+               .made_weight = 0.5, .seed = 7} {}
 
 void SwiftIntegrationTest::expect_fit(const swift_runtime& runtime, const bin& training) {
     for (size_t row = 0; row < training.labels.cells.size(); ++row) {

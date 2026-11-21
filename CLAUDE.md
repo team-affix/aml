@@ -126,9 +126,11 @@ research/                                  experiments and their records; proofs
   - **Swift** (`swift_*`): Merlin with an argument and a match's feature chosen by quadrant. An operand is fresh until
     the session uses it as an argument (`application_log::is_used`) and consumed after, and made if synthesized or
     given if an input, a bound argument or a constant: made and fresh (a chain's tip), given and fresh, made and
-    consumed, given and consumed (`operand_quadrant_measurer`, `feature_quadrant_measurer`). A choice is one flat
-    choice among the quadrants holding options, made and fresh first, then one flat choice within the quadrant
-    (`quadrant_option_chooser`), the same in the tree and in rollouts.
+    consumed, given and consumed (`operand_quadrant_measurer`, `feature_quadrant_measurer`). In the tree a choice is
+    one flat choice among the quadrants holding options, made and fresh first, then one within the quadrant
+    (`quadrant_option_chooser`); in rollouts fresh is taken with probability `fresh_weight` and made with
+    `made_weight` (0.5 is no preference; `weighted_quadrant_chooser`, `fraction_drawer`, switched by
+    `rollout_switching_option_chooser`).
 
 ### Per-bin columns
 

@@ -57,8 +57,11 @@ swift_manifest::swift_manifest(
     , operand_quadrant_measurer_(operand_table_, applications_)
     , feature_quadrant_measurer_(operand_table_, operand_quadrant_measurer_)
     , quadrant_option_chooser_(option_chooser_, option_chooser_)
-    , argument_chooser_(argument_option_finder_, operand_quadrant_measurer_, quadrant_option_chooser_)
-    , feature_chooser_(feature_quadrant_measurer_, quadrant_option_chooser_)
+    , fraction_drawer_(random_)
+    , weighted_quadrant_chooser_(fraction_drawer_, option_chooser_, options.fresh_weight, options.made_weight)
+    , operand_chooser_(in_rollout_, quadrant_option_chooser_, weighted_quadrant_chooser_)
+    , argument_chooser_(argument_option_finder_, operand_quadrant_measurer_, operand_chooser_)
+    , feature_chooser_(feature_quadrant_measurer_, operand_chooser_)
     , primitive_applier_(
           primitive_store_, argument_chooser_, applications_, app_candidate_finder_, feature_candidates_)
     , synthesis_starter_(feature_candidates_, applications_, variable_candidate_finder_, feature_candidates_)

@@ -17,6 +17,7 @@
 #include "infrastructure/feature_quadrant_measurer.hpp"
 #include "infrastructure/feature_sizer.hpp"
 #include "infrastructure/feature_synthesizer.hpp"
+#include "infrastructure/fraction_drawer.hpp"
 #include "infrastructure/in_rollout_flag.hpp"
 #include "infrastructure/keyed_argument_chooser.hpp"
 #include "infrastructure/keyed_feature_chooser.hpp"
@@ -41,6 +42,7 @@
 #include "infrastructure/primitive_store.hpp"
 #include "infrastructure/quadrant_option_chooser.hpp"
 #include "infrastructure/random_rollout.hpp"
+#include "infrastructure/rollout_switching_option_chooser.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/synthesis_starter.hpp"
 #include "infrastructure/tree_walker.hpp"
@@ -60,6 +62,7 @@
 #include "infrastructure/value_table.hpp"
 #include "infrastructure/variable_candidate_finder.hpp"
 #include "infrastructure/visits_table.hpp"
+#include "infrastructure/weighted_quadrant_chooser.hpp"
 #include "infrastructure/witness_detector.hpp"
 #include "value_objects/mcts_choice.hpp"
 #include "value_objects/mcts_tree_node_id.hpp"
@@ -70,11 +73,12 @@ namespace AML {
 
 // Swift: Merlin with arguments and a match's feature chosen by quadrant. Each operand is made if synthesized or
 // given if an input, a bound argument or a constant, and fresh until the session uses it as an argument or consumed
-// after, which puts it in one of four quadrants (in an xor chain, the tip is alone in made and fresh). A choice is one
-// flat choice among the quadrants holding options, made and fresh first, then one flat choice among that quadrant's
-// options, the same in the search tree and in rollouts. The primitive, a funnel's bound argument and
-// stopping or continuing synthesis are chosen as in Merlin, with its mixmax selection: a node is read as
-// (1 - w) * mean + w * best.
+// after, which puts it in one of four quadrants (in an xor chain, the tip is alone in made and fresh). In the search
+// tree, a choice is one flat choice among the quadrants holding options, made and fresh first, then one flat choice
+// among that quadrant's options. In a rollout, fresh is taken over consumed with probability fresh_weight and then made
+// over given with probability made_weight (both 0.5 for no preference), then any option of the quadrant. The
+// primitive, a funnel's bound argument and stopping or continuing synthesis are chosen as in Merlin, with its mixmax
+// selection: a node is read as (1 - w) * mean + w * best.
 struct swift_manifest {
     struct visits_table_t : monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map> {
         using monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map>::visits_table;
@@ -206,13 +210,25 @@ struct swift_manifest {
     struct quadrant_option_chooser_t : quadrant_option_chooser<option_chooser_t, option_chooser_t> {
         using quadrant_option_chooser<option_chooser_t, option_chooser_t>::quadrant_option_chooser;
     };
-    struct argument_chooser_t
-        : keyed_argument_chooser<argument_option_finder_t, operand_quadrant_measurer_t, quadrant_option_chooser_t> {
-        using keyed_argument_chooser<
-            argument_option_finder_t, operand_quadrant_measurer_t, quadrant_option_chooser_t>::keyed_argument_chooser;
+    struct fraction_drawer_t : fraction_drawer<std::mt19937> {
+        using fraction_drawer<std::mt19937>::fraction_drawer;
     };
-    struct feature_chooser_t : keyed_feature_chooser<feature_quadrant_measurer_t, quadrant_option_chooser_t> {
-        using keyed_feature_chooser<feature_quadrant_measurer_t, quadrant_option_chooser_t>::keyed_feature_chooser;
+    struct weighted_quadrant_chooser_t : weighted_quadrant_chooser<fraction_drawer_t, option_chooser_t> {
+        using weighted_quadrant_chooser<fraction_drawer_t, option_chooser_t>::weighted_quadrant_chooser;
+    };
+    struct operand_chooser_t : rollout_switching_option_chooser<
+        monte_carlo::in_rollout_flag, quadrant_option_chooser_t, weighted_quadrant_chooser_t> {
+        using rollout_switching_option_chooser<
+            monte_carlo::in_rollout_flag, quadrant_option_chooser_t,
+            weighted_quadrant_chooser_t>::rollout_switching_option_chooser;
+    };
+    struct argument_chooser_t
+        : keyed_argument_chooser<argument_option_finder_t, operand_quadrant_measurer_t, operand_chooser_t> {
+        using keyed_argument_chooser<
+            argument_option_finder_t, operand_quadrant_measurer_t, operand_chooser_t>::keyed_argument_chooser;
+    };
+    struct feature_chooser_t : keyed_feature_chooser<feature_quadrant_measurer_t, operand_chooser_t> {
+        using keyed_feature_chooser<feature_quadrant_measurer_t, operand_chooser_t>::keyed_feature_chooser;
     };
     struct primitive_applier_t : primitive_applier<
         primitive_store, argument_chooser_t, application_log, app_candidate_finder_t, cheapest_feature_index> {
@@ -311,6 +327,9 @@ struct swift_manifest {
     operand_quadrant_measurer_t  operand_quadrant_measurer_;
     feature_quadrant_measurer_t  feature_quadrant_measurer_;
     quadrant_option_chooser_t    quadrant_option_chooser_;
+    fraction_drawer_t            fraction_drawer_;
+    weighted_quadrant_chooser_t  weighted_quadrant_chooser_;
+    operand_chooser_t            operand_chooser_;
     argument_chooser_t           argument_chooser_;
     feature_chooser_t            feature_chooser_;
     primitive_applier_t          primitive_applier_;
