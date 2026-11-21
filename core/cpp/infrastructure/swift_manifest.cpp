@@ -56,7 +56,7 @@ swift_manifest::swift_manifest(
     , option_chooser_(mcts_chooser_)
     , operand_quadrant_measurer_(operand_table_, applications_)
     , feature_quadrant_measurer_(operand_table_, operand_quadrant_measurer_)
-    , quadrant_option_chooser_(option_chooser_, option_chooser_, option_chooser_)
+    , quadrant_option_chooser_(option_chooser_, option_chooser_)
     , argument_chooser_(argument_option_finder_, operand_quadrant_measurer_, quadrant_option_chooser_)
     , feature_chooser_(feature_quadrant_measurer_, quadrant_option_chooser_)
     , primitive_applier_(

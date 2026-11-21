@@ -70,9 +70,9 @@ namespace AML {
 
 // Swift: Merlin with arguments and a match's feature chosen by quadrant. Each operand is made if synthesized or
 // given if an input, a bound argument or a constant, and fresh until the session uses it as an argument or consumed
-// after, which puts it in one of four quadrants (in an xor chain, the tip is alone in made and fresh). A choice is a
-// two-way choice of made or given, then a two-way choice of fresh or consumed, then one flat choice among that
-// quadrant's options, the same in the search tree and in rollouts. The primitive, a funnel's bound argument and
+// after, which puts it in one of four quadrants (in an xor chain, the tip is alone in made and fresh). A choice is one
+// flat choice among the quadrants holding options, made and fresh first, then one flat choice among that quadrant's
+// options, the same in the search tree and in rollouts. The primitive, a funnel's bound argument and
 // stopping or continuing synthesis are chosen as in Merlin, with its mixmax selection: a node is read as
 // (1 - w) * mean + w * best.
 struct swift_manifest {
@@ -203,9 +203,8 @@ struct swift_manifest {
     struct feature_quadrant_measurer_t : feature_quadrant_measurer<operand_table_t, operand_quadrant_measurer_t> {
         using feature_quadrant_measurer<operand_table_t, operand_quadrant_measurer_t>::feature_quadrant_measurer;
     };
-    struct quadrant_option_chooser_t
-        : quadrant_option_chooser<option_chooser_t, option_chooser_t, option_chooser_t> {
-        using quadrant_option_chooser<option_chooser_t, option_chooser_t, option_chooser_t>::quadrant_option_chooser;
+    struct quadrant_option_chooser_t : quadrant_option_chooser<option_chooser_t, option_chooser_t> {
+        using quadrant_option_chooser<option_chooser_t, option_chooser_t>::quadrant_option_chooser;
     };
     struct argument_chooser_t
         : keyed_argument_chooser<argument_option_finder_t, operand_quadrant_measurer_t, quadrant_option_chooser_t> {
