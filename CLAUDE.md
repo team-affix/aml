@@ -196,7 +196,8 @@ public facades, as in Atlas. Test primitives are function objects whose one publ
 - Constructor init lists put the comma first. Value objects use `auto operator<=>(const T&) const = default;` and
   tests build them with designated initializers. The exceptions: `typed_primitive` has no comparison, since a
   `std::function` cannot be compared; `column_view` defines `operator==` by the values it reads, not by the cells and
-  rows it shares, so `bin_view` and `candidate`, which hold views, default `operator==` only. Ids are aliases in their own headers (`type_id`, `var_id`, ...).
+  rows it shares, so `bin_view` and `candidate`, which hold views, default `operator==` only. Ids are aliases in their
+  own headers (`type_id`, `var_id`, ...).
 - `std::optional` is checked with `.has_value()` and read with `.value()`. Locals are `const` wherever possible.
 - Tests: mocks and the fixture go in an anonymous namespace; NiceMock by default. Once a method has any
   `EXPECT_CALL`, add a catch-all `EXPECT_CALL(..., method(_)).Times(AnyNumber())` before the specific ones.
