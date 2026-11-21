@@ -6,7 +6,6 @@
 #include <vector>
 #include "infrastructure/app_candidate_finder.hpp"
 #include "infrastructure/application_log.hpp"
-#include "infrastructure/argument_chooser.hpp"
 #include "infrastructure/argument_option_finder.hpp"
 #include "infrastructure/best_model_tracker.hpp"
 #include "infrastructure/bin_splitter.hpp"
@@ -15,6 +14,7 @@
 #include "infrastructure/constant_seeder.hpp"
 #include "infrastructure/constant_store.hpp"
 #include "infrastructure/feature_evaluator.hpp"
+#include "infrastructure/feature_order_measurer.hpp"
 #include "infrastructure/feature_sizer.hpp"
 #include "infrastructure/feature_synthesizer.hpp"
 #include "infrastructure/in_rollout_flag.hpp"
@@ -37,8 +37,12 @@
 #include "infrastructure/primitive_option_finder.hpp"
 #include "infrastructure/primitive_store.hpp"
 #include "infrastructure/random_rollout.hpp"
+#include "infrastructure/rollout_tiered_option_chooser.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/synthesis_starter.hpp"
+#include "infrastructure/tiered_argument_chooser.hpp"
+#include "infrastructure/tiered_feature_chooser.hpp"
+#include "infrastructure/tiered_option_chooser.hpp"
 #include "infrastructure/tree_walker.hpp"
 #include "infrastructure/ucb1.hpp"
 #include "infrastructure/uct_backprop_path.hpp"
@@ -64,11 +68,13 @@
 
 namespace AML {
 
-// Merlin: flat choices with mixmax selection from the mcts submodule. Every choice a model build makes is one MCTS
-// choice among all of its options: the primitive, each argument, a match's feature and a funnel's bound argument, with
-// no two-way splitting and no order tiers; stopping or continuing synthesis is a two-way choice. Each backup adds the
-// episode's reward to a node's sum and raises its best reward; selection reads a node as (1 - w) * mean + w * best
-// (w is best_weight), so each option is judged by the best episode through it rather than the average.
+// Merlin: flat choices with mixmax selection from the mcts submodule. In the search tree, every choice a model build
+// makes is one MCTS choice among all of its options: the primitive, each argument, a match's feature and a funnel's
+// bound argument, with no two-way splitting; stopping or continuing synthesis is a two-way choice. In a rollout, an
+// argument and a match's feature are chosen by order tiers instead (`rollout_tiered_option_chooser`), so random
+// completions build on high-order features as Kite's do, while the tree's statistics stay per option. Each backup adds
+// the episode's reward to a node's sum and raises its best reward; selection reads a node as (1 - w) * mean + w * best
+// (w is best_weight).
 struct merlin_manifest {
     struct visits_table_t : monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map> {
         using monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map>::visits_table;
@@ -191,8 +197,24 @@ struct merlin_manifest {
         : argument_option_finder<operand_table_t, operand_table_t, witness_detector_t> {
         using argument_option_finder<operand_table_t, operand_table_t, witness_detector_t>::argument_option_finder;
     };
-    struct argument_chooser_t : argument_chooser<argument_option_finder_t, option_chooser_t> {
-        using argument_chooser<argument_option_finder_t, option_chooser_t>::argument_chooser;
+    struct tiered_option_chooser_t : tiered_option_chooser<option_chooser_t, option_chooser_t> {
+        using tiered_option_chooser<option_chooser_t, option_chooser_t>::tiered_option_chooser;
+    };
+    struct ordered_option_chooser_t : rollout_tiered_option_chooser<
+        monte_carlo::in_rollout_flag, option_chooser_t, tiered_option_chooser_t> {
+        using rollout_tiered_option_chooser<
+            monte_carlo::in_rollout_flag, option_chooser_t, tiered_option_chooser_t>::rollout_tiered_option_chooser;
+    };
+    struct argument_chooser_t : tiered_argument_chooser<
+        argument_option_finder_t, operand_table_t, feature_order_measurer, ordered_option_chooser_t> {
+        using tiered_argument_chooser<
+            argument_option_finder_t, operand_table_t, feature_order_measurer,
+            ordered_option_chooser_t>::tiered_argument_chooser;
+    };
+    struct feature_chooser_t
+        : tiered_feature_chooser<cheapest_feature_index, feature_order_measurer, ordered_option_chooser_t> {
+        using tiered_feature_chooser<
+            cheapest_feature_index, feature_order_measurer, ordered_option_chooser_t>::tiered_feature_chooser;
     };
     struct primitive_applier_t : primitive_applier<
         primitive_store, argument_chooser_t, application_log, app_candidate_finder_t, cheapest_feature_index> {
@@ -223,10 +245,10 @@ struct merlin_manifest {
         using bound_argument_chooser<variable_candidate_finder_t, option_chooser_t>::bound_argument_chooser;
     };
     struct model_builder_t : model_builder<
-        leaf_detector_t, feature_synthesizer_t, output_finder, option_chooser_t, bound_argument_chooser_t,
+        leaf_detector_t, feature_synthesizer_t, output_finder, feature_chooser_t, bound_argument_chooser_t,
         bin_splitter_t> {
         using model_builder<
-            leaf_detector_t, feature_synthesizer_t, output_finder, option_chooser_t, bound_argument_chooser_t,
+            leaf_detector_t, feature_synthesizer_t, output_finder, feature_chooser_t, bound_argument_chooser_t,
             bin_splitter_t>::model_builder;
     };
     struct model_episode_t : model_episode<model_builder_t, model_sizer_t, best_model_tracker> {
@@ -252,6 +274,7 @@ struct merlin_manifest {
     cheapest_feature_index       feature_candidates_;
     application_log              applications_;
     output_finder                output_finder_;
+    feature_order_measurer       feature_order_measurer_;
     uniform_value_finder         uniform_value_finder_;
     value_sizer                  value_sizer_;
     feature_sizer_t              feature_sizer_;
@@ -288,7 +311,10 @@ struct merlin_manifest {
     mcts_chooser_t               mcts_chooser_;
     terminator_t                 terminator_;
     option_chooser_t             option_chooser_;
+    tiered_option_chooser_t      tiered_option_chooser_;
+    ordered_option_chooser_t     ordered_option_chooser_;
     argument_chooser_t           argument_chooser_;
+    feature_chooser_t            feature_chooser_;
     primitive_applier_t          primitive_applier_;
     synthesis_starter_t          synthesis_starter_;
     feature_synthesizer_t        feature_synthesizer_;

@@ -2,7 +2,6 @@
 #include <variant>
 #include <vector>
 #include <gtest/gtest.h>
-#include "infrastructure/heron_runtime.hpp"
 #include "infrastructure/merlin_manifest.hpp"
 #include "infrastructure/merlin_runtime.hpp"
 #include "infrastructure/schema.hpp"
@@ -199,16 +198,18 @@ TEST_F(MerlinIntegrationTest, AnArgumentIsChosenInOneChoiceAmongAllItsOperands) 
         EXPECT_GT(manifest.visits_.get_visits(manifest.tree_walker_.walk(primitive, operand)), 0u);
 }
 
-TEST_F(MerlinIntegrationTest, NoBestWeightSearchesAsHeronWithoutAFocusBonus) {
+TEST_F(MerlinIntegrationTest, AMatchsFeatureIsChosenInOneChoiceAmongAllFeatures) {
     const bin training = xor_training();
-    merlin_options no_best = options;
-    no_best.best_weight = 0.0;
-    merlin_runtime merlin(types, {bool_equality}, constants, training, no_best);
-    heron_runtime heron(types, {bool_equality}, constants, training,
-                        heron_options{.max_applications = 2, .exploration_constant = 4.0, .focus_width = 0.1,
-                                      .focus_rate = 0.1, .focus_bonus = 0.0, .seed = 7});
-    for (size_t episode = 0; episode < 200; ++episode)
-        EXPECT_EQ(merlin.next().cost, heron.next().cost);
+    merlin_options no_synthesis = options;
+    no_synthesis.max_applications = 0;
+    merlin_manifest manifest(types, {bool_equality}, no_synthesis);
+    manifest.constant_seeder_.seed(constants);
+    const bin_view viewed = bin_view::of(training);
+    for (size_t episode = 0; episode < 50; ++episode)
+        manifest.mcts_episode_.run(viewed);
+    // With no applications the session offers the two inputs; the root's match chooses between them in one choice.
+    for (mcts_choice feature = 0; feature < 2; ++feature)
+        EXPECT_GT(manifest.visits_.get_visits(manifest.tree_walker_.walk(0, feature)), 0u);
 }
 
 TEST_F(MerlinIntegrationTest, TheRootsBestRewardIsTheBestModelsNegatedCost) {

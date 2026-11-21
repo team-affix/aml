@@ -119,9 +119,10 @@ research/                                  experiments and their records; proofs
     node's sum and raises its best (`max_value_update`, `paired_value_update`), and selection reads a node as
     (1 − w)·mean + w·best (`mixmax_value_view`, `best_weight`), so a deep good path among poor siblings is not
     averaged away.
-  - **Merlin** (`merlin_*`): flat choices with mixmax: Heron's wiring (every choice one MCTS choice among all its
-    options, no two-way splitting and no order tiers; stopping or continuing synthesis stays two-way) with Kestrel's
-    mixmax selection in place of focus ucb1.
+  - **Merlin** (`merlin_*`): flat choices with mixmax: in the search tree every choice is one MCTS choice among all
+    its options (no two-way splitting; stopping or continuing synthesis stays two-way), as in Heron, with Kestrel's
+    mixmax selection in place of focus ucb1. In rollouts, an argument and a match's feature are chosen by order tiers
+    as in Kite (`rollout_tiered_option_chooser`), so random completions build on high-order features.
 
 ### Per-bin columns
 
