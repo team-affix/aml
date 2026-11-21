@@ -1,0 +1,19 @@
+Swift on (x + y)^2 * z, inputs 0 to 3 (64 rows), add/sub/mul/square: max applications 9, c 2, best weight 1, fresh weight 0.75, made weight 0.5, seed 1, 10000 episodes
+  new best 365 at 0.0s (episode 1): match y
+  new best 334 at 0.0s (episode 2): match square(z)
+  new best 333 at 0.0s (episode 23): match square(square(z))
+  new best 331 at 0.0s (episode 28): match y
+  new best 325 at 0.0s (episode 35): match z
+  new best 320 at 0.0s (episode 71): match z
+  new best 262 at 0.0s (episode 165): match add(x, y)
+  new best 206 at 0.2s (episode 979): match add(y, x)
+[episode   2000,    0.4s] best 206 | last 2000 episodes: mean cost 362
+[episode   4000,    0.8s] best 206 | last 2000 episodes: mean cost 361
+  new best 9 at 0.9s (episode 4726): leaf mul(mul(add(x, y), add(x, y)), z)
+[episode   6000,    1.2s] best 9 | last 2000 episodes: mean cost 329
+[episode   8000,    1.7s] best 9 | last 2000 episodes: mean cost 303
+  new best 6 at 2.0s (episode 9382): leaf mul(square(add(x, y)), z)
+[episode  10000,    2.1s] best 6 | last 2000 episodes: mean cost 290
+
+Best model, cost 6: leaf mul(square(add(x, y)), z)
+PROOF PASSED: best cost 6 (expected 6), exactly leaf mul(square(add(x, y)), z), 0 of 64 training rows wrong, 0 of 152 unseen rows wrong

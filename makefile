@@ -44,6 +44,7 @@ PROBE_BIN = build/probe
 # make research/<name> into build/research/<name>.
 KESTREL_PARITY_BIN = build/research/kestrel_parity
 SWIFT_PARITY_BIN   = build/research/swift_parity
+SWIFT_SCALED_SQUARE_OF_SUM_BIN = build/research/swift_scaled_square_of_sum
 
 # ==============================================================================
 # Object lists  (object files live in build/obj/<variant>/)
@@ -96,7 +97,8 @@ CORE_DEBUG_FAST_GTEST_DEP = $(CORE_DEBUG_FAST_GTEST_OBJ:.o=.d)
 # User-facing targets
 # ==============================================================================
 
-.PHONY: all core core_debug core_debug_fast test test_fast probe research/kestrel_parity research/swift_parity clean
+.PHONY: all core core_debug core_debug_fast test test_fast probe clean \
+        research/kestrel_parity research/swift_parity research/swift_scaled_square_of_sum
 
 all: core core_debug core_debug_fast
 
@@ -117,6 +119,8 @@ probe: $(PROBE_BIN)
 research/kestrel_parity: $(KESTREL_PARITY_BIN)
 
 research/swift_parity: $(SWIFT_PARITY_BIN)
+
+research/swift_scaled_square_of_sum: $(SWIFT_SCALED_SQUARE_OF_SUM_BIN)
 
 clean:
 	rm -rf build
@@ -166,6 +170,13 @@ SWIFT_PARITY_SRC = research/swift_parity/swift_parity.cpp $(shell find core/test
 $(SWIFT_PARITY_BIN): $(SWIFT_PARITY_SRC) $(CORE_LIB) | build
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(RELEASE_CXXFLAGS) -Icore/test -o $@ $(SWIFT_PARITY_SRC) \
+	    -Lbuild -laml_core
+
+SWIFT_SCALED_SQUARE_OF_SUM_SRC = research/swift_scaled_square_of_sum/swift_scaled_square_of_sum.cpp
+
+$(SWIFT_SCALED_SQUARE_OF_SUM_BIN): $(SWIFT_SCALED_SQUARE_OF_SUM_SRC) $(CORE_LIB) | build
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(RELEASE_CXXFLAGS) -o $@ $(SWIFT_SCALED_SQUARE_OF_SUM_SRC) \
 	    -Lbuild -laml_core
 
 # ==============================================================================
