@@ -6,10 +6,10 @@
 using namespace AML;
 
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
-using ::testing::AnyNumber;
 
 namespace {
 
@@ -48,6 +48,7 @@ OperandApplierTest::OperandApplierTest()
 }
 
 TEST_F(OperandApplierTest, ThePrimitiveIsAppliedToEachRowsOperandCells) {
+    EXPECT_CALL(call_primitive, call(_, _)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(call_primitive, call(2, std::vector<const value*>{&falsity, &truth})).WillOnce(Return(falsity));
     EXPECT_CALL(call_primitive, call(2, std::vector<const value*>{&truth, &falsity})).WillOnce(Return(truth));
@@ -60,6 +61,7 @@ TEST_F(OperandApplierTest, NoRowsGiveAnEmptyColumn) {
 }
 
 TEST_F(OperandApplierTest, AUnaryApplicationReadsOneOperandPerRow) {
+    EXPECT_CALL(call_primitive, call(_, _)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(call_primitive, call(1, std::vector<const value*>{&falsity})).WillOnce(Return(truth));
     EXPECT_CALL(call_primitive, call(1, std::vector<const value*>{&truth})).WillOnce(Return(falsity));
@@ -67,6 +69,7 @@ TEST_F(OperandApplierTest, AUnaryApplicationReadsOneOperandPerRow) {
 }
 
 TEST_F(OperandApplierTest, AnOperandMayFillSeveralPositions) {
+    EXPECT_CALL(call_primitive, call(_, _)).Times(AnyNumber());
     EXPECT_CALL(call_primitive, call(3, std::vector<const value*>{&falsity, &falsity}));
     EXPECT_CALL(call_primitive, call(3, std::vector<const value*>{&truth, &truth}));
     applier.apply(3, {4, 4}, 2);

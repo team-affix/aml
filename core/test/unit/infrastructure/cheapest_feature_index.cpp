@@ -24,11 +24,13 @@ CheapestFeatureIndexTest::CheapestFeatureIndexTest()
     , index() {}
 
 candidate CheapestFeatureIndexTest::make(const feature& expression, size_t cost, const column& cells) {
-    return candidate{.expression = expression, .cost = cost, .observed = typed_column{.type = 0, .cells = cells}};
+    return candidate{
+        .expression = expression, .cost = cost, .observed = column_view::of(typed_column{.type = 0, .cells = cells})};
 }
 
 candidate CheapestFeatureIndexTest::make_typed(const feature& expression, type_id type, const column& cells) {
-    return candidate{.expression = expression, .cost = 1, .observed = typed_column{.type = type, .cells = cells}};
+    return candidate{
+        .expression = expression, .cost = 1, .observed = column_view::of(typed_column{.type = type, .cells = cells})};
 }
 
 }

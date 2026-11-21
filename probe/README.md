@@ -15,7 +15,7 @@ It takes no arguments. Settings live as constants at the top of `probe/main.cpp`
 
 Trains **Falcon**, through `falcon_manifest` directly, to label boolean lists true when their length is odd. The
 training set is every boolean list of length 0 to `k_max_training_length` (127 lists at 6). The elements play no part
-in the label. Synthesis may use list primitives (`probe/list_primitives.hpp`: `is_nil`, `head`, `tail`, `length`),
+in the label. Synthesis may use list primitives (`is_nil`, `head`, `tail` and `length`, in `probe/list_*.hpp`),
 natural-number modulo (`probe/nat_mod.hpp`), and `not` and `xor`, with the constants F, T, nil, 0, 1 and 2. It runs
 until a time limit, a memory limit or Ctrl-C, then prints the best model, and for every length up to
 `k_max_unseen_length` how many lists the best model gets right, wrong or leaves unanswered. Lengths above the training

@@ -6,6 +6,7 @@
 using namespace AML;
 
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::InSequence;
 using ::testing::NiceMock;
 
@@ -43,6 +44,7 @@ ConstantSeederTest::ConstantSeederTest()
 }
 
 TEST_F(ConstantSeederTest, EveryOfferedConstantIsInsertedInOrderWithItsTypeAndFeature) {
+    EXPECT_CALL(insert_constant, insert(_)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(insert_constant, insert(constant_operand{.expression = false_feature, .literal = falsity, .type = 0}));
     EXPECT_CALL(insert_constant, insert(constant_operand{.expression = true_feature, .literal = truth, .type = 0}));

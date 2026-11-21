@@ -3,7 +3,7 @@
 
 #include <cstddef>
 #include <vector>
-#include "value_objects/bin.hpp"
+#include "value_objects/bin_view.hpp"
 #include "value_objects/candidate.hpp"
 #include "value_objects/prim_id.hpp"
 
@@ -35,7 +35,7 @@ struct feature_synthesizer {
         IGetFeatures& get_features,
         IFindOutput& find_output,
         size_t max_applications);
-    const std::vector<candidate>& synthesize(const bin& data);
+    const std::vector<candidate>& synthesize(const bin_view& data);
 private:
     IStartSession& start_session_;
     ICountApplications& count_applications_;
@@ -76,7 +76,7 @@ FEATURE_SYNTHESIZER::feature_synthesizer(
     , max_applications_(max_applications) {}
 
 FEATURE_SYNTHESIZER_TEMPLATE
-const std::vector<candidate>& FEATURE_SYNTHESIZER::synthesize(const bin& data) {
+const std::vector<candidate>& FEATURE_SYNTHESIZER::synthesize(const bin_view& data) {
     start_session_.start(data);
     while (count_applications_.count() < max_applications_) {
         if (find_output_.find(get_features_.candidates(), data.labels).has_value())
@@ -88,7 +88,7 @@ const std::vector<candidate>& FEATURE_SYNTHESIZER::synthesize(const bin& data) {
         if (stop)
             break;
         const size_t chosen = choose_primitive_.choose(options.size());
-        apply_chosen_primitive_.apply(options.at(chosen), data.labels.cells.size());
+        apply_chosen_primitive_.apply(options.at(chosen), data.labels.rows->size());
     }
     return get_features_.candidates();
 }

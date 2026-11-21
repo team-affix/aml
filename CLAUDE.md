@@ -123,9 +123,12 @@ research/                                  experiments and their records; proofs
 ### Per-bin columns
 
 A `bin` is columns aligned by row: `inputs[v]` is variable v's column (the data points' own inputs first, then
-arguments bound by the matches above), and `labels`. Synthesis applies primitives row-wise to operands
-(`operand_applier`); observational equivalence keeps the cheapest feature per column (`cheapest_feature_index`). Raw
-data points are never re-read.
+arguments bound by the matches above), and `labels`. Users give their data as a `bin` of dense `typed_column`s; model
+building reads it as a `bin_view`, whose columns are `column_view`s (shared cells and the rows they select), and a
+runtime views its training data once. So splitting a bin (`bin_splitter`) shares its parent's cells and only selects
+rows (a constructor's bound arguments are the only new cells), and a variable's candidate shares its bin's column.
+Synthesis applies primitives row-wise to operands (`operand_applier`); observational equivalence keeps the cheapest
+feature per column (`cheapest_feature_index`). Raw data points are never re-read.
 
 ### Components (one mechanism each)
 
@@ -178,8 +181,9 @@ public facades, as in Atlas. Test primitives are function objects whose one publ
   a `using` alias, so type names stay short instead of nesting. Members are declared in dependency order with their
   names aligned in one column.
 - Constructor init lists put the comma first. Value objects use `auto operator<=>(const T&) const = default;` and
-  tests build them with designated initializers (`typed_primitive` is the one value object without `operator<=>`,
-  since a `std::function` cannot be compared). Ids are aliases in their own headers (`type_id`, `var_id`, ...).
+  tests build them with designated initializers. The exceptions: `typed_primitive` has no comparison, since a
+  `std::function` cannot be compared; `column_view` defines `operator==` by the values it reads, not by the cells and
+  rows it shares, so `bin_view` and `candidate`, which hold views, default `operator==` only. Ids are aliases in their own headers (`type_id`, `var_id`, ...).
 - `std::optional` is checked with `.has_value()` and read with `.value()`. Locals are `const` wherever possible.
 - Tests: mocks and the fixture go in an anonymous namespace; NiceMock by default. Once a method has any
   `EXPECT_CALL`, add a catch-all `EXPECT_CALL(..., method(_)).Times(AnyNumber())` before the specific ones.

@@ -2,7 +2,7 @@
 #define MCTS_EPISODE_HPP
 
 #include <cstddef>
-#include "value_objects/bin.hpp"
+#include "value_objects/bin_view.hpp"
 #include "value_objects/episode_outcome.hpp"
 
 namespace AML {
@@ -12,7 +12,7 @@ namespace AML {
 template<typename IRunEpisode, typename ISetReward, typename ITerminate>
 struct mcts_episode {
     mcts_episode(IRunEpisode& run_episode, ISetReward& set_reward, ITerminate& terminate);
-    episode_outcome run(const bin& training);
+    episode_outcome run(const bin_view& training);
 private:
     IRunEpisode& run_episode_;
     ISetReward& set_reward_;
@@ -29,7 +29,7 @@ MCTS_EPISODE::mcts_episode(IRunEpisode& run_episode, ISetReward& set_reward, ITe
     , terminate_(terminate) {}
 
 MCTS_EPISODE_TEMPLATE
-episode_outcome MCTS_EPISODE::run(const bin& training) {
+episode_outcome MCTS_EPISODE::run(const bin_view& training) {
     episode_outcome outcome = run_episode_.run(training);
     set_reward_.set_value(-static_cast<double>(outcome.cost));
     terminate_.terminate();

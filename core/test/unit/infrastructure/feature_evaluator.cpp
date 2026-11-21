@@ -5,11 +5,12 @@
 
 using namespace AML;
 
-using ::testing::NiceMock;
-using ::testing::Return;
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::ElementsAre;
+using ::testing::NiceMock;
 using ::testing::Pointee;
+using ::testing::Return;
 
 namespace {
 
@@ -47,6 +48,7 @@ TEST_F(FeatureEvaluatorTest, AConstantGivesItsLiteral) {
 TEST_F(FeatureEvaluatorTest, AnApplicationAppliesItsPrimitiveToItsEvaluatedArguments) {
     const feature inner{feature::app{.prim = 0, .args = {second_var}}};
     const feature outer{feature::app{.prim = 1, .args = {inner, true_constant}}};
+    EXPECT_CALL(call_primitive, call(_, _)).Times(AnyNumber());
     EXPECT_CALL(call_primitive, call(0, ElementsAre(Pointee(falsity)))).WillOnce(Return(truth));
     EXPECT_CALL(call_primitive, call(1, ElementsAre(Pointee(truth), Pointee(truth)))).WillOnce(Return(falsity));
     EXPECT_EQ(evaluator.evaluate(outer, {truth, falsity}), falsity);
@@ -65,6 +67,7 @@ TEST_F(FeatureEvaluatorTest, AConstantIgnoresTheScope) {
 TEST_F(FeatureEvaluatorTest, ArgumentsAreEvaluatedInOrder) {
     const feature first_var{feature::var{.index = 0}};
     const feature application{feature::app{.prim = 2, .args = {first_var, second_var, true_constant}}};
+    EXPECT_CALL(call_primitive, call(_, _)).Times(AnyNumber());
     EXPECT_CALL(call_primitive, call(2, ElementsAre(Pointee(falsity), Pointee(truth), Pointee(truth))))
         .WillOnce(Return(truth));
     EXPECT_EQ(evaluator.evaluate(application, {falsity, truth}), truth);

@@ -5,7 +5,7 @@
 #include <optional>
 #include <utility>
 #include <vector>
-#include "value_objects/bin.hpp"
+#include "value_objects/bin_view.hpp"
 #include "value_objects/candidate.hpp"
 #include "value_objects/feature.hpp"
 #include "value_objects/model_node.hpp"
@@ -35,9 +35,9 @@ struct model_builder {
         IChooseFeature& choose_feature,
         IChooseBoundArgument& choose_bound_argument,
         ISplitBin& split_bin);
-    model_node build(const bin& data);
+    model_node build(const bin_view& data);
 private:
-    model_node build_match(const bin& data, const candidate& scrutinee);
+    model_node build_match(const bin_view& data, const candidate& scrutinee);
 
     IDetectLeaf& detect_leaf_;
     ISynthesizeFeatures& synthesize_features_;
@@ -67,8 +67,8 @@ MODEL_BUILDER::model_builder(
     , split_bin_(split_bin) {}
 
 MODEL_BUILDER_TEMPLATE
-model_node MODEL_BUILDER::build(const bin& data) {
-    if (data.labels.cells.empty())
+model_node MODEL_BUILDER::build(const bin_view& data) {
+    if (data.labels.rows->empty())
         return model_node{model_node::empty{}};
     std::optional<feature> detected = detect_leaf_.detect(data);
     if (detected.has_value())
@@ -85,11 +85,11 @@ model_node MODEL_BUILDER::build(const bin& data) {
 }
 
 MODEL_BUILDER_TEMPLATE
-model_node MODEL_BUILDER::build_match(const bin& data, const candidate& scrutinee) {
-    const std::vector<bin> children = split_bin_.split(data, scrutinee.observed);
+model_node MODEL_BUILDER::build_match(const bin_view& data, const candidate& scrutinee) {
+    const std::vector<bin_view> children = split_bin_.split(data, scrutinee.observed);
     size_t occupied_count = 0;
-    for (const bin& child : children) {
-        if (child.labels.cells.empty())
+    for (const bin_view& child : children) {
+        if (child.labels.rows->empty())
             continue;
         ++occupied_count;
     }
@@ -98,8 +98,9 @@ model_node MODEL_BUILDER::build_match(const bin& data, const candidate& scrutine
 
     const var_id first_bound_argument = static_cast<var_id>(data.inputs.size());
     std::vector<model_node> branches;
-    for (const bin& child : children) {
-        if (!funnels || child.labels.cells.empty()) {
+    branches.reserve(children.size());
+    for (const bin_view& child : children) {
+        if (!funnels || child.labels.rows->empty()) {
             branches.push_back(build(child));
             continue;
         }

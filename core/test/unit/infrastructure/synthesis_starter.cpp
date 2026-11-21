@@ -6,6 +6,7 @@
 using namespace AML;
 
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
@@ -21,7 +22,7 @@ struct MockClearApplications {
 };
 
 struct MockFindVariableCandidates {
-    MOCK_METHOD(std::vector<candidate>, find, (const bin&, var_id), (const));
+    MOCK_METHOD(std::vector<candidate>, find, (const bin_view&, var_id), (const));
 };
 
 struct MockTryInsertFeatureCandidate {
@@ -32,7 +33,7 @@ struct SynthesisStarterTest : public ::testing::Test {
     SynthesisStarterTest();
     value truth;
     feature variable;
-    bin data;
+    bin_view data;
     candidate variable_candidate;
     NiceMock<MockClearFeatureCandidates> clear_feature_candidates;
     NiceMock<MockClearApplications> clear_applications;
@@ -52,7 +53,9 @@ struct SynthesisStarterTest : public ::testing::Test {
 SynthesisStarterTest::SynthesisStarterTest()
     : truth{.ctor = 1, .args = {}}
     , variable{feature::var{.index = 0}}
-    , data{.inputs = {typed_column{.type = 0, .cells = {truth}}}, .labels = typed_column{.type = 0, .cells = {truth}}}
+    , data(bin_view::of(
+          bin{.inputs = {typed_column{.type = 0, .cells = {truth}}},
+              .labels = typed_column{.type = 0, .cells = {truth}}}))
     , variable_candidate{.expression = variable, .cost = 1, .observed = data.inputs[0]}
     , clear_feature_candidates()
     , clear_applications()
@@ -70,11 +73,13 @@ TEST_F(SynthesisStarterTest, TheLastSessionIsForgottenBeforeTheNewOneIsSeeded) {
 }
 
 TEST_F(SynthesisStarterTest, TheBinsHeterogeneousVariablesBecomeTheFirstFeatures) {
+    EXPECT_CALL(try_insert_feature_candidate, try_insert(_)).Times(AnyNumber());
     EXPECT_CALL(try_insert_feature_candidate, try_insert(variable_candidate));
     starter.start(data);
 }
 
 TEST_F(SynthesisStarterTest, VariablesAreSoughtFromTheFirstVariable) {
+    EXPECT_CALL(find_variable_candidates, find(_, _)).Times(AnyNumber());
     EXPECT_CALL(find_variable_candidates, find(data, 0)).WillOnce(Return(std::vector<candidate>{}));
     starter.start(data);
 }
@@ -83,6 +88,7 @@ TEST_F(SynthesisStarterTest, EveryHeterogeneousVariableIsInsertedInOrder) {
     const candidate second{.expression = variable, .cost = 2, .observed = data.inputs[0]};
     ON_CALL(find_variable_candidates, find(data, 0))
         .WillByDefault(Return(std::vector<candidate>{variable_candidate, second}));
+    EXPECT_CALL(try_insert_feature_candidate, try_insert(_)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(try_insert_feature_candidate, try_insert(variable_candidate));
     EXPECT_CALL(try_insert_feature_candidate, try_insert(second));

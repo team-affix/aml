@@ -26,16 +26,18 @@
 #include "infrastructure/variable_candidate_finder.hpp"
 #include "infrastructure/witness_detector.hpp"
 #include "support/value_equality.hpp"
+#include "value_objects/bin_view.hpp"
 #include "value_objects/typed_constant.hpp"
 #include "value_objects/typed_primitive.hpp"
 
 using namespace AML;
 
-using ::testing::Invoke;
+using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::InSequence;
+using ::testing::Invoke;
 using ::testing::NiceMock;
 using ::testing::Return;
-using ::testing::_;
 
 namespace {
 
@@ -176,8 +178,9 @@ feature_synthesizer_t FeatureSynthesisIntegrationTest::make(size_t max_applicati
 
 TEST_F(FeatureSynthesisIntegrationTest, StoppingAtOnceLeavesTheInputs) {
     feature_synthesizer_t synthesizer = make(10);
+    EXPECT_CALL(chooser, choose(_)).Times(AnyNumber());
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(0));
-    const std::vector<candidate>& candidates = synthesizer.synthesize(training);
+    const std::vector<candidate>& candidates = synthesizer.synthesize(bin_view::of(training));
     ASSERT_EQ(candidates.size(), 2u);
     EXPECT_EQ(candidates[0].expression, x0);
     EXPECT_EQ(candidates[1].expression, x1);
@@ -185,35 +188,38 @@ TEST_F(FeatureSynthesisIntegrationTest, StoppingAtOnceLeavesTheInputs) {
 
 TEST_F(FeatureSynthesisIntegrationTest, ChoosingEqualityOfTheInputsDerivesItAtCostThree) {
     feature_synthesizer_t synthesizer = make(10);
+    EXPECT_CALL(chooser, choose(_)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(1));
     EXPECT_CALL(chooser, choose(1)).WillOnce(Return(0));
     EXPECT_CALL(chooser, choose(4)).WillOnce(Return(2));
     EXPECT_CALL(chooser, choose(4)).WillOnce(Return(3));
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(0));
-    const std::vector<candidate>& candidates = synthesizer.synthesize(training);
+    const std::vector<candidate>& candidates = synthesizer.synthesize(bin_view::of(training));
     ASSERT_EQ(candidates.size(), 3u);
     EXPECT_EQ(candidates[2].expression, (feature{feature::app{.prim = 0, .args = {x0, x1}}}));
     EXPECT_EQ(candidates[2].cost, 3u);
-    EXPECT_EQ(candidates[2].observed.cells, (column{truth, falsity, falsity, truth}));
+    EXPECT_EQ(candidates[2].observed,
+              column_view::of(typed_column{.type = boolean, .cells = {truth, falsity, falsity, truth}}));
     EXPECT_EQ(applications.count(), 1u);
 }
 
 TEST_F(FeatureSynthesisIntegrationTest, ATupleOfConstantsIsNeverOffered) {
     feature_synthesizer_t synthesizer = make(10);
+    EXPECT_CALL(chooser, choose(_)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(1));
     EXPECT_CALL(chooser, choose(1)).WillOnce(Return(0));
     EXPECT_CALL(chooser, choose(4)).WillOnce(Return(0));
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(0));
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(0));
-    synthesizer.synthesize(training);
+    synthesizer.synthesize(bin_view::of(training));
 }
 
 TEST_F(FeatureSynthesisIntegrationTest, ApplyingUntilNoWitnessIsLeftTriesEveryUsefulTupleOnce) {
     feature_synthesizer_t synthesizer = make(1000);
     ON_CALL(chooser, choose(_)).WillByDefault(Invoke(&last_option));
-    const std::vector<candidate>& candidates = synthesizer.synthesize(unreachable);
+    const std::vector<candidate>& candidates = synthesizer.synthesize(bin_view::of(unreachable));
     const size_t constant_count = constants.constants_of_type(boolean).size();
     const size_t operand_count = constant_count + candidates.size();
     EXPECT_EQ(applications.count(), operand_count * operand_count - constant_count * constant_count);
@@ -223,32 +229,33 @@ TEST_F(FeatureSynthesisIntegrationTest, ApplyingUntilNoWitnessIsLeftTriesEveryUs
 TEST_F(FeatureSynthesisIntegrationTest, TheSessionAppliesNoMoreThanTheCap) {
     feature_synthesizer_t synthesizer = make(5);
     ON_CALL(chooser, choose(_)).WillByDefault(Invoke(&last_option));
-    synthesizer.synthesize(unreachable);
+    synthesizer.synthesize(bin_view::of(unreachable));
     EXPECT_EQ(applications.count(), 5u);
 }
 
 TEST_F(FeatureSynthesisIntegrationTest, EveryDerivedFeatureIsHeterogeneousAndHasItsOwnColumn) {
     feature_synthesizer_t synthesizer = make(1000);
     ON_CALL(chooser, choose(_)).WillByDefault(Invoke(&last_option));
-    std::vector<column> columns;
-    for (const candidate& entry : synthesizer.synthesize(unreachable)) {
-        EXPECT_FALSE(uniform_values.find(entry.observed.cells).has_value());
-        EXPECT_EQ(std::find(columns.begin(), columns.end(), entry.observed.cells), columns.end());
-        columns.push_back(entry.observed.cells);
+    std::vector<column_view> columns;
+    for (const candidate& entry : synthesizer.synthesize(bin_view::of(unreachable))) {
+        EXPECT_FALSE(uniform_values.find(entry.observed).has_value());
+        EXPECT_EQ(std::find(columns.begin(), columns.end(), entry.observed), columns.end());
+        columns.push_back(entry.observed);
     }
 }
 
 TEST_F(FeatureSynthesisIntegrationTest, ANewSessionForgetsTheLastOne) {
     feature_synthesizer_t synthesizer = make(1000);
     ON_CALL(chooser, choose(_)).WillByDefault(Invoke(&last_option));
-    synthesizer.synthesize(unreachable);
+    synthesizer.synthesize(bin_view::of(unreachable));
     ON_CALL(chooser, choose(_)).WillByDefault(Return(0));
-    EXPECT_EQ(synthesizer.synthesize(unreachable).size(), 2u);
+    EXPECT_EQ(synthesizer.synthesize(bin_view::of(unreachable)).size(), 2u);
     EXPECT_EQ(applications.count(), 0u);
 }
 
 TEST_F(FeatureSynthesisIntegrationTest, DerivingTheLabelsEndsTheSessionWithThemAsAFeature) {
     feature_synthesizer_t synthesizer = make(10);
+    EXPECT_CALL(chooser, choose(_)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(chooser, choose(2)).WillOnce(Return(1));
     EXPECT_CALL(chooser, choose(1)).WillOnce(Return(0));
@@ -258,11 +265,11 @@ TEST_F(FeatureSynthesisIntegrationTest, DerivingTheLabelsEndsTheSessionWithThemA
     EXPECT_CALL(chooser, choose(1)).WillOnce(Return(0));
     EXPECT_CALL(chooser, choose(5)).WillOnce(Return(4));
     EXPECT_CALL(chooser, choose(5)).WillOnce(Return(0));
-    const std::vector<candidate>& candidates = synthesizer.synthesize(training);
+    const std::vector<candidate>& candidates = synthesizer.synthesize(bin_view::of(training));
     const feature equal_inputs{feature::app{.prim = 0, .args = {x0, x1}}};
     const feature false_constant{feature::constant{.literal = falsity}};
     const feature exclusive_or{feature::app{.prim = 0, .args = {equal_inputs, false_constant}}};
-    EXPECT_EQ(outputs.find(candidates, training.labels), std::optional<feature>(exclusive_or));
+    EXPECT_EQ(outputs.find(candidates, column_view::of(training.labels)), std::optional<feature>(exclusive_or));
     EXPECT_EQ(applications.count(), 2u);
 }
 
@@ -270,17 +277,18 @@ TEST_F(FeatureSynthesisIntegrationTest, AnInputThatIsAlreadyTheOutputStopsTheSes
     feature_synthesizer_t synthesizer = make(10);
     const bin copy_first{.inputs = training.inputs, .labels = training.inputs[0]};
     EXPECT_CALL(chooser, choose(_)).Times(0);
-    synthesizer.synthesize(copy_first);
+    synthesizer.synthesize(bin_view::of(copy_first));
     EXPECT_EQ(applications.count(), 0u);
 }
 
 TEST_F(FeatureSynthesisIntegrationTest, EveryFeaturesColumnIsWhatEvaluatingItOnEachRowGives) {
     feature_synthesizer_t synthesizer = make(1000);
     ON_CALL(chooser, choose(_)).WillByDefault(Invoke(&last_option));
-    for (const candidate& entry : synthesizer.synthesize(unreachable)) {
+    for (const candidate& entry : synthesizer.synthesize(bin_view::of(unreachable))) {
         for (size_t row = 0; row < unreachable.labels.cells.size(); ++row) {
             const std::vector<value> inputs{unreachable.inputs[0].cells[row], unreachable.inputs[1].cells[row]};
-            EXPECT_EQ(evaluator.evaluate(entry.expression, inputs), entry.observed.cells[row]);
+            const value& observed = (*entry.observed.cells)[(*entry.observed.rows)[row]];
+            EXPECT_EQ(evaluator.evaluate(entry.expression, inputs), observed);
         }
     }
 }
@@ -288,6 +296,6 @@ TEST_F(FeatureSynthesisIntegrationTest, EveryFeaturesColumnIsWhatEvaluatingItOnE
 TEST_F(FeatureSynthesisIntegrationTest, EveryFeaturesCostIsItsSize) {
     feature_synthesizer_t synthesizer = make(1000);
     ON_CALL(chooser, choose(_)).WillByDefault(Invoke(&last_option));
-    for (const candidate& entry : synthesizer.synthesize(unreachable))
+    for (const candidate& entry : synthesizer.synthesize(bin_view::of(unreachable)))
         EXPECT_EQ(entry.cost, feature_sizes.size(entry.expression));
 }

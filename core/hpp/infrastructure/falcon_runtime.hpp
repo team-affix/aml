@@ -4,12 +4,13 @@
 #include <cstddef>
 #include <optional>
 #include <vector>
-#include "infrastructure/schema.hpp"
 #include "infrastructure/falcon_manifest.hpp"
+#include "infrastructure/schema.hpp"
 #include "value_objects/bin.hpp"
+#include "value_objects/bin_view.hpp"
 #include "value_objects/episode_outcome.hpp"
-#include "value_objects/model_node.hpp"
 #include "value_objects/falcon_options.hpp"
+#include "value_objects/model_node.hpp"
 #include "value_objects/typed_constant.hpp"
 #include "value_objects/typed_primitive.hpp"
 #include "value_objects/value.hpp"
@@ -29,7 +30,7 @@ struct falcon_runtime {
     std::optional<value> infer(const std::vector<value>& inputs) const;
 private:
     falcon_manifest manifest_;
-    bin training_;
+    bin_view training_;
 };
 
 }

@@ -2,7 +2,7 @@
 #define LEAF_DETECTOR_HPP
 
 #include <optional>
-#include "value_objects/bin.hpp"
+#include "value_objects/bin_view.hpp"
 #include "value_objects/feature.hpp"
 #include "value_objects/value.hpp"
 #include "value_objects/var_id.hpp"
@@ -15,7 +15,7 @@ namespace AML {
 template<typename IFindUniformValue>
 struct leaf_detector {
     leaf_detector(IFindUniformValue& find_uniform_value);
-    std::optional<feature> detect(const bin& data) const;
+    std::optional<feature> detect(const bin_view& data) const;
 private:
     IFindUniformValue& find_uniform_value_;
 };
@@ -28,13 +28,13 @@ LEAF_DETECTOR::leaf_detector(IFindUniformValue& find_uniform_value)
     : find_uniform_value_(find_uniform_value) {}
 
 LEAF_DETECTOR_TEMPLATE
-std::optional<feature> LEAF_DETECTOR::detect(const bin& data) const {
+std::optional<feature> LEAF_DETECTOR::detect(const bin_view& data) const {
     for (var_id index = 0; index < data.inputs.size(); ++index) {
         if (data.inputs[index] != data.labels)
             continue;
         return feature{feature::var{.index = index}};
     }
-    const std::optional<const value*> label = find_uniform_value_.find(data.labels.cells);
+    const std::optional<const value*> label = find_uniform_value_.find(data.labels);
     if (!label.has_value())
         return std::nullopt;
     return feature{feature::constant{.literal = *label.value()}};

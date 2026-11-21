@@ -82,9 +82,9 @@ OperandTableTest::OperandTableTest()
           constant_operand{.expression = false_constant, .literal = falsity, .type = 0}}
     , features{
           candidate{.expression = first_variable, .cost = 1,
-                    .observed = typed_column{.type = 0, .cells = {falsity, truth}}},
+                    .observed = column_view::of(typed_column{.type = 0, .cells = {falsity, truth}})},
           candidate{.expression = second_variable, .cost = 1,
-                    .observed = typed_column{.type = 1, .cells = {zero, truth}}}}
+                    .observed = column_view::of(typed_column{.type = 1, .cells = {zero, truth}})}}
     , boolean_constants{0, 2}
     , nat_constants{1}
     , boolean_features{0}

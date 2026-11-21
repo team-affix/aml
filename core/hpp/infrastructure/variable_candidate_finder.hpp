@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <utility>
 #include <vector>
-#include "value_objects/bin.hpp"
+#include "value_objects/bin_view.hpp"
 #include "value_objects/candidate.hpp"
 #include "value_objects/feature.hpp"
 #include "value_objects/var_id.hpp"
@@ -15,7 +15,7 @@ namespace AML {
 template<typename ISizeFeature, typename IFindUniformValue>
 struct variable_candidate_finder {
     variable_candidate_finder(ISizeFeature& size_feature, IFindUniformValue& find_uniform_value);
-    std::vector<candidate> find(const bin& data, var_id first_var) const;
+    std::vector<candidate> find(const bin_view& data, var_id first_var) const;
 private:
     ISizeFeature& size_feature_;
     IFindUniformValue& find_uniform_value_;
@@ -30,10 +30,10 @@ VARIABLE_CANDIDATE_FINDER::variable_candidate_finder(ISizeFeature& size_feature,
     , find_uniform_value_(find_uniform_value) {}
 
 VARIABLE_CANDIDATE_FINDER_TEMPLATE
-std::vector<candidate> VARIABLE_CANDIDATE_FINDER::find(const bin& data, var_id first_var) const {
+std::vector<candidate> VARIABLE_CANDIDATE_FINDER::find(const bin_view& data, var_id first_var) const {
     std::vector<candidate> candidates;
     for (var_id index = first_var; index < data.inputs.size(); ++index) {
-        if (find_uniform_value_.find(data.inputs[index].cells).has_value())
+        if (find_uniform_value_.find(data.inputs[index]).has_value())
             continue;
         feature expression{feature::var{.index = index}};
         const size_t cost = size_feature_.size(expression);

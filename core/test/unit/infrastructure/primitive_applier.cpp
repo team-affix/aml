@@ -7,6 +7,7 @@
 using namespace AML;
 
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::InSequence;
 using ::testing::NiceMock;
 using ::testing::Return;
@@ -64,7 +65,9 @@ PrimitiveApplierTest::PrimitiveApplierTest()
     , truth{.ctor = 1, .args = {}}
     , application{feature::app{.prim = 5, .args = {}}}
     , application_candidate{
-          .expression = application, .cost = 3, .observed = typed_column{.type = 4, .cells = {truth, falsity}}}
+          .expression = application,
+          .cost = 3,
+          .observed = column_view::of(typed_column{.type = 4, .cells = {truth, falsity}})}
     , type{.arg_types = {0, 0}, .result_type = 4}
     , get_primitive_type()
     , choose_arguments()
@@ -75,6 +78,9 @@ PrimitiveApplierTest::PrimitiveApplierTest()
 }
 
 TEST_F(PrimitiveApplierTest, TheArgumentsAreChosenForTheSignatureThenLoggedThenApplied) {
+    EXPECT_CALL(choose_arguments, choose(_, _)).Times(AnyNumber());
+    EXPECT_CALL(record_application, record(_)).Times(AnyNumber());
+    EXPECT_CALL(find_app_candidate, find(_, _, _, _)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(choose_arguments, choose(5, type.arg_types)).WillOnce(Return(std::vector<size_t>{0, 1}));
     EXPECT_CALL(record_application, record(prim_application{.prim = 5, .args = {0, 1}}));
@@ -83,6 +89,7 @@ TEST_F(PrimitiveApplierTest, TheArgumentsAreChosenForTheSignatureThenLoggedThenA
 }
 
 TEST_F(PrimitiveApplierTest, AFoundApplicationJoinsTheFeatures) {
+    EXPECT_CALL(try_insert_feature, try_insert(_)).Times(AnyNumber());
     EXPECT_CALL(try_insert_feature, try_insert(application_candidate));
     applier.apply(5, 2);
 }
@@ -95,6 +102,7 @@ TEST_F(PrimitiveApplierTest, AnApplicationThatIsNotFoundIsStillLoggedButDoesNotJ
 }
 
 TEST_F(PrimitiveApplierTest, TheTypeOfTheChosenPrimitiveIsUsed) {
+    EXPECT_CALL(get_primitive_type, type(_)).Times(AnyNumber());
     EXPECT_CALL(get_primitive_type, type(5)).WillOnce(ReturnRef(type));
     applier.apply(5, 2);
 }

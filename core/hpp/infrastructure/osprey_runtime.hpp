@@ -4,9 +4,10 @@
 #include <cstddef>
 #include <optional>
 #include <vector>
-#include "infrastructure/schema.hpp"
 #include "infrastructure/osprey_manifest.hpp"
+#include "infrastructure/schema.hpp"
 #include "value_objects/bin.hpp"
+#include "value_objects/bin_view.hpp"
 #include "value_objects/episode_outcome.hpp"
 #include "value_objects/model_node.hpp"
 #include "value_objects/osprey_options.hpp"
@@ -29,7 +30,7 @@ struct osprey_runtime {
     std::optional<value> infer(const std::vector<value>& inputs) const;
 private:
     osprey_manifest manifest_;
-    bin training_;
+    bin_view training_;
 };
 
 }

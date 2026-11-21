@@ -3,7 +3,7 @@
 
 #include <cstddef>
 #include <utility>
-#include "value_objects/bin.hpp"
+#include "value_objects/bin_view.hpp"
 #include "value_objects/episode_outcome.hpp"
 #include "value_objects/model_node.hpp"
 
@@ -14,7 +14,7 @@ namespace AML {
 template<typename IBuildModel, typename ISizeModel, typename ITryRecordModel>
 struct model_episode {
     model_episode(IBuildModel& build_model, ISizeModel& size_model, ITryRecordModel& try_record_model);
-    episode_outcome run(const bin& training);
+    episode_outcome run(const bin_view& training);
 private:
     IBuildModel& build_model_;
     ISizeModel& size_model_;
@@ -31,7 +31,7 @@ MODEL_EPISODE::model_episode(IBuildModel& build_model, ISizeModel& size_model, I
     , try_record_model_(try_record_model) {}
 
 MODEL_EPISODE_TEMPLATE
-episode_outcome MODEL_EPISODE::run(const bin& training) {
+episode_outcome MODEL_EPISODE::run(const bin_view& training) {
     model_node model = build_model_.build(training);
     const size_t cost = size_model_.size(model);
     try_record_model_.try_record(model, cost);

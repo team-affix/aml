@@ -7,6 +7,7 @@
 using namespace AML;
 
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::NiceMock;
 using ::testing::Return;
 
@@ -16,8 +17,8 @@ struct MockEvaluateFeature {
     MOCK_METHOD(value, evaluate, (const feature&, const std::vector<value>&), (const));
 };
 
-// Nat is type 0: zero is constructor 0, suc constructor 1. The outer match is on x0: zero gives false; suc binds x1 and matches on
-// it, where zero gives nothing and suc (binding x2) outputs x2.
+// Nat is type 0: zero is constructor 0, suc constructor 1. The outer match is on x0: zero gives false; suc binds x1
+// and matches on it, where zero gives nothing and suc (binding x2) outputs x2.
 struct ModelEvaluatorTest : public ::testing::Test {
     ModelEvaluatorTest();
     value zero;
@@ -60,6 +61,7 @@ ModelEvaluatorTest::ModelEvaluatorTest()
 }
 
 TEST_F(ModelEvaluatorTest, ALeafGivesItsOutputEvaluatedOnTheInputs) {
+    EXPECT_CALL(evaluate_feature, evaluate(_, _)).Times(AnyNumber());
     EXPECT_CALL(evaluate_feature, evaluate(false_output, std::vector<value>{zero})).WillOnce(Return(falsity));
     EXPECT_EQ(evaluator.evaluate(false_leaf, {zero}), std::optional<value>(falsity));
 }
@@ -74,6 +76,7 @@ TEST_F(ModelEvaluatorTest, AMatchDescendsIntoTheMatchedConstructorsBranch) {
 }
 
 TEST_F(ModelEvaluatorTest, EachMatchBindsItsConstructorsArgumentsBeforeDescending) {
+    EXPECT_CALL(evaluate_feature, evaluate(_, _)).Times(AnyNumber());
     EXPECT_CALL(evaluate_feature, evaluate(input, std::vector<value>{two})).WillOnce(Return(two));
     EXPECT_CALL(evaluate_feature, evaluate(predecessor, std::vector<value>{two, one}))
         .WillOnce(Return(one));

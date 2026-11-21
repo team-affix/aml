@@ -65,6 +65,8 @@ TieredArgumentChooserTest::TieredArgumentChooserTest()
 
 TEST_F(TieredArgumentChooserTest, EachArgumentIsChosenByTheOrdersOfTheOptionsLeftByTheArgumentsBeforeIt) {
     const std::vector<type_id> arg_types{0, 0};
+    EXPECT_CALL(find_argument_options, find(_, _, _)).Times(AnyNumber());
+    EXPECT_CALL(choose_option, choose(_)).Times(AnyNumber());
     InSequence order;
     EXPECT_CALL(find_argument_options, find(3, arg_types, std::vector<size_t>{}))
         .WillOnce(Return(std::vector<size_t>{4, 6}));
@@ -78,6 +80,7 @@ TEST_F(TieredArgumentChooserTest, EachArgumentIsChosenByTheOrdersOfTheOptionsLef
 TEST_F(TieredArgumentChooserTest, EachOptionsOrderIsMeasuredFromItsOperandsExpression) {
     ON_CALL(find_argument_options, find(_, _, _)).WillByDefault(Return(std::vector<size_t>{6, 5}));
     EXPECT_CALL(get_operand_expression, expression(_)).Times(AnyNumber());
+    EXPECT_CALL(choose_option, choose(_)).Times(AnyNumber());
     EXPECT_CALL(get_operand_expression, expression(6));
     EXPECT_CALL(get_operand_expression, expression(5));
     EXPECT_CALL(choose_option, choose(std::vector<size_t>{1, 0})).WillOnce(Return(0));
@@ -91,6 +94,7 @@ TEST_F(TieredArgumentChooserTest, ANullaryPrimitiveHasNoArguments) {
 
 TEST_F(TieredArgumentChooserTest, AForcedArgumentIsStillChosenThrough) {
     ON_CALL(find_argument_options, find(_, _, _)).WillByDefault(Return(std::vector<size_t>{5}));
+    EXPECT_CALL(choose_option, choose(_)).Times(AnyNumber());
     EXPECT_CALL(choose_option, choose(std::vector<size_t>{0})).Times(3).WillRepeatedly(Return(0));
     EXPECT_EQ(chooser.choose(0, {0, 0, 0}), (std::vector<size_t>{5, 5, 5}));
 }

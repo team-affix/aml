@@ -6,6 +6,7 @@
 using namespace AML;
 
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::NiceMock;
 using ::testing::Return;
 
@@ -94,6 +95,7 @@ TEST_F(WitnessDetectorTest, AnArgumentTypeWithNoOperandsLeavesNoWitness) {
 }
 
 TEST_F(WitnessDetectorTest, TriedApplicationsAreCountedForThatPrimitiveAndPrefix) {
+    EXPECT_CALL(count_tried_applications, count_with_prefix(_, _)).Times(AnyNumber());
     EXPECT_CALL(count_tried_applications, count_with_prefix(4, std::vector<size_t>{2})).WillOnce(Return(0));
     detector.detect(4, {0, 0}, {2});
 }

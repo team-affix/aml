@@ -8,6 +8,7 @@
 #include "infrastructure/schema.hpp"
 #include "infrastructure/scout_runtime.hpp"
 #include "support/value_equality.hpp"
+#include "value_objects/bin_view.hpp"
 #include "value_objects/typed_constant.hpp"
 #include "value_objects/typed_primitive.hpp"
 
@@ -169,12 +170,12 @@ TEST_F(FalconIntegrationTest, TheSearchCommitsOnceEachTimeTheFrontierGathersItsV
     falcon_manifest manifest(types, {bool_equality}, committing);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 20; ++episode)
-        manifest.mcts_episode_.run(training);
+        manifest.mcts_episode_.run(bin_view::of(training));
     EXPECT_EQ(manifest.commitments_.commitment_count(), 0u);
-    manifest.mcts_episode_.run(training);
+    manifest.mcts_episode_.run(bin_view::of(training));
     EXPECT_EQ(manifest.commitments_.commitment_count(), 1u);
     for (size_t episode = 0; episode < 40; ++episode)
-        manifest.mcts_episode_.run(training);
+        manifest.mcts_episode_.run(bin_view::of(training));
     EXPECT_EQ(manifest.commitments_.commitment_count(), 3u);
 }
 
@@ -185,14 +186,14 @@ TEST_F(FalconIntegrationTest, TheCommittedRootChoiceIsTakenByEveryLaterEpisode) 
     falcon_manifest manifest(types, {bool_equality}, committing);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 21; ++episode)
-        manifest.mcts_episode_.run(training);
+        manifest.mcts_episode_.run(bin_view::of(training));
     const mcts_choice committed = manifest.commitments_.find_commitment(0).value();
     const mcts_tree_node_id taken = manifest.tree_walker_.walk(0, committed);
     const mcts_tree_node_id other = manifest.tree_walker_.walk(0, 1 - committed);
     const size_t taken_before = manifest.visits_.get_visits(taken);
     const size_t other_before = manifest.visits_.get_visits(other);
     for (size_t episode = 0; episode < 30; ++episode)
-        manifest.mcts_episode_.run(training);
+        manifest.mcts_episode_.run(bin_view::of(training));
     EXPECT_EQ(manifest.visits_.get_visits(taken), taken_before + 30);
     EXPECT_EQ(manifest.visits_.get_visits(other), other_before);
 }
@@ -204,7 +205,7 @@ TEST_F(FalconIntegrationTest, APrimitiveIsChosenInOneChoiceAmongAllPrimitives) {
     falcon_manifest manifest(types, {bool_equality, bool_equality, bool_equality}, never);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 50; ++episode)
-        manifest.mcts_episode_.run(training);
+        manifest.mcts_episode_.run(bin_view::of(training));
     // The root chooses between stopping (0) and continuing (1) synthesis; continuing, one choice picks the primitive.
     const mcts_tree_node_id continued = manifest.tree_walker_.walk(0, 1);
     for (mcts_choice primitive = 0; primitive < 3; ++primitive)
@@ -218,9 +219,9 @@ TEST_F(FalconIntegrationTest, TheRootIsCommittedToTheBestEpisodesFirstChoice) {
     falcon_manifest manifest(types, {bool_equality}, committing);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 20; ++episode)
-        manifest.mcts_episode_.run(training);
+        manifest.mcts_episode_.run(bin_view::of(training));
     const mcts_choice first = manifest.best_path_.find_step(0).value();
-    manifest.mcts_episode_.run(training);
+    manifest.mcts_episode_.run(bin_view::of(training));
     EXPECT_EQ(manifest.commitments_.find_commitment(0), std::optional<mcts_choice>(first));
 }
 
@@ -229,7 +230,7 @@ TEST_F(FalconIntegrationTest, TheBestPathsRewardIsTheBestModelsNegatedCost) {
     falcon_manifest manifest(types, {bool_equality}, options);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 60; ++episode) {
-        manifest.mcts_episode_.run(training);
+        manifest.mcts_episode_.run(bin_view::of(training));
         EXPECT_EQ(manifest.best_path_.best_reward(), -static_cast<double>(manifest.best_model_tracker_.best_cost()));
     }
 }
@@ -241,7 +242,7 @@ TEST_F(FalconIntegrationTest, EveryCommitmentFollowsTheBestPath) {
     falcon_manifest manifest(types, {bool_equality}, committing);
     manifest.constant_seeder_.seed(constants);
     for (size_t episode = 0; episode < 101; ++episode)
-        manifest.mcts_episode_.run(training);
+        manifest.mcts_episode_.run(bin_view::of(training));
     ASSERT_GT(manifest.commitments_.commitment_count(), 1u);
     mcts_tree_node_id node = 0;
     while (manifest.commitments_.find_commitment(node).has_value()) {
