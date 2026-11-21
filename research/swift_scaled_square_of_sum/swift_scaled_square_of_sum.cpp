@@ -1,4 +1,5 @@
-// Swift on arithmetic: the proof that Swift finds f(x, y, z) = (x + y)^2 * z from its values, as the formula itself.
+// Swift on the scaled square of a sum: the proof that Swift finds f(x, y, z) = (x + y)^2 * z from its values, as the
+// formula itself.
 // It is the exact run recorded in README.md, with every setting fixed below; change nothing here, or it is no longer
 // that run. Numbers are binary naturals, a user type with the constructors zero, twice(n) (2n) and twice_plus_one(n)
 // (2n + 1), so a number takes about log2 of its value in nodes. Swift trains on every (x, y, z) with each input from 0
@@ -8,8 +9,8 @@
 // PROOF PASSED or PROOF FAILED, and exits with 0 or 1.
 //
 // Build and run from the repository root:
-//   make research/swift_arithmetic
-//   ./build/research/swift_arithmetic
+//   make research/swift_scaled_square_of_sum
+//   ./build/research/swift_scaled_square_of_sum
 
 #include <chrono>
 #include <cstddef>

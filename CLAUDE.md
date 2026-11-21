@@ -167,9 +167,9 @@ feature per column (`cheapest_feature_index`). Raw data points are never re-read
 - The makefile `find`s every `.cpp` under `core/cpp`, `core/test` and `mcts/core/cpp`.
   **A new file is picked up automatically, so don't edit the makefile to register it.**
 - CI (`.github/workflows/ci.yml`) builds and runs `core_debug_fast`.
-- A research proof (`research/<name>/`, e.g. `kestrel_parity`, `swift_parity`, `swift_arithmetic`) is one recorded
-  run with its settings fixed in its source; a new proof stops after a fixed number of episodes, not seconds, so it
-  does the same work on any machine; `make research/<name>` builds it into `build/research/<name>`. Never edit a
+- A research proof (`research/<name>/`, e.g. `kestrel_parity`, `swift_parity`, `swift_scaled_square_of_sum`) is one
+  recorded run with its settings fixed in its source; a new proof stops after a fixed number of episodes, not seconds,
+  so it does the same work on any machine; `make research/<name>` builds it into `build/research/<name>`. Never edit a
   proof's settings; a new experiment gets a new proof and a new `research/<name>` target.
 
 ## Code style — the rules

@@ -1,4 +1,4 @@
-# Swift on arithmetic
+# Swift on the scaled square of a sum
 
 Swift finds f(x, y, z) = (x + y)² · z from 64 of its values, as the formula itself: one leaf outputting
 `mul(square(add(x, y)), z)`, cost 6. It is right on every unseen input tried, so it is the function, not a table of
@@ -18,7 +18,7 @@ the training rows.
 
 ## Result
 
-`build/research/swift_arithmetic`, about 4,500 episodes per second:
+`build/research/swift_scaled_square_of_sum`, about 4,500 episodes per second:
 
 | Episode | Best cost | Best model's root |
 |---|---|---|
@@ -33,15 +33,15 @@ experiment it was cut down from.
 
 ## Reproducing
 
-`swift_arithmetic.cpp` is this run and nothing else: every setting is a constant in its source, its primitives are
+`swift_scaled_square_of_sum.cpp` is this run and nothing else: every setting is a constant in its source, its primitives are
 defined in it, and it takes no arguments. At the end it checks the result itself: the best model must cost 6, be a
 leaf, and be right on every training and unseen row. It prints `PROOF PASSED` and exits with 0, or `PROOF FAILED`
 with what it found and exits with 1. From the repository root:
 
 ```bash
-make research/swift_arithmetic
+make research/swift_scaled_square_of_sum
 ```
 
 ```bash
-./build/research/swift_arithmetic
+./build/research/swift_scaled_square_of_sum
 ```
