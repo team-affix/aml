@@ -131,6 +131,11 @@ research/                                  experiments and their records; proofs
     (`quadrant_option_chooser`); in rollouts fresh is taken with probability `fresh_weight` and made with
     `made_weight` (0.5 is no preference; `weighted_quadrant_chooser`, `fraction_drawer`, switched by
     `rollout_switching_option_chooser`).
+  - **Wren** (`wren_*`): Swift with every choice among many options split into two-way choices in the search tree
+    (`binary_option_chooser`, as in Razor): the primitive, an argument or a match's feature within its quadrant, and a
+    funnel's bound argument. The quadrant stays one flat choice among at most four, so the tree's branching is at most
+    four whatever the number of primitives or features, and how soon the search exploits no longer grows with them.
+    Rollouts choose within a quadrant as Swift's do.
 
 ### Per-bin columns
 
