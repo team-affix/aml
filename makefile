@@ -45,6 +45,7 @@ PROBE_BIN = build/probe
 KESTREL_PARITY_BIN = build/research/kestrel_parity
 SWIFT_PARITY_BIN   = build/research/swift_parity
 SWIFT_SCALED_SQUARE_OF_SUM_BIN = build/research/swift_scaled_square_of_sum
+SWIFT_REUSED_PRODUCT_BIN = build/research/swift_reused_product
 
 # ==============================================================================
 # Object lists  (object files live in build/obj/<variant>/)
@@ -98,7 +99,8 @@ CORE_DEBUG_FAST_GTEST_DEP = $(CORE_DEBUG_FAST_GTEST_OBJ:.o=.d)
 # ==============================================================================
 
 .PHONY: all core core_debug core_debug_fast test test_fast probe clean \
-        research/kestrel_parity research/swift_parity research/swift_scaled_square_of_sum
+        research/kestrel_parity research/swift_parity research/swift_scaled_square_of_sum \
+        research/swift_reused_product
 
 all: core core_debug core_debug_fast
 
@@ -121,6 +123,8 @@ research/kestrel_parity: $(KESTREL_PARITY_BIN)
 research/swift_parity: $(SWIFT_PARITY_BIN)
 
 research/swift_scaled_square_of_sum: $(SWIFT_SCALED_SQUARE_OF_SUM_BIN)
+
+research/swift_reused_product: $(SWIFT_REUSED_PRODUCT_BIN)
 
 clean:
 	rm -rf build
@@ -177,6 +181,13 @@ SWIFT_SCALED_SQUARE_OF_SUM_SRC = research/swift_scaled_square_of_sum/swift_scale
 $(SWIFT_SCALED_SQUARE_OF_SUM_BIN): $(SWIFT_SCALED_SQUARE_OF_SUM_SRC) $(CORE_LIB) | build
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(RELEASE_CXXFLAGS) -o $@ $(SWIFT_SCALED_SQUARE_OF_SUM_SRC) \
+	    -Lbuild -laml_core
+
+SWIFT_REUSED_PRODUCT_SRC = research/swift_reused_product/swift_reused_product.cpp
+
+$(SWIFT_REUSED_PRODUCT_BIN): $(SWIFT_REUSED_PRODUCT_SRC) $(CORE_LIB) | build
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(RELEASE_CXXFLAGS) -o $@ $(SWIFT_REUSED_PRODUCT_SRC) \
 	    -Lbuild -laml_core
 
 # ==============================================================================
