@@ -17,7 +17,6 @@
 #include "infrastructure/feature_quadrant_measurer.hpp"
 #include "infrastructure/feature_sizer.hpp"
 #include "infrastructure/feature_synthesizer.hpp"
-#include "infrastructure/grouped_option_chooser.hpp"
 #include "infrastructure/in_rollout_flag.hpp"
 #include "infrastructure/keyed_argument_chooser.hpp"
 #include "infrastructure/keyed_feature_chooser.hpp"
@@ -40,8 +39,8 @@
 #include "infrastructure/primitive_caller.hpp"
 #include "infrastructure/primitive_option_finder.hpp"
 #include "infrastructure/primitive_store.hpp"
+#include "infrastructure/quadrant_option_chooser.hpp"
 #include "infrastructure/random_rollout.hpp"
-#include "infrastructure/rollout_switching_option_chooser.hpp"
 #include "infrastructure/schema.hpp"
 #include "infrastructure/synthesis_starter.hpp"
 #include "infrastructure/tree_walker.hpp"
@@ -61,7 +60,6 @@
 #include "infrastructure/value_table.hpp"
 #include "infrastructure/variable_candidate_finder.hpp"
 #include "infrastructure/visits_table.hpp"
-#include "infrastructure/weighted_quadrant_chooser.hpp"
 #include "infrastructure/witness_detector.hpp"
 #include "value_objects/mcts_choice.hpp"
 #include "value_objects/mcts_tree_node_id.hpp"
@@ -70,14 +68,13 @@
 
 namespace AML {
 
-// Swift: Merlin with arguments and a match's feature chosen by quadrant. Each operand is fresh until the session uses
-// it as an argument and consumed after, and made if synthesized or given if an input, a bound argument or a constant,
-// which puts it in one of four quadrants: made and fresh (the tip of a chain being built), given and fresh, made and
-// consumed, given and consumed. In the search tree, one flat choice picks a quadrant (made and fresh first) and, where
-// it holds several options, one flat choice picks among them; in a rollout, fresh is taken three times in four, then
-// made or given evenly, then any option of the quadrant, so random completions extend tips with fresh inputs. The
-// primitive, a funnel's bound argument and stopping or continuing synthesis are chosen as in Merlin, with its mixmax
-// selection: a node is read as (1 - w) * mean + w * best.
+// Swift: Merlin with arguments and a match's feature chosen by quadrant. Each operand is made if synthesized or
+// given if an input, a bound argument or a constant, and fresh until the session uses it as an argument or consumed
+// after, which puts it in one of four quadrants (in an xor chain, the tip is alone in made and fresh). A choice is a
+// two-way choice of made or given, then a two-way choice of fresh or consumed, then one flat choice among that
+// quadrant's options, the same in the search tree and in rollouts. The primitive, a funnel's bound argument and
+// stopping or continuing synthesis are chosen as in Merlin, with its mixmax selection: a node is read as
+// (1 - w) * mean + w * best.
 struct swift_manifest {
     struct visits_table_t : monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map> {
         using monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map>::visits_table;
@@ -206,19 +203,9 @@ struct swift_manifest {
     struct feature_quadrant_measurer_t : feature_quadrant_measurer<operand_table_t, operand_quadrant_measurer_t> {
         using feature_quadrant_measurer<operand_table_t, operand_quadrant_measurer_t>::feature_quadrant_measurer;
     };
-    struct grouped_option_chooser_t : grouped_option_chooser<option_chooser_t, option_chooser_t> {
-        using grouped_option_chooser<option_chooser_t, option_chooser_t>::grouped_option_chooser;
-    };
-    struct weighted_quadrant_chooser_t
-        : weighted_quadrant_chooser<option_chooser_t, option_chooser_t, option_chooser_t> {
-        using weighted_quadrant_chooser<
-            option_chooser_t, option_chooser_t, option_chooser_t>::weighted_quadrant_chooser;
-    };
-    struct quadrant_option_chooser_t : rollout_switching_option_chooser<
-        monte_carlo::in_rollout_flag, grouped_option_chooser_t, weighted_quadrant_chooser_t> {
-        using rollout_switching_option_chooser<
-            monte_carlo::in_rollout_flag, grouped_option_chooser_t,
-            weighted_quadrant_chooser_t>::rollout_switching_option_chooser;
+    struct quadrant_option_chooser_t
+        : quadrant_option_chooser<option_chooser_t, option_chooser_t, option_chooser_t> {
+        using quadrant_option_chooser<option_chooser_t, option_chooser_t, option_chooser_t>::quadrant_option_chooser;
     };
     struct argument_chooser_t
         : keyed_argument_chooser<argument_option_finder_t, operand_quadrant_measurer_t, quadrant_option_chooser_t> {
@@ -324,8 +311,6 @@ struct swift_manifest {
     option_chooser_t             option_chooser_;
     operand_quadrant_measurer_t  operand_quadrant_measurer_;
     feature_quadrant_measurer_t  feature_quadrant_measurer_;
-    grouped_option_chooser_t     grouped_option_chooser_;
-    weighted_quadrant_chooser_t  weighted_quadrant_chooser_;
     quadrant_option_chooser_t    quadrant_option_chooser_;
     argument_chooser_t           argument_chooser_;
     feature_chooser_t            feature_chooser_;
