@@ -13,7 +13,8 @@
 namespace AML {
 
 // Numbers a synthesis session's operands: the constants first, then the session's features, each in its store's
-// order. Every feature is heterogeneous and no constant is. Reads both stores in place and holds nothing itself.
+// order. Every feature is heterogeneous and no constant is. Reads both stores in place and holds nothing itself. A
+// feature's position in the feature store gives back its operand.
 template<typename IGetConstants, typename IGetConstantsOfType, typename IGetFeatures, typename IGetFeaturesOfType>
 struct operand_table {
     operand_table(
@@ -26,6 +27,7 @@ struct operand_table {
     size_t constant_count_of_type(type_id type) const;
     size_t operand_of_type(type_id type, size_t position) const;
     const feature& expression(size_t operand) const;
+    size_t feature_operand(size_t position) const;
     const value* cell(size_t operand, size_t row) const;
 private:
     IGetConstants& get_constants_;
@@ -76,6 +78,11 @@ const feature& OPERAND_TABLE::expression(size_t operand) const {
     if (operand < constants.size())
         return constants[operand].expression;
     return get_features_.candidates().at(operand - constants.size()).expression;
+}
+
+OPERAND_TABLE_TEMPLATE
+size_t OPERAND_TABLE::feature_operand(size_t position) const {
+    return get_constants_.constants().size() + position;
 }
 
 OPERAND_TABLE_TEMPLATE

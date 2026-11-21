@@ -143,3 +143,13 @@ TEST_F(OperandTableTest, ATypeWithOnlyFeaturesNumbersThemPastTheConstants) {
     EXPECT_EQ(table.constant_count_of_type(1), 0u);
     EXPECT_EQ(table.operand_of_type(1, 0), 4u);
 }
+
+TEST_F(OperandTableTest, AFeaturesPositionGivesItsOperandPastEveryConstant) {
+    EXPECT_EQ(table.feature_operand(0), 3u);
+    EXPECT_EQ(table.feature_operand(1), 4u);
+}
+
+TEST_F(OperandTableTest, WithNoConstantsAFeaturesOperandIsItsPosition) {
+    constants.clear();
+    EXPECT_EQ(table.feature_operand(1), 1u);
+}

@@ -32,4 +32,12 @@ size_t application_log::count_with_prefix(prim_id prim, const std::vector<size_t
     return matching;
 }
 
+bool application_log::is_used(size_t operand) const {
+    for (const prim_application& application : applications_) {
+        if (std::find(application.args.begin(), application.args.end(), operand) != application.args.end())
+            return true;
+    }
+    return false;
+}
+
 }

@@ -56,3 +56,23 @@ TEST_F(ApplicationLogTest, ANullaryApplicationIsCounted) {
     log.record(prim_application{.prim = 3, .args = {}});
     EXPECT_EQ(log.count_with_prefix(3, {}), 1u);
 }
+
+TEST_F(ApplicationLogTest, AnOperandIsUsedOnceAnApplicationTakesIt) {
+    log.record(prim_application{.prim = 0, .args = {1, 2}});
+    log.record(prim_application{.prim = 1, .args = {5}});
+    EXPECT_TRUE(log.is_used(1));
+    EXPECT_TRUE(log.is_used(2));
+    EXPECT_TRUE(log.is_used(5));
+}
+
+TEST_F(ApplicationLogTest, AnOperandNoApplicationTakesIsNotUsed) {
+    log.record(prim_application{.prim = 0, .args = {1, 2}});
+    EXPECT_FALSE(log.is_used(0));
+    EXPECT_FALSE(log.is_used(3));
+}
+
+TEST_F(ApplicationLogTest, ClearForgetsWhatWasUsed) {
+    log.record(prim_application{.prim = 0, .args = {1, 2}});
+    log.clear();
+    EXPECT_FALSE(log.is_used(1));
+}

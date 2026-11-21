@@ -119,6 +119,18 @@ research/                                  experiments and their records; proofs
     node's sum and raises its best (`max_value_update`, `paired_value_update`), and selection reads a node as
     (1 − w)·mean + w·best (`mixmax_value_view`, `best_weight`), so a deep good path among poor siblings is not
     averaged away.
+  - **Merlin** (`merlin_*`): flat choices with mixmax: in the search tree every choice is one MCTS choice among all
+    its options (no two-way splitting; stopping or continuing synthesis stays two-way), as in Heron, with Kestrel's
+    mixmax selection in place of focus ucb1. In rollouts, an argument and a match's feature are chosen by order tiers
+    as in Kite (`rollout_tiered_option_chooser`), so random completions build on high-order features.
+  - **Swift** (`swift_*`): Merlin with an argument and a match's feature chosen by quadrant. An operand is fresh until
+    the session uses it as an argument (`application_log::is_used`) and consumed after, and made if synthesized or
+    given if an input, a bound argument or a constant: made and fresh (a chain's tip), given and fresh, made and
+    consumed, given and consumed (`operand_quadrant_measurer`, `feature_quadrant_measurer`). In the tree a choice is
+    one flat choice among the quadrants holding options, made and fresh first, then one within the quadrant
+    (`quadrant_option_chooser`); in rollouts fresh is taken with probability `fresh_weight` and made with
+    `made_weight` (0.5 is no preference; `weighted_quadrant_chooser`, `fraction_drawer`, switched by
+    `rollout_switching_option_chooser`).
 
 ### Per-bin columns
 
@@ -155,8 +167,9 @@ feature per column (`cheapest_feature_index`). Raw data points are never re-read
 - The makefile `find`s every `.cpp` under `core/cpp`, `core/test` and `mcts/core/cpp`.
   **A new file is picked up automatically, so don't edit the makefile to register it.**
 - CI (`.github/workflows/ci.yml`) builds and runs `core_debug_fast`.
-- A research proof (`research/<name>/`, e.g. `kestrel_parity`) is one recorded run with its settings fixed in its
-  source; `make research/<name>` builds it into `build/research/<name>`. Never edit a proof's settings; a new
+- A research proof (`research/<name>/`, e.g. `kestrel_parity`, `swift_parity`) is one recorded run with its settings
+  fixed in its source; a new proof stops after a fixed number of episodes, not seconds, so it does the same work on any
+  machine; `make research/<name>` builds it into `build/research/<name>`. Never edit a proof's settings; a new
   experiment gets a new proof and a new `research/<name>` target.
 
 ## Code style — the rules
@@ -183,7 +196,8 @@ public facades, as in Atlas. Test primitives are function objects whose one publ
 - Constructor init lists put the comma first. Value objects use `auto operator<=>(const T&) const = default;` and
   tests build them with designated initializers. The exceptions: `typed_primitive` has no comparison, since a
   `std::function` cannot be compared; `column_view` defines `operator==` by the values it reads, not by the cells and
-  rows it shares, so `bin_view` and `candidate`, which hold views, default `operator==` only. Ids are aliases in their own headers (`type_id`, `var_id`, ...).
+  rows it shares, so `bin_view` and `candidate`, which hold views, default `operator==` only. Ids are aliases in their
+  own headers (`type_id`, `var_id`, ...).
 - `std::optional` is checked with `.has_value()` and read with `.value()`. Locals are `const` wherever possible.
 - Tests: mocks and the fixture go in an anonymous namespace; NiceMock by default. Once a method has any
   `EXPECT_CALL`, add a catch-all `EXPECT_CALL(..., method(_)).Times(AnyNumber())` before the specific ones.
