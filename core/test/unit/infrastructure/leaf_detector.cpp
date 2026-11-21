@@ -44,13 +44,13 @@ LeafDetectorTest::LeafDetectorTest()
 
 TEST_F(LeafDetectorTest, LabelsThatAgreeGiveTheirLabelAsAConstant) {
     const bin_view data = bin_view::of(bin{.inputs = {typed_column{.type = 0, .cells = {truth, falsity}}},
-                   .labels = typed_column{.type = 0, .cells = {truth, truth}}});
+                                           .labels = typed_column{.type = 0, .cells = {truth, truth}}});
     EXPECT_EQ(detector.detect(data), std::optional<feature>(true_constant));
 }
 
 TEST_F(LeafDetectorTest, LabelsThatDisagreeAndMatchNoVariableGiveNothing) {
     const bin_view data = bin_view::of(bin{.inputs = {typed_column{.type = 0, .cells = {truth, truth}}},
-                   .labels = typed_column{.type = 0, .cells = {truth, falsity}}});
+                                           .labels = typed_column{.type = 0, .cells = {truth, falsity}}});
     EXPECT_FALSE(detector.detect(data).has_value());
 }
 
@@ -72,7 +72,7 @@ TEST_F(LeafDetectorTest, TheFirstMatchingVariableWins) {
 
 TEST_F(LeafDetectorTest, AMatchingVariableIsPreferredToAgreeingLabels) {
     const bin_view data = bin_view::of(bin{.inputs = {typed_column{.type = 0, .cells = {truth, truth}}},
-                   .labels = typed_column{.type = 0, .cells = {truth, truth}}});
+                                           .labels = typed_column{.type = 0, .cells = {truth, truth}}});
     EXPECT_EQ(detector.detect(data), std::optional<feature>(first_variable));
 }
 

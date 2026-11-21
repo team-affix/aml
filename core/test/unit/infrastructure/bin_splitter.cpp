@@ -69,7 +69,7 @@ TEST_F(BinSplitterTest, RowsGoToTheirConstructorsChildWithItsArgumentsBound) {
 
 TEST_F(BinSplitterTest, AConstructorNoRowHasGivesAnEmptyChildWithItsInputsTyped) {
     const bin_view parent = bin_view::of(bin{.inputs = {typed_column{.type = 1, .cells = {zero, zero}}},
-                     .labels = typed_column{.type = 0, .cells = {falsity, truth}}});
+                                             .labels = typed_column{.type = 0, .cells = {falsity, truth}}});
     const bin_view suc_child = bin_view::of(bin{
         .inputs = {typed_column{.type = 1, .cells = {}}, typed_column{.type = 1, .cells = {}}},
         .labels = typed_column{.type = 0, .cells = {}}});
@@ -78,7 +78,7 @@ TEST_F(BinSplitterTest, AConstructorNoRowHasGivesAnEmptyChildWithItsInputsTyped)
 
 TEST_F(BinSplitterTest, ThereIsOneChildPerConstructorInTagOrder) {
     const bin_view parent = bin_view::of(bin{.inputs = {typed_column{.type = 1, .cells = {one, zero}}},
-                     .labels = typed_column{.type = 0, .cells = {truth, falsity}}});
+                                             .labels = typed_column{.type = 0, .cells = {truth, falsity}}});
     const std::vector<bin_view> children = splitter.split(parent, parent.inputs[0]);
     ASSERT_EQ(children.size(), 2u);
     EXPECT_EQ(children[0].labels, view(0, {falsity}));
@@ -97,10 +97,10 @@ TEST_F(BinSplitterTest, RowsKeepTheirOrderWithinAChild) {
 
 TEST_F(BinSplitterTest, TheScrutineeNeedNotBeAVariableInScope) {
     const bin_view parent = bin_view::of(bin{.inputs = {typed_column{.type = 0, .cells = {truth, falsity}}},
-                     .labels = typed_column{.type = 0, .cells = {truth, falsity}}});
+                                             .labels = typed_column{.type = 0, .cells = {truth, falsity}}});
     const column_view derived = column_view::of(typed_column{.type = 1, .cells = {one, zero}});
     const bin_view zero_child = bin_view::of(bin{.inputs = {typed_column{.type = 0, .cells = {falsity}}},
-                         .labels = typed_column{.type = 0, .cells = {falsity}}});
+                                                 .labels = typed_column{.type = 0, .cells = {falsity}}});
     const bin_view suc_child = bin_view::of(bin{
         .inputs = {typed_column{.type = 0, .cells = {truth}}, typed_column{.type = 1, .cells = {zero}}},
         .labels = typed_column{.type = 0, .cells = {truth}}});
@@ -120,7 +120,7 @@ TEST_F(BinSplitterTest, EveryChildKeepsTheParentsVariablesFirst) {
 
 TEST_F(BinSplitterTest, TheScrutineesTypeGivesTheConstructors) {
     const bin_view parent = bin_view::of(bin{.inputs = {typed_column{.type = 0, .cells = {truth, falsity}}},
-                     .labels = typed_column{.type = 0, .cells = {truth, falsity}}});
+                                             .labels = typed_column{.type = 0, .cells = {truth, falsity}}});
     EXPECT_CALL(get_type_def, def(0)).WillOnce(ReturnRef(boolean));
     EXPECT_EQ(splitter.split(parent, parent.inputs[0]).size(), 2u);
 }

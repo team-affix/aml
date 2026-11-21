@@ -21,7 +21,7 @@ ColumnViewHashTest::ColumnViewHashTest()
 
 }
 
-TEST_F(ColumnViewHashTest, EqualTypedColumnsHashEqual) {
+TEST_F(ColumnViewHashTest, EqualViewsHashEqual) {
     EXPECT_EQ(hasher(column_view::of(typed_column{.type = 0, .cells = {falsity, truth}})),
               hasher(column_view::of(typed_column{.type = 0, .cells = {falsity, truth}})));
 }

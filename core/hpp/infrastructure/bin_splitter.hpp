@@ -29,8 +29,8 @@ private:
     // child's too.
     using selections_t = std::vector<std::pair<const std::vector<size_t>*, std::shared_ptr<const std::vector<size_t>>>>;
 
-    column_view select(const column_view& parent_column, const std::vector<size_t>& positions,
-                       selections_t& selections) const;
+    column_view select(
+        const column_view& parent_column, const std::vector<size_t>& positions, selections_t& selections) const;
 
     IGetTypeDef& get_type_def_;
 };

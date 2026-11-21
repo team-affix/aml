@@ -7,6 +7,7 @@
 using namespace AML;
 
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRef;
@@ -106,6 +107,7 @@ TEST_F(AppCandidateFinderTest, TheFeatureIsMadeFromTheOperandsExpressionsInOrder
 }
 
 TEST_F(AppCandidateFinderTest, HomogeneityIsJudgedOnTheAppliedColumn) {
+    EXPECT_CALL(find_uniform_value, find(_)).Times(AnyNumber());
     EXPECT_CALL(find_uniform_value, find(column_view::of(typed_column{.type = 5, .cells = result})))
         .WillOnce(Return(std::nullopt));
     finder.find(2, 5, {0, 1}, 2);
