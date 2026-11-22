@@ -21,9 +21,8 @@
 #include "infrastructure/feature_synthesizer.hpp"
 #include "infrastructure/fraction_drawer.hpp"
 #include "infrastructure/in_rollout_flag.hpp"
-#include "infrastructure/inherited_feature_store.hpp"
 #include "infrastructure/inheriting_bin_splitter.hpp"
-#include "infrastructure/inheriting_synthesis_starter.hpp"
+#include "infrastructure/inheriting_model_evaluator.hpp"
 #include "infrastructure/keyed_argument_chooser.hpp"
 #include "infrastructure/keyed_feature_chooser.hpp"
 #include "infrastructure/leaf_detector.hpp"
@@ -33,7 +32,6 @@
 #include "infrastructure/mixmax_value_view.hpp"
 #include "infrastructure/model_builder.hpp"
 #include "infrastructure/model_episode.hpp"
-#include "infrastructure/model_evaluator.hpp"
 #include "infrastructure/model_sizer.hpp"
 #include "infrastructure/operand_applier.hpp"
 #include "infrastructure/operand_quadrant_measurer.hpp"
@@ -49,6 +47,7 @@
 #include "infrastructure/random_rollout.hpp"
 #include "infrastructure/rollout_switching_option_chooser.hpp"
 #include "infrastructure/schema.hpp"
+#include "infrastructure/scrutinee_piece_finder.hpp"
 #include "infrastructure/synthesis_starter.hpp"
 #include "infrastructure/tree_walker.hpp"
 #include "infrastructure/ucb1.hpp"
@@ -76,13 +75,13 @@
 
 namespace AML {
 
-// Raven: Wren whose synthesis sessions below a match also hold what the matches above them built. When a bin is split
-// by a match, its children inherit the scrutinee's expression and every primitive application inside it, on top of
-// what the bin inherited itself (inheriting_bin_splitter, inherited_feature_store); a session below starts with its
-// variables and then those features, each evaluated over its rows and left out where uniform
-// (inheriting_synthesis_starter, feature_column_evaluator). Inherited features are applications, so they sit in the
-// made quadrants, fresh until the session uses them; using one costs its full size, as if rebuilt, so models and their
-// costs are as in Wren and only what the search is offered changes. Everything else is Wren's.
+// Raven: Wren whose matches pass what they built down as variables. Below a match, a child's variables are its
+// parent's, its constructor's arguments, then the scrutinee and every primitive application inside it, each once
+// (scrutinee_piece_finder), evaluated once over the parent's rows and selected for each child (inheriting_bin_splitter,
+// feature_column_evaluator). A piece is paid for once, inside the match's scrutinee, and costs 1 wherever it is used
+// below, like any variable; pieces from further up arrive as the parent's variables. A piece uniform over a bin stays
+// among its variables, so the numbering does not depend on the rows, and is never offered to its sessions. Inference
+// binds the same variables (inheriting_model_evaluator). Everything else is Wren's.
 struct raven_manifest {
     struct visits_table_t : monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map> {
         using monte_carlo::visits_table<mcts_tree_node_id, std::unordered_map>::visits_table;
@@ -252,18 +251,11 @@ struct raven_manifest {
     struct feature_column_evaluator_t : feature_column_evaluator<primitive_store, primitive_caller_t> {
         using feature_column_evaluator<primitive_store, primitive_caller_t>::feature_column_evaluator;
     };
-    struct inheriting_synthesis_starter_t : inheriting_synthesis_starter<
-        synthesis_starter_t, inherited_feature_store, feature_column_evaluator_t, uniform_value_finder, feature_sizer_t,
-        cheapest_feature_index> {
-        using inheriting_synthesis_starter<
-            synthesis_starter_t, inherited_feature_store, feature_column_evaluator_t, uniform_value_finder,
-            feature_sizer_t, cheapest_feature_index>::inheriting_synthesis_starter;
-    };
     struct feature_synthesizer_t : feature_synthesizer<
-        inheriting_synthesis_starter_t, application_log, primitive_option_finder_t, option_chooser_t,
+        synthesis_starter_t, application_log, primitive_option_finder_t, option_chooser_t,
         binary_option_chooser_t, primitive_applier_t, cheapest_feature_index, output_finder> {
         using feature_synthesizer<
-            inheriting_synthesis_starter_t, application_log, primitive_option_finder_t, option_chooser_t,
+            synthesis_starter_t, application_log, primitive_option_finder_t, option_chooser_t,
             binary_option_chooser_t, primitive_applier_t, cheapest_feature_index, output_finder>::feature_synthesizer;
     };
     struct leaf_detector_t : leaf_detector<uniform_value_finder> {
@@ -273,11 +265,10 @@ struct raven_manifest {
         using bin_splitter<schema>::bin_splitter;
     };
     struct inheriting_bin_splitter_t : inheriting_bin_splitter<
-        bin_splitter_t, cheapest_feature_index, inherited_feature_store, inherited_feature_store,
-        inherited_feature_store, inherited_feature_store> {
+        bin_splitter_t, cheapest_feature_index, scrutinee_piece_finder, feature_column_evaluator_t> {
         using inheriting_bin_splitter<
-            bin_splitter_t, cheapest_feature_index, inherited_feature_store, inherited_feature_store,
-            inherited_feature_store, inherited_feature_store>::inheriting_bin_splitter;
+            bin_splitter_t, cheapest_feature_index, scrutinee_piece_finder,
+            feature_column_evaluator_t>::inheriting_bin_splitter;
     };
     struct bound_argument_chooser_t
         : bound_argument_chooser<variable_candidate_finder_t, binary_option_chooser_t> {
@@ -299,8 +290,8 @@ struct raven_manifest {
     struct feature_evaluator_t : feature_evaluator<primitive_caller_t> {
         using feature_evaluator<primitive_caller_t>::feature_evaluator;
     };
-    struct model_evaluator_t : model_evaluator<feature_evaluator_t> {
-        using model_evaluator<feature_evaluator_t>::model_evaluator;
+    struct model_evaluator_t : inheriting_model_evaluator<feature_evaluator_t, scrutinee_piece_finder> {
+        using inheriting_model_evaluator<feature_evaluator_t, scrutinee_piece_finder>::inheriting_model_evaluator;
     };
 
     raven_manifest(
@@ -308,72 +299,71 @@ struct raven_manifest {
         const std::vector<typed_primitive>& primitives,
         const raven_options& options);
 
-    schema&                        schema_;
-    constant_store                 constants_;
-    cheapest_feature_index         feature_candidates_;
-    inherited_feature_store        inherited_features_;
-    application_log                applications_;
-    output_finder                  output_finder_;
-    uniform_value_finder           uniform_value_finder_;
-    value_sizer                    value_sizer_;
-    feature_sizer_t                feature_sizer_;
-    model_sizer_t                  model_sizer_;
-    primitive_store                primitive_store_;
-    primitive_caller_t             primitive_caller_;
-    feature_column_evaluator_t     feature_column_evaluator_;
-    variable_candidate_finder_t    variable_candidate_finder_;
-    constant_seeder_t              constant_seeder_;
-    operand_table_t                operand_table_;
-    operand_applier_t              operand_applier_;
-    app_candidate_finder_t         app_candidate_finder_;
-    witness_detector_t             witness_detector_;
-    primitive_option_finder_t      primitive_option_finder_;
-    argument_option_finder_t       argument_option_finder_;
-    visits_table_t                 visits_;
-    value_table_t                  rewards_;
-    value_table_t                  best_rewards_;
-    value_bounds_t                 reward_bounds_;
-    std::mt19937                   random_;
-    monte_carlo::in_rollout_flag   in_rollout_;
-    tree_walker_t                  tree_walker_;
-    rollout_t                      rollout_;
-    exploration_constant_t         exploration_constant_;
-    value_delta_t                  value_delta_;
-    sum_update_t                   sum_update_;
-    best_update_t                  best_update_;
-    value_update_t                 value_update_;
-    value_view_t                   value_view_;
-    cursor_t                       cursor_;
-    backprop_path_t                backprop_path_;
-    visit_creditor_t               visit_creditor_;
-    value_creditor_t               value_creditor_;
-    policy_t                       policy_;
-    mcts_chooser_t                 mcts_chooser_;
-    terminator_t                   terminator_;
-    option_chooser_t               option_chooser_;
-    binary_option_chooser_t        binary_option_chooser_;
-    operand_quadrant_measurer_t    operand_quadrant_measurer_;
-    feature_quadrant_measurer_t    feature_quadrant_measurer_;
-    quadrant_option_chooser_t      quadrant_option_chooser_;
-    fraction_drawer_t              fraction_drawer_;
-    weighted_quadrant_chooser_t    weighted_quadrant_chooser_;
-    operand_chooser_t              operand_chooser_;
-    argument_chooser_t             argument_chooser_;
-    feature_chooser_t              feature_chooser_;
-    primitive_applier_t            primitive_applier_;
-    synthesis_starter_t            synthesis_starter_;
-    inheriting_synthesis_starter_t inheriting_synthesis_starter_;
-    feature_synthesizer_t          feature_synthesizer_;
-    leaf_detector_t                leaf_detector_;
-    bin_splitter_t                 bin_splitter_;
-    inheriting_bin_splitter_t      inheriting_bin_splitter_;
-    bound_argument_chooser_t       bound_argument_chooser_;
-    model_builder_t                model_builder_;
-    best_model_tracker             best_model_tracker_;
-    model_episode_t                model_episode_;
-    mcts_episode_t                 mcts_episode_;
-    feature_evaluator_t            feature_evaluator_;
-    model_evaluator_t              model_evaluator_;
+    schema&                      schema_;
+    constant_store               constants_;
+    cheapest_feature_index       feature_candidates_;
+    application_log              applications_;
+    output_finder                output_finder_;
+    uniform_value_finder         uniform_value_finder_;
+    value_sizer                  value_sizer_;
+    feature_sizer_t              feature_sizer_;
+    model_sizer_t                model_sizer_;
+    primitive_store              primitive_store_;
+    primitive_caller_t           primitive_caller_;
+    scrutinee_piece_finder       scrutinee_piece_finder_;
+    feature_column_evaluator_t   feature_column_evaluator_;
+    variable_candidate_finder_t  variable_candidate_finder_;
+    constant_seeder_t            constant_seeder_;
+    operand_table_t              operand_table_;
+    operand_applier_t            operand_applier_;
+    app_candidate_finder_t       app_candidate_finder_;
+    witness_detector_t           witness_detector_;
+    primitive_option_finder_t    primitive_option_finder_;
+    argument_option_finder_t     argument_option_finder_;
+    visits_table_t               visits_;
+    value_table_t                rewards_;
+    value_table_t                best_rewards_;
+    value_bounds_t               reward_bounds_;
+    std::mt19937                 random_;
+    monte_carlo::in_rollout_flag in_rollout_;
+    tree_walker_t                tree_walker_;
+    rollout_t                    rollout_;
+    exploration_constant_t       exploration_constant_;
+    value_delta_t                value_delta_;
+    sum_update_t                 sum_update_;
+    best_update_t                best_update_;
+    value_update_t               value_update_;
+    value_view_t                 value_view_;
+    cursor_t                     cursor_;
+    backprop_path_t              backprop_path_;
+    visit_creditor_t             visit_creditor_;
+    value_creditor_t             value_creditor_;
+    policy_t                     policy_;
+    mcts_chooser_t               mcts_chooser_;
+    terminator_t                 terminator_;
+    option_chooser_t             option_chooser_;
+    binary_option_chooser_t      binary_option_chooser_;
+    operand_quadrant_measurer_t  operand_quadrant_measurer_;
+    feature_quadrant_measurer_t  feature_quadrant_measurer_;
+    quadrant_option_chooser_t    quadrant_option_chooser_;
+    fraction_drawer_t            fraction_drawer_;
+    weighted_quadrant_chooser_t  weighted_quadrant_chooser_;
+    operand_chooser_t            operand_chooser_;
+    argument_chooser_t           argument_chooser_;
+    feature_chooser_t            feature_chooser_;
+    primitive_applier_t          primitive_applier_;
+    synthesis_starter_t          synthesis_starter_;
+    feature_synthesizer_t        feature_synthesizer_;
+    leaf_detector_t              leaf_detector_;
+    bin_splitter_t               bin_splitter_;
+    inheriting_bin_splitter_t    inheriting_bin_splitter_;
+    bound_argument_chooser_t     bound_argument_chooser_;
+    model_builder_t              model_builder_;
+    best_model_tracker           best_model_tracker_;
+    model_episode_t              model_episode_;
+    mcts_episode_t               mcts_episode_;
+    feature_evaluator_t          feature_evaluator_;
+    model_evaluator_t            model_evaluator_;
 };
 
 }

@@ -247,3 +247,25 @@ TEST_F(RavenIntegrationTest, TheBestWeightChangesTheSearch) {
         differed = differed || blended.next().cost != plain.next().cost;
     EXPECT_TRUE(differed);
 }
+
+TEST_F(RavenIntegrationTest, EveryEpisodesModelInfersItsTrainingLabelsThroughInheritedVariables) {
+    const bin training = xor_training();
+    raven_manifest manifest(types, {bool_equality}, options);
+    manifest.constant_seeder_.seed(constants);
+    const bin_view viewed = bin_view::of(training);
+    bool matched_on_an_application = false;
+    for (size_t episode = 0; episode < 300; ++episode) {
+        const episode_outcome outcome = manifest.mcts_episode_.run(viewed);
+        const model_node::match* root = std::get_if<model_node::match>(&outcome.model.content);
+        const bool by_application = root != nullptr && std::holds_alternative<feature::app>(root->scrutinee.content);
+        matched_on_an_application = matched_on_an_application || by_application;
+        for (size_t row = 0; row < training.labels.cells.size(); ++row) {
+            std::vector<value> inputs;
+            for (const typed_column& input : training.inputs)
+                inputs.push_back(input.cells[row]);
+            EXPECT_EQ(manifest.model_evaluator_.evaluate(outcome.model, inputs),
+                      std::optional<value>(training.labels.cells[row]));
+        }
+    }
+    EXPECT_TRUE(matched_on_an_application);
+}

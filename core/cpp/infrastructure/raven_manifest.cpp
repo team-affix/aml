@@ -15,7 +15,6 @@ raven_manifest::raven_manifest(
     : schema_(types)
     , constants_()
     , feature_candidates_()
-    , inherited_features_()
     , applications_()
     , output_finder_()
     , uniform_value_finder_()
@@ -24,6 +23,7 @@ raven_manifest::raven_manifest(
     , model_sizer_(feature_sizer_)
     , primitive_store_(primitives)
     , primitive_caller_(primitive_store_)
+    , scrutinee_piece_finder_()
     , feature_column_evaluator_(primitive_store_, primitive_caller_)
     , variable_candidate_finder_(feature_sizer_, uniform_value_finder_)
     , constant_seeder_(constants_)
@@ -68,17 +68,12 @@ raven_manifest::raven_manifest(
     , primitive_applier_(
           primitive_store_, argument_chooser_, applications_, app_candidate_finder_, feature_candidates_)
     , synthesis_starter_(feature_candidates_, applications_, variable_candidate_finder_, feature_candidates_)
-    , inheriting_synthesis_starter_(
-          synthesis_starter_, inherited_features_, feature_column_evaluator_, uniform_value_finder_, feature_sizer_,
-          feature_candidates_)
     , feature_synthesizer_(
-          inheriting_synthesis_starter_, applications_, primitive_option_finder_, option_chooser_,
-          binary_option_chooser_, primitive_applier_, feature_candidates_, output_finder_, options.max_applications)
+          synthesis_starter_, applications_, primitive_option_finder_, option_chooser_, binary_option_chooser_,
+          primitive_applier_, feature_candidates_, output_finder_, options.max_applications)
     , leaf_detector_(uniform_value_finder_)
     , bin_splitter_(schema_)
-    , inheriting_bin_splitter_(
-          bin_splitter_, feature_candidates_, inherited_features_, inherited_features_, inherited_features_,
-          inherited_features_)
+    , inheriting_bin_splitter_(bin_splitter_, feature_candidates_, scrutinee_piece_finder_, feature_column_evaluator_)
     , bound_argument_chooser_(variable_candidate_finder_, binary_option_chooser_)
     , model_builder_(
           leaf_detector_, feature_synthesizer_, output_finder_, feature_chooser_, bound_argument_chooser_,
@@ -87,6 +82,6 @@ raven_manifest::raven_manifest(
     , model_episode_(model_builder_, model_sizer_, best_model_tracker_)
     , mcts_episode_(model_episode_, value_delta_, terminator_)
     , feature_evaluator_(primitive_caller_)
-    , model_evaluator_(feature_evaluator_) {}
+    , model_evaluator_(feature_evaluator_, scrutinee_piece_finder_) {}
 
 }

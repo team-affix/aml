@@ -136,12 +136,12 @@ research/                                  experiments and their records; proofs
     funnel's bound argument. The quadrant stays one flat choice among at most four, so the tree's branching is at most
     four whatever the number of primitives or features, and how soon the search exploits no longer grows with them.
     Rollouts choose within a quadrant as Swift's do.
-  - **Raven** (`raven_*`): Wren whose sessions below a match also hold what the matches above built. Splitting a bin
-    passes its children the scrutinee's expression and every primitive application inside it, on top of what the bin
-    inherited (`inheriting_bin_splitter`, `inherited_feature_store`, keyed by a bin's selection of rows); a session
-    starts with its variables, then those features evaluated over its rows, uniform ones left out
-    (`inheriting_synthesis_starter`, `feature_column_evaluator`). They are made and fresh, and cost their full size
-    when used, so models and costs are Wren's; only what the search is offered changes.
+  - **Raven** (`raven_*`): Wren whose matches pass what they built down as variables. Below a match a child's
+    variables are its parent's, its constructor's arguments, then the scrutinee and every primitive application inside
+    it, each once in preorder (`scrutinee_piece_finder`), evaluated once over the parent's rows and selected per child
+    (`inheriting_bin_splitter`, `feature_column_evaluator`). A piece is paid for once in the match's scrutinee and costs
+    1 per use below, like any variable; a piece uniform over a bin stays among its variables (so numbering never
+    depends on rows) but is never offered. Inference binds the same variables (`inheriting_model_evaluator`).
 
 ### Per-bin columns
 
@@ -156,21 +156,20 @@ feature per column (`cheapest_feature_index`). Raw data points are never re-read
 ### Components (one mechanism each)
 
 - Stores: `schema`, `constant_store`, `primitive_store`, `cheapest_feature_index` (a session's features),
-  `inherited_feature_store` (what bins below a match inherit),
   `application_log`, `best_model_tracker`, `tree_walker`; `operand_table` is a read-only view over the constant and
   feature stores.
-- Synthesis: `constant_seeder`, `synthesis_starter`, `inheriting_synthesis_starter`, `variable_candidate_finder`,
+- Synthesis: `constant_seeder`, `synthesis_starter`, `variable_candidate_finder`,
   `witness_detector`, `primitive_option_finder`, `argument_option_finder`, `argument_chooser`,
   `primitive_caller`, `operand_applier`, `app_candidate_finder`, `primitive_applier`,
   `feature_synthesizer`.
 - Partition: `leaf_detector`, `output_finder`, `uniform_value_finder`, `bound_argument_chooser`, `bin_splitter`,
-  `inheriting_bin_splitter`, `model_builder`.
+  `inheriting_bin_splitter`, `scrutinee_piece_finder`, `model_builder`.
 - Choices: `first_option_chooser`, `mcts_option_chooser`, `binary_option_chooser`; each chooses an index among
   `option_count` options. `tiered_option_chooser` chooses among options by their orders, and `tiered_argument_chooser`
   and `tiered_feature_chooser` use it for arguments and for a match's feature. MCTS sees them as an `option_range`
   (a count, not a vector).
 - Cost and inference: `value_sizer`, `feature_sizer`, `feature_order_measurer`, `model_sizer`, `feature_evaluator`,
-  `feature_column_evaluator`, `model_evaluator`.
+  `feature_column_evaluator`, `model_evaluator`, `inheriting_model_evaluator`.
 - Episodes: `model_episode`, `mcts_episode`.
 
 ## Build & test
