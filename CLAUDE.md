@@ -142,6 +142,10 @@ research/                                  experiments and their records; proofs
     (`inheriting_bin_splitter`, `feature_column_evaluator`). A piece is paid for once in the match's scrutinee and costs
     1 per use below, like any variable; a piece uniform over a bin stays among its variables (so numbering never
     depends on rows) but is never offered. Inference binds the same variables (`inheriting_model_evaluator`).
+  - **Jay** (`jay_*`): Raven with flat choices, as in Swift: in the search tree the primitive, an argument or a match's
+    feature within its quadrant, and a funnel's bound argument are each one choice among all their options, so every
+    option gets its own child and is tried before any is tried twice; the quadrant stays one flat choice. Matches pass
+    what they built down as variables, as in Raven.
 
 ### Per-bin columns
 
