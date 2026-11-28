@@ -15,6 +15,7 @@ and are minimal in symbolic description length. Fit comes first; among models th
   recursive and mutually recursive types. Code that sets up types (tests with real types, the probe) takes ids from
   the schema rather than writing them as literals.
   Core knows no particular user type (no bool, no nat); anything specific to one lives with the user (the tests).
+  The exception is the column solvers (Quartz, Obsidian, Amethyst, Granite): their columns hold native C++ values, see below.
 - **Primitives and constants:** a `primitive` is a `std::function` from argument values (read in place, as pointers
   into the solver's columns) to a fresh result value; a `typed_primitive` pairs it with its `primitive_type`
   (argument and result types). The constants synthesis may use as arguments are `typed_constant`s the user offers.
@@ -83,7 +84,7 @@ research/                                  experiments and their records; proofs
 ```
 
 - Manifests and runtimes are named after their solver, never after the project. Solver names are short, one word,
-  and don't describe the mechanism.
+  and don't describe the mechanism. Bird names are the partition-tree solvers; column solvers never take bird names.
 - When you add a solver, add a new manifest + runtime instead of changing an existing one. Duplicate wiring
   across manifests if needed.
 - Solvers so far:
@@ -146,6 +147,56 @@ research/                                  experiments and their records; proofs
     feature within its quadrant, and a funnel's bound argument are each one choice among all their options, so every
     option gets its own child and is tried before any is tried twice; the quadrant stays one flat choice. Matches pass
     what they built down as variables, as in Raven.
+- Column solvers (no partition tree; the model is a `table_model`: the graph of features it reads, their training
+  columns, and a lookup from each distinct tuple of their classes to its label, with no prediction for a value or a
+  tuple no training row held). Their values are native C++ values, not `value` trees: a type is a `std::type_index`,
+  and a `native_type` (`native_type::of<T, Hash>()`) erases the operations a column of T needs (classify, hash, fill,
+  compare and read cells), a column being a `std::vector<T>` in a `std::any`. A `native_primitive`
+  (`native_primitive::of(std::function<Ret(Args...)>)`) is a native function lifted to columns
+  (`lifted_primitive`), unwrapping each operand once; an operand is a column or a scalar read at every row
+  (`operand_data`). Data is a `native_bin` of `native_column`s; constants are `native_constant`s:
+  **Quartz** (`quartz_*`): best-first search over sets of features that are functions of the labels (each distinct row
+    of the set's values has one label). Constants never vary over rows, so they live in a `constant_graph` of their own,
+    one value each: the offered constants are atoms, and a constant may be a primitive applied to other constants. As
+    with features, the graph keeps only origins and types; values live in a `constant_cache` within
+    `constant_cache_bytes`, recomputed from their origins when evicted (`constant_reader`). A feature's application
+    takes `operand`s, each a feature or a constant. A set's cost is the number of features in its ancestry plus the
+    number of constants those features reach, with their own ancestry (shared ancestors once), plus its distinct rows.
+    Visiting the cheapest set discards it and pushes one child per single move: every legal drop
+    (`droppable_member_finder`, exact by prefix and suffix row keys) and up to `adds_per_feature` sampled additions per
+    feature in its ancestry. An application over constants alone can never vary, so every sampled application has a
+    feature operand: on each visit the primitives taking a type the ancestry holds features of are eligible
+    (`argument_type_index`, `eligible_primitive_finder`); a primitive is drawn uniformly among them, then each argument
+    among the ancestry's features and the constants of its type, all drawn again while none is a feature. A set's key is
+    the exclusive or of its members' random keys. A set is queued again only once its ancestry is smaller than every
+    time it was queued, as when a cheaper origin is found for a feature beneath it; its distinct rows never change, so
+    otherwise it is a repeat. The queue holds at most `queue_capacity` sets, dropping the costliest. Features are never
+    deleted (`feature_graph`); their columns live in a `column_cache` within `column_cache_bytes`, recomputed from their
+    origins when evicted. A derived column equal to a feature's merges into it, keeping the cheaper origin; a column
+    holding one value everywhere is discarded.
+  **Obsidian** (`obsidian_*`): Quartz's sets, graphs, caches and cost searched by UCT in place of best-first, since
+    best-first only exploits and buries early sets under their descendants. Each episode walks from the root set (the
+    varied inputs) by up to `max_moves` moves and is rewarded with the negated cost of the cheapest set it passed
+    through (normalized as in Razor); a node backs up the best reward through it, not the mean, and selection reads
+    that best (`max_value_update`, `mixmax_value_view` with the best weighted fully). A move is one drop or one addition (`set_mover`), made of flat MCTS choices with
+    nothing capped: drop or add when both are offered, then a droppable member, or a fillable primitive
+    (`fillable_primitive_finder`: eligible, and every argument has a pool feature or a constant) and each argument left
+    to right among its type's ancestry features then constants; while no feature is chosen, the last argument a
+    feature can fill offers features alone (`application_chooser`). An addition deriving no feature or a member leaves
+    the set as it was. Repeats are allowed: the feature graph persists across and within episodes, so a cheaper origin
+    found anywhere prices every later set. Rollouts choose uniformly.
+  **Amethyst** (`amethyst_*`): Obsidian with Hawk's best-path memory and Razor's two-way choices. An episode whose
+    reward is at least the best so far adds its whole path, rollout included, to the tree (`best_path_grafter`), and
+    nodes back up the best reward, so a cheap set a rollout reached is never re-found move by move. Every choice is split
+    into two-way choices (`binary_option_chooser`), so a node has at most one untried sibling and a grafted path is
+    exploited after at most one detour per level.
+  **Granite** (`granite_*`): Quartz with Type-GBFS's exploration (Xie, Mueller, Holte and Imai, AAAI 2014), the
+    standard fix for greedy best-first search stuck on plateaus. Every queued set also goes into the bucket of its
+    stratum, the "type" of that paper: its ancestry size and its distinct rows (`set_stratum`, `stratum_bucket_store`,
+    `stratified_child_pusher`). Visits alternate (`alternating_set_popper`) between Quartz's cheapest set and an
+    exploring pick, a bucket uniformly at random then a set uniformly at random within it (`random_stratum_popper`);
+    a set popped from one is skipped when the other gives it again (`unvisited_set_popper`, `visited_set_store`, keyed
+    by set key and cost). The buckets have no capacity, so a set the queue dropped can still be visited.
 
 ### Per-bin columns
 
@@ -175,6 +226,28 @@ feature per column (`cheapest_feature_index`). Raw data points are never re-read
 - Cost and inference: `value_sizer`, `feature_sizer`, `feature_order_measurer`, `model_sizer`, `feature_evaluator`,
   `feature_column_evaluator`, `model_evaluator`, `inheriting_model_evaluator`.
 - Episodes: `model_episode`, `mcts_episode`.
+- Quartz:
+  - Native types: `native_classifier`, `native_column_hasher`, `native_column_filler`, `native_cell_comparer`,
+    `native_cell_reader`, `lifted_primitive`, `operand_cell_reader` (the operations `native_type` and
+    `native_primitive` erase).
+  - Stores: `native_type_store`, `native_primitive_store`, `argument_type_index`, `feature_graph`, `constant_graph`,
+    `derivation_index`, `column_hash_index`, `column_cache`, `constant_cache`, `set_key_store`, `set_queue`,
+    `best_table_tracker`.
+  - Columns: `column_computer`, `cached_column_maker`, `column_byte_measurer`, `column_reader`,
+    `uniform_column_detector`.
+  - Constants: `constant_computer`, `constant_byte_measurer`, `constant_reader`.
+  - Features: `key_drawer`, `feature_recorder`, `equal_feature_finder`, `origin_replacer`, `feature_deriver`,
+    `input_feature_seeder`, `constant_atom_seeder`.
+  - Sets: `ancestry_finder`, `constant_ancestry_finder`, `ancestry_sizer`, `row_key_numberer`,
+    `distinct_row_counter`, `droppable_member_finder`, `set_key_measurer`, `child_pusher`,
+    `operand_pool_finder`, `eligible_primitive_finder`, `derivation_sampler`, `dropping_expander`, `adding_expander`,
+    `cheapest_set_visitor`.
+  - Models: `model_graph_builder`, `table_model_builder`, `graph_row_evaluator`, `value_class_finder`,
+    `table_model_evaluator`.
+- Granite (Quartz's components plus): `set_stratum`, `stratum_bucket_store`, `visited_set_store`,
+  `stratified_child_pusher`, `random_stratum_popper`, `alternating_set_popper`, `unvisited_set_popper`.
+- Obsidian and Amethyst (Quartz's components but the queue and its expansion): `fillable_primitive_finder`, `application_chooser`,
+  `set_mover`, `set_cost_measurer`, `set_walk_episode`, `mcts_walk_episode`.
 
 ## Build & test
 
@@ -194,8 +267,9 @@ The detailed rules live in `.claude/rules/*.md` (copied from Atlas) and load aut
 
 Core of it in one breath: simplest thing that works. `struct` only. Collaborators are injected **by reference as
 template params named per invoked capability**. The only inheritance is the manifest naming trick. No lambdas
-(except a genuinely generic `std::visit`), no `std::function` (except `primitive`), no overloads, no default args,
-no default member initializers. Every infrastructure struct supports one mechanism: a store, or one job; extra
+(except a genuinely generic `std::visit`), no `std::function` (except `primitive`, and the native type erasure:
+`native_type`'s operations and `native_primitive::apply`), no overloads, no default args, no default member
+initializers. Every infrastructure struct supports one mechanism: a store, or one job; extra
 behavior goes into another struct. A store (passive: holds data) may have several accessors and mutators and is
 named as a noun (`_store`, `_pool`, `_index`, `_log`, `_table`). Active infrastructure has exactly one public
 function besides its constructor and is named after its job (`_finder`, `_chooser`, `_applier`, `_caller`, ...);
